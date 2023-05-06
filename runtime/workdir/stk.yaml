@@ -1,0 +1,19 @@
+kind: Stack
+metadata:
+  name: stack-1
+  version: 0.0.1
+spec:
+  plugins:
+  - name: plugin-1
+    ref:
+      type: local
+      path: ./workdir/plugin1
+  - name: plugin-2
+    depends:
+    - plugin-1
+    ref:
+      type: local
+      path: ./workdir/plugin2
+    inputs:
+    - key: url
+      value: {{plugin-1.output.url}}
