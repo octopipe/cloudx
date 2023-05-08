@@ -1,0 +1,95 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: stacks.commons.cloudx.io
+spec:
+  group: commons.cloudx.io
+  names:
+    kind: Stack
+    listKind: StackList
+    plural: stacks
+    singular: stack
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Circle is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              author:
+                type: string
+              description:
+                type: string
+              plugins:
+                items:
+                  properties:
+                    depends:
+                      items:
+                        type: string
+                      type: array
+                    inputs:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                    ref:
+                      properties:
+                        path:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - path
+                      - type
+                      type: object
+                  required:
+                  - depends
+                  - inputs
+                  - name
+                  - ref
+                  type: object
+                type: array
+            required:
+            - plugins
+            type: object
+          status:
+            properties:
+              error:
+                type: string
+              lastExecutionAt:
+                type: string
+              lastExecutionStatus:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
