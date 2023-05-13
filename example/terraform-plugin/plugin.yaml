@@ -1,0 +1,15 @@
+kind: Plugin
+metadata:
+  name: terraform-plugin
+spec:
+  inputs:
+    - label: Name
+      name: name
+      type: text
+      help: the name of deployment
+      required: true
+    - label: Namespace
+      name: namespace
+      type: text
+      help: the name of deployment
+      default: default

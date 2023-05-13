@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"encoding/json"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -44,7 +46,10 @@ func (p pluginCmd) NewPublishPluginCmd() *cobra.Command {
 				return nil
 			})
 
-			p.pluginManager.Publish(args[0], contents)
+			err := p.pluginManager.Publish(args[0], contents)
+			if err != nil {
+				log.Fatalln(err)
+			}
 
 		},
 	}
@@ -54,10 +59,27 @@ func (p pluginCmd) NewExecutPluginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "execute",
 		Short: "execute plugin",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
+			name := args[0]
+			inputPath := args[1]
 
-			p.pluginManager.Execute(args[0])
+			d, err := os.ReadFile(inputPath)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			input := map[string]interface{}{}
+
+			err = json.Unmarshal(d, &input)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			err = p.pluginManager.Execute(name, input)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		},
 	}
 }

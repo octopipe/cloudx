@@ -1,3 +1,3 @@
-provider "aws" {
-  region = "us-east-2"
+provider "kubectl" {
+  load_config_file       = true
 }

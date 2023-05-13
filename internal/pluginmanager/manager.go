@@ -6,15 +6,19 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/execution"
+	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type Manager interface {
 	Publish(pluginName string, filecontents map[string][]byte) error
-	Execute(pluginName string) error
+	Execute(pluginName string, input map[string]interface{}) error
 }
 
 type manager struct {
@@ -43,7 +47,7 @@ func (m manager) Publish(pluginName string, filecontents map[string][]byte) erro
 	return nil
 }
 
-func (m manager) Execute(pluginName string) error {
+func (m manager) Execute(pluginName string, input map[string]interface{}) error {
 	fmt.Println("Pulling plugin")
 	img, err := crane.Pull("mayconjrpacheco/ec2-plugin:latest")
 	if err != nil {
@@ -58,6 +62,15 @@ func (m manager) Execute(pluginName string) error {
 
 	tr := tar.NewReader(&buf)
 	content := map[string]string{}
+
+	rawPluginConfig := []byte{}
+
+	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", strconv.Itoa(int(time.Now().Unix())))
+
+	err = os.Mkdir(workdir, os.ModePerm)
+	if err != nil {
+		return err
+	}
 
 	for {
 		hdr, err := tr.Next()
@@ -74,7 +87,7 @@ func (m manager) Execute(pluginName string) error {
 		}
 
 		content[hdr.Name] = string(b)
-		f, err := os.Create(fmt.Sprintf("./tmp/%s", hdr.Name))
+		f, err := os.Create(fmt.Sprintf("%s/%s", workdir, hdr.Name))
 		if err != nil {
 			return err
 		}
@@ -83,10 +96,38 @@ func (m manager) Execute(pluginName string) error {
 		if err != nil {
 			return err
 		}
+
+		if hdr.Name == "plugin.yaml" {
+			rawPluginConfig = b
+		}
 	}
 
-	fmt.Println("Executing plugin")
-	out, err := execution.NewTerraformExecution("./tmp")
+	pluginConfig := commonv1alpha1.Plugin{}
+	decoder := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(rawPluginConfig), 4096)
+	err = decoder.Decode(&pluginConfig)
+	if err != nil {
+		return err
+	}
+
+	parsedInput := map[string]interface{}{}
+	for _, i := range pluginConfig.Spec.Inputs {
+		value, ok := input[i.Name]
+		if !ok && i.Required {
+			return fmt.Errorf("required field: %s", i.Name)
+		}
+
+		if !ok {
+			parsedInput[i.Name] = i.Default
+			continue
+		}
+
+		parsedInput[i.Name] = value
+	}
+
+	fmt.Println(pluginConfig.Spec.Inputs)
+
+	fmt.Printf("Executing plugin on %s\n", workdir)
+	out, err := execution.NewTerraformExecution(workdir, parsedInput)
 	if err != nil {
 		return err
 	}
