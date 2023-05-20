@@ -1,0 +1,23 @@
+apiVersion: commons.cloudx.io/v1alpha1
+kind: StackSet
+metadata:
+  name: stackset-1
+spec:
+  author: Maycon Pacheco
+  description: StackSet for example 1
+  plugins:
+  - name: plugin-a
+    ref: mayconjrpacheco/ec2-plugin:latest
+    depends: []
+    type: terraform
+    inputs:
+    - key: name
+      value: maycon
+  - name: plugin-b
+    ref: mayconjrpacheco/ec2-plugin:latest
+    type: terraform
+    depends:
+      - plugin-a
+    inputs:
+    - key: name
+      value: junio

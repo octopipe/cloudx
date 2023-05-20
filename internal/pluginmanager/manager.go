@@ -12,20 +12,24 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/execution"
+	"github.com/octopipe/cloudx/internal/plugin"
+	"github.com/octopipe/cloudx/internal/provider"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type Manager interface {
 	Publish(pluginName string, filecontents map[string][]byte) error
-	Execute(pluginName string, input map[string]interface{}) error
+	Execute(pluginRef string, input map[string]interface{}) ([]commonv1alpha1.StackSetPluginOutput, error)
 }
 
 type manager struct {
+	terraformProvider provider.Provider
 }
 
-func NewPluginManager() Manager {
-	return manager{}
+func NewPluginManager(terraformProvider provider.Provider) Manager {
+	return manager{
+		terraformProvider: terraformProvider,
+	}
 }
 
 func (m manager) Publish(pluginName string, filecontents map[string][]byte) error {
@@ -47,17 +51,17 @@ func (m manager) Publish(pluginName string, filecontents map[string][]byte) erro
 	return nil
 }
 
-func (m manager) Execute(pluginName string, input map[string]interface{}) error {
+func (m manager) Execute(pluginRef string, input map[string]interface{}) ([]commonv1alpha1.StackSetPluginOutput, error) {
 	fmt.Println("Pulling plugin")
-	img, err := crane.Pull("mayconjrpacheco/ec2-plugin:latest")
+	img, err := crane.Pull(pluginRef)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var buf bytes.Buffer
 	err = crane.Export(img, &buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tr := tar.NewReader(&buf)
@@ -67,9 +71,9 @@ func (m manager) Execute(pluginName string, input map[string]interface{}) error 
 
 	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", strconv.Itoa(int(time.Now().Unix())))
 
-	err = os.Mkdir(workdir, os.ModePerm)
+	err = os.MkdirAll(workdir, os.ModePerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for {
@@ -78,23 +82,23 @@ func (m manager) Execute(pluginName string, input map[string]interface{}) error 
 			break
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		b, err := io.ReadAll(tr)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		content[hdr.Name] = string(b)
 		f, err := os.Create(fmt.Sprintf("%s/%s", workdir, hdr.Name))
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		_, err = f.Write(b)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if hdr.Name == "plugin.yaml" {
@@ -102,18 +106,18 @@ func (m manager) Execute(pluginName string, input map[string]interface{}) error 
 		}
 	}
 
-	pluginConfig := commonv1alpha1.Plugin{}
+	pluginConfig := plugin.Plugin{}
 	decoder := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(rawPluginConfig), 4096)
 	err = decoder.Decode(&pluginConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	parsedInput := map[string]interface{}{}
 	for _, i := range pluginConfig.Spec.Inputs {
 		value, ok := input[i.Name]
 		if !ok && i.Required {
-			return fmt.Errorf("required field: %s", i.Name)
+			return nil, fmt.Errorf("required field: %s", i.Name)
 		}
 
 		if !ok {
@@ -124,15 +128,6 @@ func (m manager) Execute(pluginName string, input map[string]interface{}) error 
 		parsedInput[i.Name] = value
 	}
 
-	fmt.Println(pluginConfig.Spec.Inputs)
-
 	fmt.Printf("Executing plugin on %s\n", workdir)
-	out, err := execution.NewTerraformExecution(workdir, parsedInput)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(out)
-
-	return nil
+	return m.terraformProvider.Apply(workdir, parsedInput)
 }

@@ -1,15 +1,11 @@
 package main
 
 import (
-	"context"
-	"log"
-
-	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/hc-install/product"
-	"github.com/hashicorp/hc-install/releases"
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/controller/terraform"
+	"github.com/octopipe/cloudx/internal/controller/stackset"
+	"github.com/octopipe/cloudx/internal/pluginmanager"
+	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -46,21 +42,18 @@ func main() {
 		panic(err)
 	}
 
-	installer := &releases.ExactVersion{
-		Product: product.Terraform,
-		Version: version.Must(version.NewVersion("1.0.6")),
-	}
-
-	execPath, err := installer.Install(context.Background())
+	terraformProvider, err := provider.NewTerraformProvider()
 	if err != nil {
-		log.Fatalf("error installing Terraform: %s", err)
+		panic(err)
 	}
 
-	terraformController := terraform.NewController(
+	pluginManager := pluginmanager.NewPluginManager(terraformProvider)
+
+	terraformController := stackset.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		execPath,
+		pluginManager,
 	)
 
 	if err := terraformController.SetupWithManager(mgr); err != nil {
@@ -74,7 +67,7 @@ func main() {
 		panic(err)
 	}
 
-	logger.Info("start terraform controller")
+	logger.Info("start stackSet controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
 	}

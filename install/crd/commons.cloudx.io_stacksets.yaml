@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: stacks.commons.cloudx.io
+  name: stacksets.commons.cloudx.io
 spec:
   group: commons.cloudx.io
   names:
-    kind: Stack
-    listKind: StackList
-    plural: stacks
-    singular: stack
+    kind: StackSet
+    listKind: StackSetList
+    plural: stacksets
+    singular: stackset
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -60,20 +60,15 @@ spec:
                     name:
                       type: string
                     ref:
-                      properties:
-                        path:
-                          type: string
-                        type:
-                          type: string
-                      required:
-                      - path
-                      - type
-                      type: object
+                      type: string
+                    type:
+                      type: string
                   required:
                   - depends
                   - inputs
                   - name
                   - ref
+                  - type
                   type: object
                 type: array
             required:

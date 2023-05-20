@@ -6,15 +6,20 @@ import (
 
 	"github.com/octopipe/cloudx/cmd/cli/commands"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
+	"github.com/octopipe/cloudx/internal/provider"
 )
 
 func main() {
-	pluginManager := pluginmanager.NewPluginManager()
+	terraformProvider, err := provider.NewTerraformProvider()
+	if err != nil {
+		panic(err)
+	}
+	pluginManager := pluginmanager.NewPluginManager(terraformProvider)
 	pluginCmd := commands.NewPluginRoot(pluginManager)
-	stackCmd := commands.NewStackRoot(pluginManager)
+	stackSetCmd := commands.NewStackSetRoot(pluginManager)
 
 	commands.RootCmd.AddCommand(pluginCmd)
-	commands.RootCmd.AddCommand(stackCmd)
+	commands.RootCmd.AddCommand(stackSetCmd)
 
 	if err := commands.RootCmd.Execute(); err != nil {
 		fmt.Println(err)

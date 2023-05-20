@@ -1,14 +1,14 @@
-package v1alpha1
+package plugin
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type PluginInput struct {
-	Label    string      `json:"label"`
-	Name     string      `json:"name"`
-	Help     string      `json:"help"`
-	Required bool        `json:"required"`
-	Type     string      `json:"type"`
-	Default  interface{} `json:"default"`
+	Label    string `json:"label"`
+	Name     string `json:"name"`
+	Help     string `json:"help"`
+	Required bool   `json:"required"`
+	Type     string `json:"type"`
+	Default  string `json:"default"`
 }
 
 type PluginSpec struct {
