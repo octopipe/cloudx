@@ -1,4 +1,4 @@
-package provider
+package terraform
 
 import (
 	"context"
@@ -13,12 +13,18 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 )
 
+type TerraformProvider interface {
+	Apply(workdirPath string, input map[string]interface{}) ([]commonv1alpha1.SharedInfraPluginOutput, string, error)
+	Destroy(workdirPath string, input map[string]interface{}) error
+}
+
 type terraformProvider struct {
 	execPath string
 }
 
-func NewTerraformProvider() (Provider, error) {
-	err := os.MkdirAll("/tmp/terraform-ins", os.ModePerm)
+func NewTerraformProvider() (TerraformProvider, error) {
+	installDirPath := "/tmp/terraform-ins"
+	err := os.MkdirAll(installDirPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +32,7 @@ func NewTerraformProvider() (Provider, error) {
 	installer := &releases.ExactVersion{
 		Product:    product.Terraform,
 		Version:    version.Must(version.NewVersion("1.0.6")),
-		InstallDir: "/tmp/terraform-ins",
+		InstallDir: installDirPath,
 	}
 
 	execPath, err := installer.Install(context.Background())
@@ -39,7 +45,7 @@ func NewTerraformProvider() (Provider, error) {
 	}, nil
 }
 
-func (p terraformProvider) Apply(workdirPath string, input map[string]interface{}) ([]commonv1alpha1.StackSetPluginOutput, string, error) {
+func (p terraformProvider) Apply(workdirPath string, input map[string]interface{}) ([]commonv1alpha1.SharedInfraPluginOutput, string, error) {
 	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
 	if err != nil {
 		return nil, "", err
@@ -50,8 +56,8 @@ func (p terraformProvider) Apply(workdirPath string, input map[string]interface{
 		return nil, "", err
 	}
 
-	execVarsFile := filepath.Join(workdirPath, "exec.tfvars")
-	f, err := os.Create(execVarsFile)
+	execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
+	f, err := os.Create(execVarsFilePath)
 	if err != nil {
 		return nil, "", err
 	}
@@ -60,7 +66,7 @@ func (p terraformProvider) Apply(workdirPath string, input map[string]interface{
 		f.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, val))
 	}
 
-	err = tf.Apply(context.Background(), tfexec.VarFile(execVarsFile))
+	err = tf.Apply(context.Background(), tfexec.VarFile(execVarsFilePath))
 	if err != nil {
 		return nil, "", err
 	}
@@ -70,16 +76,17 @@ func (p terraformProvider) Apply(workdirPath string, input map[string]interface{
 		return nil, "", err
 	}
 
-	outputs := []commonv1alpha1.StackSetPluginOutput{}
+	outputs := []commonv1alpha1.SharedInfraPluginOutput{}
 
 	for key, value := range out {
-		outputs = append(outputs, commonv1alpha1.StackSetPluginOutput{
+		outputs = append(outputs, commonv1alpha1.SharedInfraPluginOutput{
 			Key:   key,
 			Value: string(value.Value),
 		})
 	}
 
-	stateFile, err := os.ReadFile(fmt.Sprintf("%s/terraform.tfstate", workdirPath))
+	stateFilePath := fmt.Sprintf("%s/terraform.tfstate", workdirPath)
+	stateFile, err := os.ReadFile(stateFilePath)
 	if err != nil {
 		return nil, "", err
 	}
@@ -98,8 +105,8 @@ func (p terraformProvider) Destroy(workdirPath string, input map[string]interfac
 		return err
 	}
 
-	execVarsFile := filepath.Join(workdirPath, "exec.tfvars")
-	f, err := os.Create(execVarsFile)
+	execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
+	f, err := os.Create(execVarsFilePath)
 	if err != nil {
 		return err
 	}
@@ -108,7 +115,7 @@ func (p terraformProvider) Destroy(workdirPath string, input map[string]interfac
 		f.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, val))
 	}
 
-	err = tf.Destroy(context.Background(), tfexec.VarFile(execVarsFile))
+	err = tf.Destroy(context.Background(), tfexec.VarFile(execVarsFilePath))
 	if err != nil {
 		return err
 	}

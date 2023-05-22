@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/controller/stackset"
+	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
-	"github.com/octopipe/cloudx/internal/provider"
+	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -42,14 +42,14 @@ func main() {
 		panic(err)
 	}
 
-	terraformProvider, err := provider.NewTerraformProvider()
+	terraformProvider, err := terraform.NewTerraformProvider()
 	if err != nil {
 		panic(err)
 	}
 
 	pluginManager := pluginmanager.NewPluginManager(terraformProvider)
 
-	terraformController := stackset.NewController(
+	terraformController := sharedinfra.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
@@ -67,7 +67,7 @@ func main() {
 		panic(err)
 	}
 
-	logger.Info("start stackSet controller")
+	logger.Info("start sharedInfra controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
 	}

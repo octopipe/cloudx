@@ -5,22 +5,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type stackSetCmd struct {
+type sharedInfraCmd struct {
 }
 
-func (p stackSetCmd) NewStackSetCmd() *cobra.Command {
+func (p sharedInfraCmd) NewSharedInfraCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "stackSet",
-		Short: "Manage stackSets",
+		Use:   "sharedInfra",
+		Short: "Manage sharedInfras",
 		Run: func(cmd *cobra.Command, args []string) {
 		},
 	}
 }
 
-func (p stackSetCmd) NewCreateStackSetCmd() *cobra.Command {
+func (p sharedInfraCmd) NewCreateSharedInfraCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "create",
-		Short: "create a stackSet",
+		Short: "create a sharedInfra",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -28,11 +28,11 @@ func (p stackSetCmd) NewCreateStackSetCmd() *cobra.Command {
 	}
 }
 
-func NewStackSetRoot(pluginManager pluginmanager.Manager) *cobra.Command {
-	stackSetRoot := stackSetCmd{}
+func NewSharedInfraRoot(pluginManager pluginmanager.Manager) *cobra.Command {
+	sharedInfraRoot := sharedInfraCmd{}
 
-	stackSetCmd := stackSetRoot.NewStackSetCmd()
-	stackSetCmd.AddCommand(stackSetRoot.NewCreateStackSetCmd())
+	sharedInfraCmd := sharedInfraRoot.NewSharedInfraCmd()
+	sharedInfraCmd.AddCommand(sharedInfraRoot.NewCreateSharedInfraCmd())
 
-	return stackSetCmd
+	return sharedInfraCmd
 }

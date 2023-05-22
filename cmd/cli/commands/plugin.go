@@ -76,7 +76,7 @@ func (p pluginCmd) NewExecutPluginCmd() *cobra.Command {
 				log.Fatalln(err)
 			}
 
-			_, err = p.pluginManager.Execute(name, input)
+			_, _, err = p.pluginManager.ExecuteTerraformPlugin(name, input)
 			if err != nil {
 				log.Fatalln(err)
 			}
