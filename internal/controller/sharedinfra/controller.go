@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 type Controller interface {
@@ -59,6 +60,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		executionGraph:  executionGraph,
 		executedNodes:   map[string][]commonv1alpha1.SharedInfraPluginOutput{},
 	}
+
 	pluginStatus, err := c.execute(&newExecutionContext, currentSharedInfra.Spec.Plugins)
 	if err != nil {
 		return ctrl.Result{}, nil
@@ -169,5 +171,6 @@ func createGraphs(stackset commonv1alpha1.SharedInfra) (map[string][]string, map
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&commonv1alpha1.SharedInfra{}).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Complete(c)
 }

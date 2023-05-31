@@ -15,7 +15,7 @@ import (
 
 type TerraformProvider interface {
 	Apply(workdirPath string, input map[string]interface{}) ([]commonv1alpha1.SharedInfraPluginOutput, string, error)
-	Destroy(workdirPath string, input map[string]interface{}) error
+	Destroy(workdirPath string, state string) error
 }
 
 type terraformProvider struct {
@@ -94,7 +94,7 @@ func (p terraformProvider) Apply(workdirPath string, input map[string]interface{
 	return outputs, string(stateFile), nil
 }
 
-func (p terraformProvider) Destroy(workdirPath string, input map[string]interface{}) error {
+func (p terraformProvider) Destroy(workdirPath string, state string) error {
 	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
 	if err != nil {
 		return err
@@ -106,16 +106,12 @@ func (p terraformProvider) Destroy(workdirPath string, input map[string]interfac
 	}
 
 	execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
-	f, err := os.Create(execVarsFilePath)
+	_, err = os.Create(execVarsFilePath)
 	if err != nil {
 		return err
 	}
 
-	for key, val := range input {
-		f.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, val))
-	}
-
-	err = tf.Destroy(context.Background(), tfexec.VarFile(execVarsFilePath))
+	err = tf.Destroy(context.Background(), tfexec.StateOut(""))
 	if err != nil {
 		return err
 	}

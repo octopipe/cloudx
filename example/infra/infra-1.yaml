@@ -6,18 +6,17 @@ spec:
   author: Maycon Pacheco
   description: SharedInfra for example 1
   plugins:
-  - name: plugin-a
-    ref: mayconjrpacheco/ec2-plugin:latest
+  - name: sqs
+    ref: mayconjrpacheco/sqs:latest
     depends: []
     type: terraform
     inputs:
     - key: name
-      value: maycon
-  - name: plugin-b
-    ref: mayconjrpacheco/ec2-plugin:latest
+      value: celio
+  - name: sqs-policy
+    ref: mayconjrpacheco/sqs-policy:latest
     type: terraform
-    depends:
-      - plugin-a
+    depends: []
     inputs:
     - key: name
-      value: junio
+      value: santos

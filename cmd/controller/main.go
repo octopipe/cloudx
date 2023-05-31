@@ -23,10 +23,6 @@ func init() {
 	utilruntime.Must(commonv1alpha1.AddToScheme(scheme))
 }
 
-func init() {
-
-}
-
 func main() {
 	logger, _ := zap.NewProduction()
 	_ = godotenv.Load()

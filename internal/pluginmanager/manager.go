@@ -33,7 +33,7 @@ func NewPluginManager(terraformProvider terraform.TerraformProvider) Manager {
 }
 
 func (m manager) Publish(pluginName string, filecontents map[string][]byte) error {
-	tag, err := name.NewTag("mayconjrpacheco/ec2-plugin:latest")
+	tag, err := name.NewTag("mayconjrpacheco/celio-plugin:latest")
 	if err != nil {
 		return err
 	}
