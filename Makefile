@@ -27,14 +27,19 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=install/crd
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=install/crd
 
-install: manifests ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: manifests
 	kubectl apply -f install/crd
+	kubectl apply -f install/rbac
+
 
 build-job:
-	docker build -t mayconjrpacheco/cloudx-job:latest -f Dockerfile.job .
-	docker push mayconjrpacheco/cloudx-job:latest
+	docker build -t mayconjrpacheco/cloudx-runner:latest -f Dockerfile.runner .
+	docker push mayconjrpacheco/cloudx-runner:latest
+
+controller:
+	go run cmd/controller/*.go

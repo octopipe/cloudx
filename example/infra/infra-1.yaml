@@ -12,11 +12,11 @@ spec:
     type: terraform
     inputs:
     - key: name
-      value: celio
+      value: matheus
   - name: sqs-policy
     ref: mayconjrpacheco/celio-plugin:latest
     type: terraform
     depends: []
     inputs:
     - key: name
-      value: santos
+      value: leandro

@@ -76,24 +76,43 @@ spec:
             type: object
           status:
             properties:
-              error:
-                type: string
-              lastExecutionAt:
-                type: string
-              lastExecutionStatus:
-                type: string
-              plugins:
+              executions:
+                description: LastExecutionStatus string                       `json:"lastExecutionStatus,omitempty"`
+                  LastExecutionAt     string                       `json:"lastExecutionAt,omitempty"`
+                  Error               string                       `json:"error,omitempty"`
+                  Plugins             []PluginStatus               `json:"plugins,omitempty"`
                 items:
                   properties:
                     error:
                       type: string
-                    executionAt:
-                      type: string
-                    executionStatus:
-                      type: string
-                    name:
-                      type: string
-                    state:
+                    finishedAt:
+                      format: int64
+                      type: integer
+                    plugins:
+                      items:
+                        properties:
+                          dependencyLock:
+                            type: string
+                          error:
+                            type: string
+                          finishedAt:
+                            format: int64
+                            type: integer
+                          name:
+                            type: string
+                          startedAt:
+                            format: int64
+                            type: integer
+                          state:
+                            type: string
+                          status:
+                            type: string
+                        type: object
+                      type: array
+                    startedAt:
+                      format: int64
+                      type: integer
+                    status:
                       type: string
                   type: object
                 type: array

@@ -29,7 +29,6 @@ type controller struct {
 }
 
 func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, pluginManager pluginmanager.Manager) Controller {
-
 	return &controller{
 		Client:        client,
 		logger:        logger,
@@ -44,13 +43,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return ctrl.Result{}, nil
 	}
-
-	// rawSharedInfra, err := json.Marshal(currentSharedInfra)
-	// if err != nil {
-	// 	return ctrl.Result{}, nil
-	// }
-
-	// c.logger.Info("Start job for sharedinfra", zap.String("name", currentSharedInfra.GetName()))
 
 	blockOwnerDeletion := true
 	controller := true
@@ -80,7 +72,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Containers: []v1.Container{
 				{
 					Name:            "runner",
-					Image:           "mayconjrpacheco/cloudx-job:latest",
+					Image:           "mayconjrpacheco/cloudx-runner:latest",
 					Command:         []string{"/job-bin", req.String()},
 					ImagePullPolicy: v1.PullAlways,
 				},

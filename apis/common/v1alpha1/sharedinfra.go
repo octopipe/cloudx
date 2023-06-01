@@ -34,18 +34,29 @@ type SharedInfraSpec struct {
 }
 
 type PluginStatus struct {
-	Name            string `json:"name,omitempty"`
-	State           string `json:"state,omitempty"`
-	ExecutionStatus string `json:"executionStatus,omitempty"`
-	ExecutionAt     string `json:"executionAt,omitempty"`
-	Error           string `json:"error,omitempty"`
+	Name           string `json:"name,omitempty"`
+	State          string `json:"state,omitempty"`
+	DependencyLock string `json:"dependencyLock,omitempty"`
+	StartedAt      int64  `json:"startedAt,omitempty"`
+	FinishedAt     int64  `json:"finishedAt,omitempty"`
+	Status         string `json:"status,omitempty"`
+	Error          string `json:"error,omitempty"`
+}
+
+type SharedInfraExecutionStatus struct {
+	Plugins    []PluginStatus `json:"plugins,omitempty"`
+	StartedAt  int64          `json:"startedAt,omitempty"`
+	FinishedAt int64          `json:"finishedAt,omitempty"`
+	Status     string         `json:"status,omitempty"`
+	Error      string         `json:"error,omitempty"`
 }
 
 type SharedInfraStatus struct {
-	LastExecutionStatus string         `json:"lastExecutionStatus,omitempty"`
-	LastExecutionAt     string         `json:"lastExecutionAt,omitempty"`
-	Error               string         `json:"error,omitempty"`
-	Plugins             []PluginStatus `json:"plugins,omitempty"`
+	// LastExecutionStatus string                       `json:"lastExecutionStatus,omitempty"`
+	// LastExecutionAt     string                       `json:"lastExecutionAt,omitempty"`
+	// Error               string                       `json:"error,omitempty"`
+	// Plugins             []PluginStatus               `json:"plugins,omitempty"`
+	Executions []SharedInfraExecutionStatus `json:"executions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

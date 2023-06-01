@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"net/rpc"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
@@ -34,6 +37,7 @@ func init() {
 type executionContext struct {
 	pluginManager pluginmanager.Manager
 	mu            sync.Mutex
+	rpcClient     *rpc.Client
 
 	dependencyGraph map[string][]string
 	executionGraph  map[string][]string
@@ -50,6 +54,11 @@ func main() {
 	})
 	if err != nil {
 		panic(err)
+	}
+
+	rpcClient, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:9000", "localhost"))
+	if err != nil {
+		log.Fatal("dialing:", err)
 	}
 
 	terraformProvider, err := terraform.NewTerraformProvider(logger)
@@ -82,16 +91,40 @@ func main() {
 
 	dependencyGraph, executionGraph := createGraphs(*currentSharedInfra)
 	newExecutionContext := executionContext{
+		rpcClient:       rpcClient,
 		pluginManager:   pluginManager,
 		dependencyGraph: dependencyGraph,
 		executionGraph:  executionGraph,
 		executedNodes:   map[string][]commonv1alpha1.SharedInfraPluginOutput{},
 	}
 
-	_, err = newExecutionContext.execute(currentSharedInfra.Spec.Plugins)
+	startedAt := time.Now().Unix()
+	errMsg := ""
+	status := "Success"
+	pluginStatus, err := newExecutionContext.execute(currentSharedInfra.Spec.Plugins)
 	if err != nil {
-		logger.Fatal("error in execution", zap.Error(err))
+		errMsg = err.Error()
+		status = "Error"
 	}
+
+	args := &sharedinfra.RPCSetRunnerFinishedArgs{
+		Ref: req,
+		Execution: commonv1alpha1.SharedInfraExecutionStatus{
+			Error:      errMsg,
+			StartedAt:  startedAt,
+			Plugins:    pluginStatus,
+			Status:     status,
+			FinishedAt: time.Now().Unix(),
+		},
+	}
+
+	var reply int
+	err = rpcClient.Call("RPCServer.SetRunnerFinished", args, &reply)
+	if err != nil {
+		logger.Fatal("Error to call controller", zap.Error(err))
+	}
+
+	logger.Info("Finish runner execution")
 }
 
 func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) ([]commonv1alpha1.PluginStatus, error) {
@@ -107,15 +140,17 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 						inputs[i.Key] = i.Value
 					}
 
+					startedAt := time.Now().Unix()
 					if p.PluginType == "terraform" {
 						out, state, err := c.pluginManager.ExecuteTerraformPlugin(currentPlugin.Ref, inputs)
 						if err != nil {
 							status = append(status, commonv1alpha1.PluginStatus{
-								Name:            p.Name,
-								State:           state,
-								ExecutionStatus: "Error",
-								ExecutionAt:     strconv.Itoa(int(time.Now().Unix())),
-								Error:           err.Error(),
+								Name:       p.Name,
+								State:      state,
+								Status:     "Error",
+								StartedAt:  startedAt,
+								FinishedAt: time.Now().Unix(),
+								Error:      err.Error(),
 							})
 							return err
 						}
@@ -123,10 +158,11 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 						c.mu.Lock()
 						defer c.mu.Unlock()
 						status = append(status, commonv1alpha1.PluginStatus{
-							Name:            p.Name,
-							State:           state,
-							ExecutionStatus: "ExecutedWithSuccess",
-							ExecutionAt:     strconv.Itoa(int(time.Now().Unix())),
+							Name:       p.Name,
+							State:      state,
+							Status:     "ExecutedWithSuccess",
+							StartedAt:  startedAt,
+							FinishedAt: time.Now().Unix(),
 						})
 						c.executedNodes[currentPlugin.Name] = out
 					}

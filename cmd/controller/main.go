@@ -1,6 +1,10 @@
 package main
 
 import (
+	"net"
+	"net/http"
+	"net/rpc"
+
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/runner"
@@ -74,6 +78,17 @@ func main() {
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		panic(err)
 	}
+
+	rpcServer := sharedinfra.NewRPCServer(mgr.GetClient(), logger)
+	rpc.Register(rpcServer)
+	rpc.HandleHTTP()
+	l, e := net.Listen("tcp", ":9000")
+	if e != nil {
+		panic(err)
+	}
+
+	logger.Info("start rpc server")
+	go http.Serve(l, nil)
 
 	logger.Info("start sharedInfra controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
