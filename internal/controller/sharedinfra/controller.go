@@ -3,14 +3,13 @@ package sharedinfra
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"sync"
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,17 +23,9 @@ type Controller interface {
 
 type controller struct {
 	client.Client
-	logger           *zap.Logger
-	scheme           *runtime.Scheme
-	pluginManager    pluginmanager.Manager
-	mu               sync.Mutex
-	executionContext executionContext
-}
-
-type executionContext struct {
-	dependencyGraph map[string][]string
-	executionGraph  map[string][]string
-	executedNodes   map[string][]commonv1alpha1.SharedInfraPluginOutput
+	logger        *zap.Logger
+	scheme        *runtime.Scheme
+	pluginManager pluginmanager.Manager
 }
 
 func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, pluginManager pluginmanager.Manager) Controller {
@@ -54,118 +45,61 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	dependencyGraph, executionGraph := createGraphs(*currentSharedInfra)
-	newExecutionContext := executionContext{
-		dependencyGraph: dependencyGraph,
-		executionGraph:  executionGraph,
-		executedNodes:   map[string][]commonv1alpha1.SharedInfraPluginOutput{},
+	// rawSharedInfra, err := json.Marshal(currentSharedInfra)
+	// if err != nil {
+	// 	return ctrl.Result{}, nil
+	// }
+
+	// c.logger.Info("Start job for sharedinfra", zap.String("name", currentSharedInfra.GetName()))
+
+	blockOwnerDeletion := true
+	controller := true
+	newRunner := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-runner-%d", currentSharedInfra.GetName(), time.Now().Unix()),
+			Namespace: "default",
+			Labels: map[string]string{
+				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
+				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
+				"app.kubernetes.io/managed-by":            "cloudx",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         commonv1alpha1.GroupVersion.String(),
+					BlockOwnerDeletion: &blockOwnerDeletion,
+					Controller:         &controller,
+					Kind:               "SharedInfra",
+					Name:               currentSharedInfra.GetName(),
+					UID:                currentSharedInfra.UID,
+				},
+			},
+		},
+		Spec: v1.PodSpec{
+			ServiceAccountName: "controller-cloudx",
+			RestartPolicy:      v1.RestartPolicyNever,
+			Containers: []v1.Container{
+				{
+					Name:            "runner",
+					Image:           "mayconjrpacheco/cloudx-job:latest",
+					Command:         []string{"/job-bin", req.String()},
+					ImagePullPolicy: v1.PullAlways,
+				},
+			},
+		},
 	}
 
-	pluginStatus, err := c.execute(&newExecutionContext, currentSharedInfra.Spec.Plugins)
+	err = c.Create(ctx, newRunner)
 	if err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
-	currentSharedInfra.Status.Plugins = pluginStatus
+	// currentSharedInfra.Status.Plugins = pluginStatus
 	err = c.Status().Update(ctx, currentSharedInfra)
 	if err != nil {
 		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (c *controller) execute(executionContext *executionContext, plugins []commonv1alpha1.SharedInfraPlugin) ([]commonv1alpha1.PluginStatus, error) {
-	status := []commonv1alpha1.PluginStatus{}
-	eg, _ := errgroup.WithContext(context.Background())
-	for _, p := range plugins {
-		if _, ok := executionContext.executedNodes[p.Name]; !ok && isComplete(executionContext.dependencyGraph[p.Name], executionContext.executedNodes) {
-			cb := func(currentPlugin commonv1alpha1.SharedInfraPlugin) func() error {
-				return func() error {
-					inputs := map[string]interface{}{}
-
-					for _, i := range currentPlugin.Inputs {
-						inputs[i.Key] = i.Value
-					}
-
-					if p.PluginType == "terraform" {
-						out, state, err := c.pluginManager.ExecuteTerraformPlugin(currentPlugin.Ref, inputs)
-						if err != nil {
-							status = append(status, commonv1alpha1.PluginStatus{
-								Name:            p.Name,
-								State:           state,
-								ExecutionStatus: "Error",
-								ExecutionAt:     strconv.Itoa(int(time.Now().Unix())),
-								Error:           err.Error(),
-							})
-							return err
-						}
-
-						c.mu.Lock()
-						defer c.mu.Unlock()
-						status = append(status, commonv1alpha1.PluginStatus{
-							Name:            p.Name,
-							State:           state,
-							ExecutionStatus: "ExecutedWithSuccess",
-							ExecutionAt:     strconv.Itoa(int(time.Now().Unix())),
-						})
-						executionContext.executedNodes[currentPlugin.Name] = out
-					}
-					return nil
-				}
-			}
-			eg.Go(cb(p))
-		}
-	}
-
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-
-	fmt.Println(len(executionContext.executedNodes) == len(executionContext.executionGraph))
-
-	if len(executionContext.executedNodes) == len(executionContext.executionGraph) {
-		return status, nil
-	}
-
-	p, err := c.execute(executionContext, plugins)
-	if err != nil {
-		return nil, err
-	}
-
-	status = append(status, p...)
-	return status, nil
-}
-
-func isComplete(dependencies []string, executedNodes map[string][]commonv1alpha1.SharedInfraPluginOutput) bool {
-	isComplete := true
-
-	for _, d := range dependencies {
-		if _, ok := executedNodes[d]; !ok {
-			isComplete = false
-		}
-	}
-
-	return isComplete || len(dependencies) <= 0
-}
-
-func createGraphs(stackset commonv1alpha1.SharedInfra) (map[string][]string, map[string][]string) {
-
-	dependencyGraph := map[string][]string{}
-	executionGraph := map[string][]string{}
-
-	for _, p := range stackset.Spec.Plugins {
-		dependencyGraph[p.Name] = p.Depends
-		executionGraph[p.Name] = []string{}
-	}
-
-	for _, p := range stackset.Spec.Plugins {
-		for _, d := range p.Depends {
-			executionGraph[d] = append(executionGraph[d], p.Name)
-		}
-	}
-
-	return dependencyGraph, executionGraph
 }
 
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {

@@ -34,3 +34,7 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 
 install: manifests ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	kubectl apply -f install/crd
+
+build-job:
+	docker build -t mayconjrpacheco/cloudx-job:latest -f Dockerfile.job .
+	docker push mayconjrpacheco/cloudx-job:latest

@@ -7,14 +7,16 @@ import (
 	"github.com/octopipe/cloudx/cmd/cli/commands"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
 	"github.com/octopipe/cloudx/internal/terraform"
+	"go.uber.org/zap"
 )
 
 func main() {
-	terraformProvider, err := terraform.NewTerraformProvider()
+	logger, _ := zap.NewProduction()
+	terraformProvider, err := terraform.NewTerraformProvider(logger)
 	if err != nil {
 		panic(err)
 	}
-	pluginManager := pluginmanager.NewPluginManager(terraformProvider)
+	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
 	pluginCmd := commands.NewPluginRoot(pluginManager)
 	sharedInfraCmd := commands.NewSharedInfraRoot(pluginManager)
 

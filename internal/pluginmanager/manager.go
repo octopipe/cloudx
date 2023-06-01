@@ -14,6 +14,7 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/plugin"
 	"github.com/octopipe/cloudx/internal/terraform"
+	"go.uber.org/zap"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -23,11 +24,13 @@ type Manager interface {
 }
 
 type manager struct {
+	logger            *zap.Logger
 	terraformProvider terraform.TerraformProvider
 }
 
-func NewPluginManager(terraformProvider terraform.TerraformProvider) Manager {
+func NewPluginManager(logger *zap.Logger, terraformProvider terraform.TerraformProvider) Manager {
 	return manager{
+		logger:            logger,
 		terraformProvider: terraformProvider,
 	}
 }
@@ -52,7 +55,7 @@ func (m manager) Publish(pluginName string, filecontents map[string][]byte) erro
 }
 
 func (m manager) prepareExecution(pluginRef string, input map[string]interface{}) (string, map[string]interface{}, error) {
-	fmt.Println("Pulling plugin")
+	m.logger.Info("pulling plugin image", zap.String("image", pluginRef))
 	img, err := crane.Pull(pluginRef)
 	if err != nil {
 		return "", nil, err
@@ -69,7 +72,7 @@ func (m manager) prepareExecution(pluginRef string, input map[string]interface{}
 
 	rawPluginConfig := []byte{}
 
-	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", strconv.Itoa(int(time.Now().Unix())))
+	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", strconv.Itoa(int(time.Now().UnixNano())))
 
 	err = os.MkdirAll(workdir, os.ModePerm)
 	if err != nil {
@@ -137,6 +140,6 @@ func (m manager) ExecuteTerraformPlugin(pluginRef string, input map[string]inter
 		return nil, "", err
 	}
 
-	fmt.Printf("Executing plugin on %s\n", workdir)
+	m.logger.Info("Executing plugin", zap.String("workdir", workdir))
 	return m.terraformProvider.Apply(workdir, parsedInput)
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
 	"github.com/octopipe/cloudx/internal/terraform"
@@ -38,12 +39,12 @@ func main() {
 		panic(err)
 	}
 
-	terraformProvider, err := terraform.NewTerraformProvider()
+	terraformProvider, err := terraform.NewTerraformProvider(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	pluginManager := pluginmanager.NewPluginManager(terraformProvider)
+	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
 
 	terraformController := sharedinfra.NewController(
 		logger,
@@ -52,7 +53,18 @@ func main() {
 		pluginManager,
 	)
 
+	runnerController := runner.NewController(
+		logger,
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		pluginManager,
+	)
+
 	if err := terraformController.SetupWithManager(mgr); err != nil {
+		panic(err)
+	}
+
+	if err := runnerController.SetupWithManager(mgr); err != nil {
 		panic(err)
 	}
 

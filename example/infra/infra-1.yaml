@@ -7,14 +7,14 @@ spec:
   description: SharedInfra for example 1
   plugins:
   - name: sqs
-    ref: mayconjrpacheco/sqs:latest
+    ref: mayconjrpacheco/celio-plugin:latest
     depends: []
     type: terraform
     inputs:
     - key: name
       value: celio
   - name: sqs-policy
-    ref: mayconjrpacheco/sqs-policy:latest
+    ref: mayconjrpacheco/celio-plugin:latest
     type: terraform
     depends: []
     inputs:
