@@ -9,22 +9,23 @@ type SharedInfraPluginRef struct {
 	Path string `json:"path"`
 }
 
-type SharedInfraPluginOutput struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
 type SharedInfraPluginInput struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
+type SharedInfraPluginOutput struct {
+	Key       string `json:"key"`
+	Sensitive bool   `json:"sensitive"`
+}
+
 type SharedInfraPlugin struct {
-	Name       string                   `json:"name"`
-	Ref        string                   `json:"ref"`
-	Depends    []string                 `json:"depends"`
-	PluginType string                   `json:"type"`
-	Inputs     []SharedInfraPluginInput `json:"inputs"`
+	Name       string                    `json:"name"`
+	Ref        string                    `json:"ref"`
+	Depends    []string                  `json:"depends"`
+	PluginType string                    `json:"type"`
+	Inputs     []SharedInfraPluginInput  `json:"inputs"`
+	Outputs    []SharedInfraPluginOutput `json:"outputs"`
 }
 
 type SharedInfraSpec struct {
@@ -52,10 +53,6 @@ type SharedInfraExecutionStatus struct {
 }
 
 type SharedInfraStatus struct {
-	// LastExecutionStatus string                       `json:"lastExecutionStatus,omitempty"`
-	// LastExecutionAt     string                       `json:"lastExecutionAt,omitempty"`
-	// Error               string                       `json:"error,omitempty"`
-	// Plugins             []PluginStatus               `json:"plugins,omitempty"`
 	Executions []SharedInfraExecutionStatus `json:"executions,omitempty"`
 }
 

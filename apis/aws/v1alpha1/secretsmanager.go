@@ -4,12 +4,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type SecretManagerSpec struct {
-	Author      string `json:"author,omitempty" default:"anonymous"`
-	Description string `json:"description,omitempty"`
+type SecretsManagerSpec struct {
+	Author       string `json:"author,omitempty" default:"anonymous"`
+	Description  string `json:"description,omitempty"`
+	Name         string `json:"name,omitempty"`
+	SecretString string `json:"secretString,omitempty"`
+	KmsKeyId     string `json:"kmsKeyId"`
 }
 
-type SecretManagerStatus struct {
+type SecretsManagerStatus struct {
 	// Executions []SharedInfraExecutionStatus `json:"executions,omitempty"`
 }
 
@@ -17,23 +20,23 @@ type SecretManagerStatus struct {
 //+kubebuilder:subresource:status
 
 // Circle is the Schema for the circles API
-type SecretManager struct {
+type SecretsManager struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   SecretManagerSpec   `json:"spec,omitempty"`
-	Status SecretManagerStatus `json:"status,omitempty"`
+	Spec   SecretsManagerSpec   `json:"spec,omitempty"`
+	Status SecretsManagerStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
 // CircleList contains a list of Circle
-type SecretManagerList struct {
+type SecretsManagerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []SecretManager `json:"items"`
+	Items           []SecretsManager `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&SecretManager{}, &SecretManagerList{})
+	SchemeBuilder.Register(&SecretsManager{}, &SecretsManagerList{})
 }

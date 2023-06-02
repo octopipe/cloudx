@@ -13,8 +13,8 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
-	"github.com/octopipe/cloudx/internal/pluginmanager"
-	"github.com/octopipe/cloudx/internal/terraform"
+	providerIO "github.com/octopipe/cloudx/internal/provider/io"
+	"github.com/octopipe/cloudx/internal/provider/terraform"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,13 +35,13 @@ func init() {
 }
 
 type executionContext struct {
-	pluginManager pluginmanager.Manager
-	mu            sync.Mutex
-	rpcClient     *rpc.Client
+	terraformProvider terraform.TerraformProvider
+	mu                sync.Mutex
+	rpcClient         *rpc.Client
 
 	dependencyGraph map[string][]string
 	executionGraph  map[string][]string
-	executedNodes   map[string][]commonv1alpha1.SharedInfraPluginOutput
+	executedNodes   map[string]providerIO.ProviderOutput
 }
 
 func main() {
@@ -61,12 +61,28 @@ func main() {
 		log.Fatal("dialing:", err)
 	}
 
+	go func() {
+
+		time.Sleep(5 * time.Minute)
+
+		var reply int
+		args := &sharedinfra.RPCSetRunnerTimeoutArgs{
+			RunnerRef: types.NamespacedName{},
+		}
+
+		err := rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
+		if err != nil {
+			logger.Fatal("call rpc timeout error")
+		}
+
+		logger.Fatal("Runner timeout")
+	}()
+
 	terraformProvider, err := terraform.NewTerraformProvider(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
 	sharedInfraRef := os.Args[1:]
 
@@ -91,11 +107,11 @@ func main() {
 
 	dependencyGraph, executionGraph := createGraphs(*currentSharedInfra)
 	newExecutionContext := executionContext{
-		rpcClient:       rpcClient,
-		pluginManager:   pluginManager,
-		dependencyGraph: dependencyGraph,
-		executionGraph:  executionGraph,
-		executedNodes:   map[string][]commonv1alpha1.SharedInfraPluginOutput{},
+		rpcClient:         rpcClient,
+		terraformProvider: terraformProvider,
+		dependencyGraph:   dependencyGraph,
+		executionGraph:    executionGraph,
+		executedNodes:     map[string]providerIO.ProviderOutput{},
 	}
 
 	startedAt := time.Now().Unix()
@@ -141,8 +157,9 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 					}
 
 					startedAt := time.Now().Unix()
+					providerInputs := providerIO.ToProviderInput(p.Inputs)
 					if p.PluginType == "terraform" {
-						out, state, err := c.pluginManager.ExecuteTerraformPlugin(currentPlugin.Ref, inputs)
+						out, state, err := c.terraformProvider.Apply(p.Ref, providerInputs)
 						if err != nil {
 							status = append(status, commonv1alpha1.PluginStatus{
 								Name:       p.Name,
@@ -190,7 +207,7 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 	return status, nil
 }
 
-func isComplete(dependencies []string, executedNodes map[string][]commonv1alpha1.SharedInfraPluginOutput) bool {
+func isComplete(dependencies []string, executedNodes map[string]providerIO.ProviderOutput) bool {
 	isComplete := true
 
 	for _, d := range dependencies {

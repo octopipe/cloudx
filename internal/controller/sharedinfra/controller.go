@@ -75,6 +75,16 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					Image:           "mayconjrpacheco/cloudx-runner:latest",
 					Command:         []string{"/job-bin", req.String()},
 					ImagePullPolicy: v1.PullAlways,
+					Env: []v1.EnvVar{
+						{
+							Name:  "TF_VERSION",
+							Value: "latest",
+						},
+						{
+							Name:  "RPC_SERVER",
+							Value: "localhost:9000",
+						},
+					},
 				},
 			},
 		},
