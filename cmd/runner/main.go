@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/rpc"
 	"os"
@@ -56,7 +55,7 @@ func main() {
 		panic(err)
 	}
 
-	rpcClient, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:9000", "localhost"))
+	rpcClient, err := rpc.DialHTTP("tcp", os.Getenv("RPC_SERVER"))
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}

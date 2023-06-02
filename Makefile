@@ -32,14 +32,23 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=install/crd
 
-install: manifests
-	kubectl apply -f install/crd
-	kubectl apply -f install/rbac
-
-
 build-job:
 	docker build -t mayconjrpacheco/cloudx-runner:latest -f Dockerfile.runner .
 	docker push mayconjrpacheco/cloudx-runner:latest
+
+build-controller:
+	docker build -t mayconjrpacheco/cloudx-controller:latest -f Dockerfile.controller .
+	docker push mayconjrpacheco/cloudx-controller:latest
+
+install-manifests: manifests build-job build-controller
+	kubectl apply -f install/crd
+	kubectl apply -f install/controller
+	kubectl apply -f install/rbac
+
+install: manifests build-job build-controller
+	kubectl apply -f install/crd
+	kubectl apply -f install/controller
+	kubectl apply -f install/rbac
 
 controller:
 	go run cmd/controller/*.go

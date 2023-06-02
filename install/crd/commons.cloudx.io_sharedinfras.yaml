@@ -59,6 +59,18 @@ spec:
                       type: array
                     name:
                       type: string
+                    outputs:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          sensitive:
+                            type: boolean
+                        required:
+                        - key
+                        - sensitive
+                        type: object
+                      type: array
                     ref:
                       type: string
                     type:
@@ -67,6 +79,7 @@ spec:
                   - depends
                   - inputs
                   - name
+                  - outputs
                   - ref
                   - type
                   type: object
@@ -77,10 +90,6 @@ spec:
           status:
             properties:
               executions:
-                description: LastExecutionStatus string                       `json:"lastExecutionStatus,omitempty"`
-                  LastExecutionAt     string                       `json:"lastExecutionAt,omitempty"`
-                  Error               string                       `json:"error,omitempty"`
-                  Plugins             []PluginStatus               `json:"plugins,omitempty"`
                 items:
                   properties:
                     error:

@@ -10,13 +10,15 @@ spec:
     ref: mayconjrpacheco/celio-plugin:latest
     depends: []
     type: terraform
+    outputs: []
     inputs:
     - key: name
-      value: matheus
+      value: matheusaaa
   - name: sqs-policy
     ref: mayconjrpacheco/celio-plugin:latest
     type: terraform
     depends: []
+    outputs: []
     inputs:
     - key: name
       value: leandro

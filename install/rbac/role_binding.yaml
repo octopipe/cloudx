@@ -8,5 +8,5 @@ roleRef:
   name: cloudx-role
 subjects:
 - kind: ServiceAccount
-  name: controller-cloudx
-  namespace: default
+  name: controller-sa
+  namespace: cloudx

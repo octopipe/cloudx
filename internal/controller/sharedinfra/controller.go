@@ -49,7 +49,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	newRunner := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-runner-%d", currentSharedInfra.GetName(), time.Now().Unix()),
-			Namespace: "default",
+			Namespace: "cloudx",
 			Labels: map[string]string{
 				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
 				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
@@ -67,8 +67,8 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			},
 		},
 		Spec: v1.PodSpec{
-			ServiceAccountName: "controller-cloudx",
-			RestartPolicy:      v1.RestartPolicyNever,
+			ServiceAccountName: "controller-sa",
+			// RestartPolicy:      v1.RestartPolicyNever,
 			Containers: []v1.Container{
 				{
 					Name:            "runner",
@@ -82,7 +82,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						},
 						{
 							Name:  "RPC_SERVER",
-							Value: "localhost:9000",
+							Value: "http://controller.cloudx:9000",
 						},
 					},
 				},

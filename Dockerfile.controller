@@ -1,0 +1,21 @@
+FROM golang:1.20 AS build-stage
+
+WORKDIR /app
+
+
+COPY . ./
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /controller cmd/controller/main.go
+
+
+FROM gcr.io/distroless/static:nonroot
+
+WORKDIR /
+
+COPY --from=build-stage /controller /controller
+
+EXPOSE 9000
+
+USER 65532:65532
+
+ENTRYPOINT ["/controller"]
