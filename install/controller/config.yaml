@@ -1,15 +1,8 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  labels:
-    control-plane: cloudx-controller
-  name: cloudx
----
-apiVersion: v1
 kind: Service
 metadata:
   name: controller
-  namespace: cloudx
+  namespace: cloudx-system
 spec:
   selector:
     control-plane: cloudx-controller
@@ -22,7 +15,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller
-  namespace: cloudx
+  namespace: cloudx-system
   labels:
     control-plane: cloudx-controller
 spec:

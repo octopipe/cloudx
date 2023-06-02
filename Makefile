@@ -40,15 +40,17 @@ build-controller:
 	docker build -t mayconjrpacheco/cloudx-controller:latest -f Dockerfile.controller .
 	docker push mayconjrpacheco/cloudx-controller:latest
 
-install-manifests: manifests build-job build-controller
+install-manifests:
 	kubectl apply -f install/crd
-	kubectl apply -f install/controller
+	kubectl apply -f install/default
 	kubectl apply -f install/rbac
+	kubectl apply -f install/controller
 
 install: manifests build-job build-controller
 	kubectl apply -f install/crd
-	kubectl apply -f install/controller
+	kubectl apply -f install/default
 	kubectl apply -f install/rbac
+	kubectl apply -f install/controller
 
 controller:
 	go run cmd/controller/*.go

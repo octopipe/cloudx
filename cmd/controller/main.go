@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -31,6 +32,7 @@ func init() {
 func main() {
 	logger, _ := zap.NewProduction()
 	_ = godotenv.Load()
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     "0",
@@ -48,6 +50,8 @@ func main() {
 		panic(err)
 	}
 
+	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+
 	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
 
 	terraformController := sharedinfra.NewController(
@@ -62,6 +66,7 @@ func main() {
 		mgr.GetClient(),
 		mgr.GetScheme(),
 		pluginManager,
+		k8sClient,
 	)
 
 	if err := terraformController.SetupWithManager(mgr); err != nil {

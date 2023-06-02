@@ -44,31 +44,31 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	blockOwnerDeletion := true
-	controller := true
+	// blockOwnerDeletion := true
+	// controller := true
 	newRunner := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-runner-%d", currentSharedInfra.GetName(), time.Now().Unix()),
-			Namespace: "cloudx",
+			Namespace: "cloudx-system",
 			Labels: map[string]string{
 				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
 				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
 				"app.kubernetes.io/managed-by":            "cloudx",
 			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         commonv1alpha1.GroupVersion.String(),
-					BlockOwnerDeletion: &blockOwnerDeletion,
-					Controller:         &controller,
-					Kind:               "SharedInfra",
-					Name:               currentSharedInfra.GetName(),
-					UID:                currentSharedInfra.UID,
-				},
-			},
+			// OwnerReferences: []metav1.OwnerReference{
+			// 	{
+			// 		APIVersion: commonv1alpha1.GroupVersion.String(),
+			// 		// BlockOwnerDeletion: &blockOwnerDeletion,
+			// 		Controller: &controller,
+			// 		Kind:       "SharedInfra",
+			// 		Name:       currentSharedInfra.GetName(),
+			// 		UID:        currentSharedInfra.UID,
+			// 	},
+			// },
 		},
 		Spec: v1.PodSpec{
 			ServiceAccountName: "controller-sa",
-			// RestartPolicy:      v1.RestartPolicyNever,
+			RestartPolicy:      v1.RestartPolicyNever,
 			Containers: []v1.Container{
 				{
 					Name:            "runner",
@@ -93,12 +93,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	err = c.Create(ctx, newRunner)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-
-	// currentSharedInfra.Status.Plugins = pluginStatus
-	err = c.Status().Update(ctx, currentSharedInfra)
-	if err != nil {
-		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil

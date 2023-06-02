@@ -5,6 +5,7 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: cloudx-role
+  namespace: cloudx-system
 rules:
 - apiGroups:
   - commons.cloudx.io
@@ -32,7 +33,6 @@ rules:
   - get
   - patch
   - update
-
 - apiGroups:
   - ""
   resources:
