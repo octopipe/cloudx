@@ -5,7 +5,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/octopipe/cloudx/internal/pluginmanager"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,20 +22,18 @@ type Controller interface {
 
 type controller struct {
 	client.Client
-	logger        *zap.Logger
-	scheme        *runtime.Scheme
-	pluginManager pluginmanager.Manager
-	k8sClient     *kubernetes.Clientset
+	logger    *zap.Logger
+	scheme    *runtime.Scheme
+	k8sClient *kubernetes.Clientset
 }
 
-func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, pluginManager pluginmanager.Manager, k8sClient *kubernetes.Clientset) Controller {
+func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, k8sClient *kubernetes.Clientset) Controller {
 
 	return &controller{
-		Client:        client,
-		logger:        logger,
-		scheme:        scheme,
-		pluginManager: pluginManager,
-		k8sClient:     k8sClient,
+		Client:    client,
+		logger:    logger,
+		scheme:    scheme,
+		k8sClient: k8sClient,
 	}
 }
 

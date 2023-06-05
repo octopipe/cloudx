@@ -95,8 +95,9 @@ spec:
                     error:
                       type: string
                     finishedAt:
-                      format: int64
-                      type: integer
+                      type: string
+                    id:
+                      type: string
                     plugins:
                       items:
                         properties:
@@ -105,13 +106,11 @@ spec:
                           error:
                             type: string
                           finishedAt:
-                            format: int64
-                            type: integer
+                            type: string
                           name:
                             type: string
                           startedAt:
-                            format: int64
-                            type: integer
+                            type: string
                           state:
                             type: string
                           status:
@@ -119,8 +118,7 @@ spec:
                         type: object
                       type: array
                     startedAt:
-                      format: int64
-                      type: integer
+                      type: string
                     status:
                       type: string
                   type: object

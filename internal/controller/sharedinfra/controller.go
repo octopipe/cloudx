@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/pluginmanager"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,17 +23,15 @@ type Controller interface {
 
 type controller struct {
 	client.Client
-	logger        *zap.Logger
-	scheme        *runtime.Scheme
-	pluginManager pluginmanager.Manager
+	logger *zap.Logger
+	scheme *runtime.Scheme
 }
 
-func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, pluginManager pluginmanager.Manager) Controller {
+func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme) Controller {
 	return &controller{
-		Client:        client,
-		logger:        logger,
-		scheme:        scheme,
-		pluginManager: pluginManager,
+		Client: client,
+		logger: logger,
+		scheme: scheme,
 	}
 }
 
@@ -44,8 +42,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	// blockOwnerDeletion := true
-	// controller := true
+	executionId := uuid.New()
 	newRunner := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-runner-%d", currentSharedInfra.GetName(), time.Now().Unix()),
@@ -53,18 +50,9 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Labels: map[string]string{
 				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
 				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
+				"commons.cloudx.io/execution-id":          executionId.String(),
 				"app.kubernetes.io/managed-by":            "cloudx",
 			},
-			// OwnerReferences: []metav1.OwnerReference{
-			// 	{
-			// 		APIVersion: commonv1alpha1.GroupVersion.String(),
-			// 		// BlockOwnerDeletion: &blockOwnerDeletion,
-			// 		Controller: &controller,
-			// 		Kind:       "SharedInfra",
-			// 		Name:       currentSharedInfra.GetName(),
-			// 		UID:        currentSharedInfra.UID,
-			// 	},
-			// },
 		},
 		Spec: v1.PodSpec{
 			ServiceAccountName: "controller-sa",
@@ -73,7 +61,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				{
 					Name:            "runner",
 					Image:           "mayconjrpacheco/cloudx-runner:latest",
-					Command:         []string{"/job-bin", req.String()},
+					Args:            []string{req.String(), executionId.String()},
 					ImagePullPolicy: v1.PullAlways,
 					Env: []v1.EnvVar{
 						{
@@ -81,13 +69,26 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 							Value: "latest",
 						},
 						{
-							Name:  "RPC_SERVER",
-							Value: "http://controller.cloudx:9000",
+							Name:  "RPC_SERVER_ADDRESS",
+							Value: "controller.cloudx-system:9000",
 						},
 					},
 				},
 			},
 		},
+	}
+
+	newSharedInfraExecution := commonv1alpha1.SharedInfraExecutionStatus{
+		Id:        executionId.String(),
+		StartedAt: time.Now().Format(time.RFC3339),
+	}
+	currentExecutions := currentSharedInfra.Status.Executions
+	currentExecutions = append(currentExecutions, newSharedInfraExecution)
+	currentSharedInfra.Status.Executions = currentExecutions
+
+	err = c.Status().Update(ctx, currentSharedInfra)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	err = c.Create(ctx, newRunner)

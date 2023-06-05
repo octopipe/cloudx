@@ -13,7 +13,7 @@ spec:
     outputs: []
     inputs:
     - key: name
-      value: matheusaaa
+      value: matheus
   - name: sqs-policy
     ref: mayconjrpacheco/celio-plugin:latest
     type: terraform

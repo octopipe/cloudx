@@ -9,8 +9,6 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
-	"github.com/octopipe/cloudx/internal/pluginmanager"
-	"github.com/octopipe/cloudx/internal/provider/terraform"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -45,27 +43,18 @@ func main() {
 		panic(err)
 	}
 
-	terraformProvider, err := terraform.NewTerraformProvider(logger)
-	if err != nil {
-		panic(err)
-	}
-
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-
-	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
 
 	terraformController := sharedinfra.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		pluginManager,
 	)
 
 	runnerController := runner.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
-		pluginManager,
 		k8sClient,
 	)
 

@@ -38,16 +38,17 @@ type PluginStatus struct {
 	Name           string `json:"name,omitempty"`
 	State          string `json:"state,omitempty"`
 	DependencyLock string `json:"dependencyLock,omitempty"`
-	StartedAt      int64  `json:"startedAt,omitempty"`
-	FinishedAt     int64  `json:"finishedAt,omitempty"`
+	StartedAt      string `json:"startedAt,omitempty"`
+	FinishedAt     string `json:"finishedAt,omitempty"`
 	Status         string `json:"status,omitempty"`
 	Error          string `json:"error,omitempty"`
 }
 
 type SharedInfraExecutionStatus struct {
+	Id         string         `json:"id,omitempty"`
 	Plugins    []PluginStatus `json:"plugins,omitempty"`
-	StartedAt  int64          `json:"startedAt,omitempty"`
-	FinishedAt int64          `json:"finishedAt,omitempty"`
+	StartedAt  string         `json:"startedAt,omitempty"`
+	FinishedAt string         `json:"finishedAt,omitempty"`
 	Status     string         `json:"status,omitempty"`
 	Error      string         `json:"error,omitempty"`
 }

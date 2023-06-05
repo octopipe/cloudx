@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
+	"encoding/json"
+	"errors"
 	"net/rpc"
 	"os"
 	"strings"
@@ -34,6 +35,7 @@ func init() {
 }
 
 type executionContext struct {
+	logger            *zap.Logger
 	terraformProvider terraform.TerraformProvider
 	mu                sync.Mutex
 	rpcClient         *rpc.Client
@@ -55,27 +57,10 @@ func main() {
 		panic(err)
 	}
 
-	rpcClient, err := rpc.DialHTTP("tcp", os.Getenv("RPC_SERVER"))
+	rpcClient, err := rpc.DialHTTP("tcp", os.Getenv("RPC_SERVER_ADDRESS"))
 	if err != nil {
-		log.Fatal("dialing:", err)
+		logger.Fatal("Error to connect with controllerr", zap.Error(err), zap.String("address", os.Getenv("RPC_SERVER_ADDRESS")))
 	}
-
-	go func() {
-
-		time.Sleep(5 * time.Minute)
-
-		var reply int
-		args := &sharedinfra.RPCSetRunnerTimeoutArgs{
-			RunnerRef: types.NamespacedName{},
-		}
-
-		err := rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
-		if err != nil {
-			logger.Fatal("call rpc timeout error")
-		}
-
-		logger.Fatal("Runner timeout")
-	}()
 
 	terraformProvider, err := terraform.NewTerraformProvider(logger)
 	if err != nil {
@@ -83,10 +68,11 @@ func main() {
 	}
 
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	sharedInfraRef := os.Args[1:]
+	commandArgs := os.Args[1:]
+	executionId := commandArgs[1]
 
 	namespace, name := "", ""
-	s := strings.Split(sharedInfraRef[0], "/")
+	s := strings.Split(commandArgs[0], "/")
 	if len(s) <= 1 {
 		name = s[0]
 	} else {
@@ -104,8 +90,26 @@ func main() {
 
 	logger.Info("Starting runner", zap.String("sharedinfra", req.String()))
 
+	go func() {
+		time.Sleep(5 * time.Minute)
+
+		var reply int
+		args := &sharedinfra.RPCSetRunnerTimeoutArgs{
+			SharedInfraRef: req,
+			ExecutionId:    executionId,
+		}
+
+		err := rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
+		if err != nil {
+			logger.Fatal("call rpc timeout error")
+		}
+
+		logger.Fatal("Runner timeout")
+	}()
+
 	dependencyGraph, executionGraph := createGraphs(*currentSharedInfra)
 	newExecutionContext := executionContext{
+		logger:            logger,
 		rpcClient:         rpcClient,
 		terraformProvider: terraformProvider,
 		dependencyGraph:   dependencyGraph,
@@ -113,7 +117,6 @@ func main() {
 		executedNodes:     map[string]providerIO.ProviderOutput{},
 	}
 
-	startedAt := time.Now().Unix()
 	errMsg := ""
 	status := "Success"
 	pluginStatus, err := newExecutionContext.execute(currentSharedInfra.Spec.Plugins)
@@ -123,14 +126,12 @@ func main() {
 	}
 
 	args := &sharedinfra.RPCSetRunnerFinishedArgs{
-		Ref: req,
-		Execution: commonv1alpha1.SharedInfraExecutionStatus{
-			Error:      errMsg,
-			StartedAt:  startedAt,
-			Plugins:    pluginStatus,
-			Status:     status,
-			FinishedAt: time.Now().Unix(),
-		},
+		ExecutionId: executionId,
+		Ref:         req,
+		Error:       errMsg,
+		Plugins:     pluginStatus,
+		Status:      status,
+		FinishedAt:  time.Now().Format(time.RFC3339),
 	}
 
 	var reply int
@@ -147,7 +148,7 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 	eg, _ := errgroup.WithContext(context.Background())
 	for _, p := range plugins {
 		if _, ok := c.executedNodes[p.Name]; !ok && isComplete(c.dependencyGraph[p.Name], c.executedNodes) {
-			cb := func(currentPlugin commonv1alpha1.SharedInfraPlugin) func() error {
+			eg.Go(func(currentPlugin commonv1alpha1.SharedInfraPlugin) func() error {
 				return func() error {
 					inputs := map[string]interface{}{}
 
@@ -155,37 +156,16 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 						inputs[i.Key] = i.Value
 					}
 
-					startedAt := time.Now().Unix()
-					providerInputs := providerIO.ToProviderInput(p.Inputs)
-					if p.PluginType == "terraform" {
-						out, state, err := c.terraformProvider.Apply(p.Ref, providerInputs)
-						if err != nil {
-							status = append(status, commonv1alpha1.PluginStatus{
-								Name:       p.Name,
-								State:      state,
-								Status:     "Error",
-								StartedAt:  startedAt,
-								FinishedAt: time.Now().Unix(),
-								Error:      err.Error(),
-							})
-							return err
-						}
-
-						c.mu.Lock()
-						defer c.mu.Unlock()
-						status = append(status, commonv1alpha1.PluginStatus{
-							Name:       p.Name,
-							State:      state,
-							Status:     "ExecutedWithSuccess",
-							StartedAt:  startedAt,
-							FinishedAt: time.Now().Unix(),
-						})
-						c.executedNodes[currentPlugin.Name] = out
+					pluginStatus, pluginOutput := c.executeStep(currentPlugin)
+					status = append(status, pluginStatus)
+					if pluginStatus.Error != "" {
+						return errors.New(pluginStatus.Error)
 					}
+
+					c.executedNodes[currentPlugin.Name] = pluginOutput
 					return nil
 				}
-			}
-			eg.Go(cb(p))
+			}(p))
 		}
 	}
 
@@ -204,6 +184,54 @@ func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) (
 
 	status = append(status, p...)
 	return status, nil
+}
+
+func (c *executionContext) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginStatus, providerIO.ProviderOutput) {
+	startedAt := time.Now().Format(time.RFC3339)
+	providerInputs := providerIO.ToProviderInput(p.Inputs)
+	if p.PluginType == "terraform" {
+		out, state, err := c.terraformProvider.Apply(p.Ref, providerInputs)
+		if err != nil {
+			escapedErrorMsg, err := json.Marshal(err.Error())
+			if err != nil {
+				c.logger.Error("error to escape plugin error", zap.Error(err))
+				return commonv1alpha1.PluginStatus{
+					Status:     "ERROR",
+					StartedAt:  startedAt,
+					FinishedAt: time.Now().Format(time.RFC3339),
+					Error:      err.Error(),
+				}, providerIO.ProviderOutput{}
+			}
+
+			return commonv1alpha1.PluginStatus{
+				Name:       p.Name,
+				Status:     "ERROR",
+				StartedAt:  startedAt,
+				FinishedAt: time.Now().Format(time.RFC3339),
+				Error:      string(escapedErrorMsg),
+			}, providerIO.ProviderOutput{}
+		}
+
+		escapedState, err := json.Marshal(state)
+		if err != nil {
+			return commonv1alpha1.PluginStatus{
+				Status:     "ERROR",
+				StartedAt:  startedAt,
+				FinishedAt: time.Now().Format(time.RFC3339),
+				Error:      err.Error(),
+			}, providerIO.ProviderOutput{}
+		}
+
+		return commonv1alpha1.PluginStatus{
+			Name:       p.Name,
+			State:      string(escapedState),
+			Status:     "SUCCESS",
+			StartedAt:  startedAt,
+			FinishedAt: time.Now().Format(time.RFC3339),
+		}, out
+	}
+
+	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}
 }
 
 func isComplete(dependencies []string, executedNodes map[string]providerIO.ProviderOutput) bool {
