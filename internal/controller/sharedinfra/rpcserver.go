@@ -40,6 +40,7 @@ func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int
 
 	s.logger.Info("rpc execution", zap.String("status", args.Status))
 
+	newExecutions := []commonv1alpha1.SharedInfraExecutionStatus{}
 	allExecutions := currentSharedInfra.Status.Executions
 
 	currentExecution := commonv1alpha1.SharedInfraExecutionStatus{}
@@ -54,11 +55,13 @@ func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int
 				Error:      args.Error,
 				Plugins:    args.Plugins,
 			}
+		} else {
+			newExecutions = append(newExecutions, e)
 		}
 	}
 
-	allExecutions = append(allExecutions, currentExecution)
-	currentSharedInfra.Status.Executions = allExecutions
+	newExecutions = append(newExecutions, currentExecution)
+	currentSharedInfra.Status.Executions = newExecutions
 
 	return s.Status().Update(context.TODO(), currentSharedInfra)
 }

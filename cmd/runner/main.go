@@ -118,11 +118,11 @@ func main() {
 	}
 
 	errMsg := ""
-	status := "Success"
+	status := "SUCCESS"
 	pluginStatus, err := newExecutionContext.execute(currentSharedInfra.Spec.Plugins)
 	if err != nil {
 		errMsg = err.Error()
-		status = "Error"
+		status = "ERROR"
 	}
 
 	args := &sharedinfra.RPCSetRunnerFinishedArgs{

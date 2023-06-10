@@ -81,7 +81,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	newSharedInfraExecution := commonv1alpha1.SharedInfraExecutionStatus{
 		Id:        executionId.String(),
 		StartedAt: time.Now().Format(time.RFC3339),
-		Status:    "Running",
+		Status:    "RUNNING",
 	}
 	currentExecutions := currentSharedInfra.Status.Executions
 	currentExecutions = append(currentExecutions, newSharedInfraExecution)

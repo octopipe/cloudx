@@ -54,3 +54,6 @@ install: manifests build-job build-controller
 
 controller:
 	go run cmd/controller/*.go
+
+apiserver:
+	go run cmd/apiserver/*.go

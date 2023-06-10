@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, Col, Container, ListGroup, Row } from "react-bootstrap";
+import { Link } from "react-router-dom";
 
 const SharedInfras = () => {
   const [list, setList] = useState<any>()
@@ -32,7 +33,9 @@ const SharedInfras = () => {
           className="d-flex justify-content-between align-items-start"
         >
           <div className="ms-2 me-auto">
-            <div className="fw-bold">{item?.metadata?.name}</div>
+            <div className="fw-bold">
+              <Link to={item?.metadata?.name}>{item?.metadata?.name}</Link>
+            </div>
             {item?.spec?.description}
           </div>
           <Badge bg="primary" pill>

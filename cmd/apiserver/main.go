@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,6 +49,21 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"items": sharedInfraList.Items,
 		})
+	})
+	r.GET("/shared-infras/:name", func(c *gin.Context) {
+		name := c.Param("name")
+		sharedInfra := &commonv1alpha1.SharedInfra{}
+		err := k8sClient.Get(c.Request.Context(), types.NamespacedName{
+			Name:      name,
+			Namespace: "default",
+		}, sharedInfra)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, sharedInfra)
 	})
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }

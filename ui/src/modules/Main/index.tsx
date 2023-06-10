@@ -25,6 +25,7 @@ const Main = () => {
               <Nav.Link href="/">Shared infras</Nav.Link>
               <Nav.Link href="/connection-interfaces">Connection Interfaces</Nav.Link>
               <Nav.Link href="/cloud-accounts">Cloud accounts</Nav.Link>
+              <Nav.Link href="/plugins">Plugins</Nav.Link>
             </Nav>
           </Col>
           <Col md={9} lg={10} className="px-md-4 ms-sm-auto">
