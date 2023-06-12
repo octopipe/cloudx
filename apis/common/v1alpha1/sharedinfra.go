@@ -28,10 +28,16 @@ type SharedInfraPlugin struct {
 	Outputs    []SharedInfraPluginOutput `json:"outputs"`
 }
 
+type SharedInfraRunnerConfig struct {
+	NodeSelector   string `json:"nodeSelector,omitempty"`
+	ServiceAccount string `json:"serviceAccount,omitempty"`
+}
+
 type SharedInfraSpec struct {
-	Author      string              `json:"author,omitempty" default:"anonymous"`
-	Description string              `json:"description,omitempty"`
-	Plugins     []SharedInfraPlugin `json:"plugins"`
+	Author       string                  `json:"author,omitempty" default:"anonymous"`
+	Description  string                  `json:"description,omitempty"`
+	RunnerConfig SharedInfraRunnerConfig `json:"runnerConfig,omitempty"`
+	Plugins      []SharedInfraPlugin     `json:"plugins"`
 }
 
 type PluginStatus struct {

@@ -84,6 +84,13 @@ spec:
                   - type
                   type: object
                 type: array
+              runnerConfig:
+                properties:
+                  nodeSelector:
+                    type: string
+                  serviceAccount:
+                    type: string
+                type: object
             required:
             - plugins
             type: object

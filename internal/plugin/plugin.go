@@ -2,6 +2,10 @@ package plugin
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+const (
+	TerraformPluginType = "terraform"
+)
+
 type PluginInput struct {
 	Label    string `json:"label"`
 	Name     string `json:"name"`

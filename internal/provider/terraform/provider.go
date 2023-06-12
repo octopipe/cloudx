@@ -24,7 +24,7 @@ import (
 )
 
 type TerraformProvider interface {
-	Apply(pluginRef string, input providerIO.ProviderInput) (providerIO.ProviderOutput, string, error)
+	Apply(pluginRef string, input providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, error)
 	Destroy(workdirPath string, state string) error
 }
 
@@ -137,7 +137,7 @@ func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.P
 	return workdir, parsedInput, nil
 }
 
-func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.ProviderInput) (providerIO.ProviderOutput, string, error) {
+func (p terraformProvider) Plan(pluginRef string, executionInput providerIO.ProviderInput) (providerIO.ProviderOutput, string, error) {
 	workdirPath, input, err := p.prepareExecution(pluginRef, executionInput)
 	if err != nil {
 		return nil, "", err
@@ -170,6 +170,92 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 	err = tf.Apply(context.Background(), tfexec.VarFile(execVarsFilePath))
 	if err != nil {
 		return nil, "", err
+	}
+
+	out, err := tf.Output(context.Background())
+	if err != nil {
+		return nil, "", err
+	}
+
+	outputs := providerIO.ProviderOutput{}
+
+	for key, res := range out {
+		outputs[key] = providerIO.ProviderOutputMetadata{
+			Value:     string(res.Value),
+			Sensitive: res.Sensitive,
+		}
+	}
+
+	p.logger.Info("get terraform state file", zap.String("workdir", workdirPath))
+	stateFilePath := fmt.Sprintf("%s/terraform.tfstate", workdirPath)
+	stateFile, err := os.ReadFile(stateFilePath)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return outputs, string(stateFile), nil
+}
+
+func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, error) {
+	workdirPath, input, err := p.prepareExecution(pluginRef, executionInput)
+	if err != nil {
+		return nil, "", err
+	}
+
+	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if previousLockDeps != "" {
+		previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
+		previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
+		if err != nil {
+			return nil, "", err
+		}
+
+		previousLockDepsFile.Write([]byte(previousState))
+	}
+
+	p.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
+	err = tf.Init(context.Background(), tfexec.Upgrade(true))
+	if err != nil {
+
+		return nil, "", err
+	}
+
+	if previousState != "" {
+		previousStateFilePath := filepath.Join(workdirPath, "terraform.tfstate")
+		previousStateFile, err := os.Create(previousStateFilePath)
+		if err != nil {
+			return nil, "", err
+		}
+
+		previousStateFile.Write([]byte(previousState))
+	}
+
+	hasModifications, err := tf.Plan(context.Background())
+	if err != nil {
+		return nil, "", err
+	}
+
+	if hasModifications {
+		execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
+		f, err := os.Create(execVarsFilePath)
+		if err != nil {
+			return nil, "", err
+		}
+
+		p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
+		for key, val := range input {
+			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, val))
+		}
+
+		p.logger.Info("executing terraform apply", zap.String("workdir", workdirPath))
+		err = tf.Apply(context.Background(), tfexec.VarFile(execVarsFilePath))
+		if err != nil {
+			return nil, "", err
+		}
 	}
 
 	out, err := tf.Output(context.Background())

@@ -14,6 +14,53 @@ type Runner struct {
 }
 
 func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1alpha1.SharedInfra) Runner {
+	vFalse := false
+	vTrue := true
+	vUser := int64(65532)
+	securityContext := &v1.SecurityContext{
+		Capabilities: &v1.Capabilities{
+			Drop: []v1.Capability{"ALL"},
+		},
+		AllowPrivilegeEscalation: &vFalse,
+		RunAsNonRoot:             &vTrue,
+		RunAsUser:                &vUser,
+		SeccompProfile: &v1.SeccompProfile{
+			Type: v1.SeccompProfileTypeRuntimeDefault,
+		},
+		ReadOnlyRootFilesystem: &vTrue,
+	}
+
+	podVolumes := []v1.Volume{
+		{
+			Name: "temp",
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		},
+		{
+			Name: "home",
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		},
+	}
+
+	podVolumeMounts := []v1.VolumeMount{
+		{
+			Name:      "temp",
+			MountPath: "/tmp",
+		},
+		{
+			Name:      "home",
+			MountPath: "/home/runner",
+		},
+	}
+	serviceAccount := "controller-sa"
+
+	if sharedInfra.Spec.RunnerConfig.ServiceAccount != "" {
+		serviceAccount = sharedInfra.Spec.RunnerConfig.ServiceAccount
+	}
+
 	newRunnerObject := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-runner-%d", sharedInfra.GetName(), time.Now().Unix()),
@@ -26,7 +73,7 @@ func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1al
 			},
 		},
 		Spec: v1.PodSpec{
-			ServiceAccountName: "controller-sa",
+			ServiceAccountName: serviceAccount,
 			RestartPolicy:      v1.RestartPolicyNever,
 			Containers: []v1.Container{
 				{
@@ -34,6 +81,7 @@ func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1al
 					Image:           "mayconjrpacheco/cloudx-runner:latest",
 					Args:            []string{sharedInfraRef, executionId},
 					ImagePullPolicy: v1.PullAlways,
+					SecurityContext: securityContext,
 					Env: []v1.EnvVar{
 						{
 							Name:  "TF_VERSION",
@@ -44,8 +92,10 @@ func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1al
 							Value: "controller.cloudx-system:9000",
 						},
 					},
+					VolumeMounts: podVolumeMounts,
 				},
 			},
+			Volumes: podVolumes,
 		},
 	}
 
