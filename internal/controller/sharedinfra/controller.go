@@ -2,14 +2,12 @@ package sharedinfra
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,40 +41,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	executionId := uuid.New()
-	newRunner := &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-runner-%d", currentSharedInfra.GetName(), time.Now().Unix()),
-			Namespace: "cloudx-system",
-			Labels: map[string]string{
-				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
-				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
-				"commons.cloudx.io/execution-id":          executionId.String(),
-				"app.kubernetes.io/managed-by":            "cloudx",
-			},
-		},
-		Spec: v1.PodSpec{
-			ServiceAccountName: "controller-sa",
-			RestartPolicy:      v1.RestartPolicyNever,
-			Containers: []v1.Container{
-				{
-					Name:            "runner",
-					Image:           "mayconjrpacheco/cloudx-runner:latest",
-					Args:            []string{req.String(), executionId.String()},
-					ImagePullPolicy: v1.PullAlways,
-					Env: []v1.EnvVar{
-						{
-							Name:  "TF_VERSION",
-							Value: "latest",
-						},
-						{
-							Name:  "RPC_SERVER_ADDRESS",
-							Value: "controller.cloudx-system:9000",
-						},
-					},
-				},
-			},
-		},
-	}
+	newRunner := runner.NewRunner(executionId.String(), req.String(), *currentSharedInfra)
 
 	newSharedInfraExecution := commonv1alpha1.SharedInfraExecutionStatus{
 		Id:        executionId.String(),
@@ -92,7 +57,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	err = c.Create(ctx, newRunner)
+	err = c.Create(ctx, newRunner.Object)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

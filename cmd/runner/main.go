@@ -1,28 +1,22 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"net/rpc"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
-	providerIO "github.com/octopipe/cloudx/internal/provider/io"
+	"github.com/octopipe/cloudx/internal/execution"
 	"github.com/octopipe/cloudx/internal/provider/terraform"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -34,28 +28,14 @@ func init() {
 	utilruntime.Must(commonv1alpha1.AddToScheme(scheme))
 }
 
-type executionContext struct {
-	logger            *zap.Logger
-	terraformProvider terraform.TerraformProvider
-	mu                sync.Mutex
-	rpcClient         *rpc.Client
-
-	dependencyGraph map[string][]string
-	executionGraph  map[string][]string
-	executedNodes   map[string]providerIO.ProviderOutput
+type runnerContext struct {
+	logger    *zap.Logger
+	rpcClient *rpc.Client
 }
 
 func main() {
 	logger, _ := zap.NewProduction()
 	_ = godotenv.Load()
-
-	config := ctrl.GetConfigOrDie()
-	k8sClient, err := client.New(config, client.Options{
-		Scheme: scheme,
-	})
-	if err != nil {
-		panic(err)
-	}
 
 	rpcClient, err := rpc.DialHTTP("tcp", os.Getenv("RPC_SERVER_ADDRESS"))
 	if err != nil {
@@ -67,12 +47,86 @@ func main() {
 		panic(err)
 	}
 
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
+	newRunnerContext := runnerContext{
+		rpcClient: rpcClient,
+		logger:    logger,
+	}
+
+	sharedInfraRef, executionId, err := newRunnerContext.getDataFromCommandArgs()
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("Starting runner", zap.String("sharedinfra", sharedInfraRef.String()))
+
+	currentSharedInfra, err := newRunnerContext.getCurrentSharedInfra(sharedInfraRef, executionId)
+	if err != nil {
+		panic(err)
+	}
+
+	go newRunnerContext.startTimeout(sharedInfraRef, executionId)
+
+	rpcRunnerFinishedArgs := &sharedinfra.RPCSetRunnerFinishedArgs{
+		ExecutionId: executionId,
+		Ref:         sharedInfraRef,
+		Error:       "",
+		Plugins:     []commonv1alpha1.PluginStatus{},
+		Status:      "SUCCESS",
+		FinishedAt:  time.Now().Format(time.RFC3339),
+	}
+
+	currentExecution := execution.NewExecution(logger, terraformProvider, *currentSharedInfra)
+	pluginStatus, err := currentExecution.Start()
+	if err != nil {
+		rpcRunnerFinishedArgs.Status = "ERROR"
+		rpcRunnerFinishedArgs.Error = err.Error()
+	}
+
+	rpcRunnerFinishedArgs.Plugins = pluginStatus
+
+	var reply int
+	err = rpcClient.Call("RPCServer.SetRunnerFinished", rpcRunnerFinishedArgs, &reply)
+	if err != nil {
+		logger.Fatal("Error to call controller", zap.Error(err))
+	}
+
+	logger.Info("Finish runner execution")
+}
+
+func (c runnerContext) getLastAppliedConfiguration(sharedInfra commonv1alpha1.SharedInfra) (commonv1alpha1.SharedInfra, error) {
+	lastSharedInfra := commonv1alpha1.SharedInfra{}
+	annotations := sharedInfra.GetAnnotations()
+	currentLastApliedConfig := ""
+	kubectlLastAppliedConf, ok := annotations["kubectl.kubernetes.io/last-applied-configuration"]
+	if ok {
+		currentLastApliedConfig = kubectlLastAppliedConf
+	}
+
+	ownerLastAppliedConf, ok := annotations["commons.cloudx.io/last-applied-configuration"]
+	if ok {
+		currentLastApliedConfig = ownerLastAppliedConf
+	}
+
+	if ok && currentLastApliedConfig != "" {
+		err := json.Unmarshal([]byte(currentLastApliedConfig), &lastSharedInfra)
+		if err != nil {
+			return lastSharedInfra, err
+		}
+
+		return lastSharedInfra, nil
+	}
+
+	return lastSharedInfra, nil
+
+}
+
+func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string, error) {
 	commandArgs := os.Args[1:]
+	sharedInfraRef := commandArgs[0]
 	executionId := commandArgs[1]
 
 	namespace, name := "", ""
-	s := strings.Split(commandArgs[0], "/")
+	s := strings.Split(sharedInfraRef, "/")
 	if len(s) <= 1 {
 		name = s[0]
 	} else {
@@ -83,184 +137,39 @@ func main() {
 		Name:      name,
 		Namespace: namespace,
 	}
-	err = k8sClient.Get(context.Background(), req, currentSharedInfra)
-	if err != nil {
-		logger.Fatal("error on get shared infra", zap.Error(err))
-	}
 
-	logger.Info("Starting runner", zap.String("sharedinfra", req.String()))
+	return req, executionId, nil
+}
 
-	go func() {
-		time.Sleep(5 * time.Minute)
-
-		var reply int
-		args := &sharedinfra.RPCSetRunnerTimeoutArgs{
-			SharedInfraRef: req,
-			ExecutionId:    executionId,
-		}
-
-		err := rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
-		if err != nil {
-			logger.Fatal("call rpc timeout error")
-		}
-
-		logger.Fatal("Runner timeout")
-	}()
-
-	dependencyGraph, executionGraph := createGraphs(*currentSharedInfra)
-	newExecutionContext := executionContext{
-		logger:            logger,
-		rpcClient:         rpcClient,
-		terraformProvider: terraformProvider,
-		dependencyGraph:   dependencyGraph,
-		executionGraph:    executionGraph,
-		executedNodes:     map[string]providerIO.ProviderOutput{},
-	}
-
-	errMsg := ""
-	status := "SUCCESS"
-	pluginStatus, err := newExecutionContext.execute(currentSharedInfra.Spec.Plugins)
-	if err != nil {
-		errMsg = err.Error()
-		status = "ERROR"
-	}
-
-	args := &sharedinfra.RPCSetRunnerFinishedArgs{
-		ExecutionId: executionId,
-		Ref:         req,
-		Error:       errMsg,
-		Plugins:     pluginStatus,
-		Status:      status,
-		FinishedAt:  time.Now().Format(time.RFC3339),
-	}
+func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executionId string) {
+	time.Sleep(5 * time.Minute)
 
 	var reply int
-	err = rpcClient.Call("RPCServer.SetRunnerFinished", args, &reply)
-	if err != nil {
-		logger.Fatal("Error to call controller", zap.Error(err))
+	args := &sharedinfra.RPCSetRunnerTimeoutArgs{
+		SharedInfraRef: sharedInfraRef,
+		ExecutionId:    executionId,
 	}
 
-	logger.Info("Finish runner execution")
+	err := c.rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
+	if err != nil {
+		c.logger.Fatal("call rpc timeout error")
+	}
+
+	c.logger.Fatal("Runner timeout")
 }
 
-func (c *executionContext) execute(plugins []commonv1alpha1.SharedInfraPlugin) ([]commonv1alpha1.PluginStatus, error) {
-	status := []commonv1alpha1.PluginStatus{}
-	eg, _ := errgroup.WithContext(context.Background())
-	for _, p := range plugins {
-		if _, ok := c.executedNodes[p.Name]; !ok && isComplete(c.dependencyGraph[p.Name], c.executedNodes) {
-			eg.Go(func(currentPlugin commonv1alpha1.SharedInfraPlugin) func() error {
-				return func() error {
-					inputs := map[string]interface{}{}
-
-					for _, i := range currentPlugin.Inputs {
-						inputs[i.Key] = i.Value
-					}
-
-					pluginStatus, pluginOutput := c.executeStep(currentPlugin)
-					status = append(status, pluginStatus)
-					if pluginStatus.Error != "" {
-						return errors.New(pluginStatus.Error)
-					}
-
-					c.executedNodes[currentPlugin.Name] = pluginOutput
-					return nil
-				}
-			}(p))
-		}
+func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName, executionId string) (*commonv1alpha1.SharedInfra, error) {
+	currentSharedInfra := &commonv1alpha1.SharedInfra{}
+	args := &sharedinfra.RPCSetRunnerTimeoutArgs{
+		SharedInfraRef: sharedInfraRef,
+		ExecutionId:    executionId,
 	}
 
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-
-	if len(c.executedNodes) == len(c.executionGraph) {
-		return status, nil
-	}
-
-	p, err := c.execute(plugins)
+	var reply sharedinfra.RPCGetRunnerDataReply
+	err := c.rpcClient.Call("RPCServer.GetRunnerData", args, &reply)
 	if err != nil {
 		return nil, err
 	}
 
-	status = append(status, p...)
-	return status, nil
-}
-
-func (c *executionContext) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginStatus, providerIO.ProviderOutput) {
-	startedAt := time.Now().Format(time.RFC3339)
-	providerInputs := providerIO.ToProviderInput(p.Inputs)
-	if p.PluginType == "terraform" {
-		out, state, err := c.terraformProvider.Apply(p.Ref, providerInputs)
-		if err != nil {
-			escapedErrorMsg, err := json.Marshal(err.Error())
-			if err != nil {
-				c.logger.Error("error to escape plugin error", zap.Error(err))
-				return commonv1alpha1.PluginStatus{
-					Status:     "ERROR",
-					StartedAt:  startedAt,
-					FinishedAt: time.Now().Format(time.RFC3339),
-					Error:      err.Error(),
-				}, providerIO.ProviderOutput{}
-			}
-
-			return commonv1alpha1.PluginStatus{
-				Name:       p.Name,
-				Status:     "ERROR",
-				StartedAt:  startedAt,
-				FinishedAt: time.Now().Format(time.RFC3339),
-				Error:      string(escapedErrorMsg),
-			}, providerIO.ProviderOutput{}
-		}
-
-		escapedState, err := json.Marshal(state)
-		if err != nil {
-			return commonv1alpha1.PluginStatus{
-				Status:     "ERROR",
-				StartedAt:  startedAt,
-				FinishedAt: time.Now().Format(time.RFC3339),
-				Error:      err.Error(),
-			}, providerIO.ProviderOutput{}
-		}
-
-		return commonv1alpha1.PluginStatus{
-			Name:       p.Name,
-			State:      string(escapedState),
-			Status:     "SUCCESS",
-			StartedAt:  startedAt,
-			FinishedAt: time.Now().Format(time.RFC3339),
-		}, out
-	}
-
-	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}
-}
-
-func isComplete(dependencies []string, executedNodes map[string]providerIO.ProviderOutput) bool {
-	isComplete := true
-
-	for _, d := range dependencies {
-		if _, ok := executedNodes[d]; !ok {
-			isComplete = false
-		}
-	}
-
-	return isComplete || len(dependencies) <= 0
-}
-
-func createGraphs(stackset commonv1alpha1.SharedInfra) (map[string][]string, map[string][]string) {
-
-	dependencyGraph := map[string][]string{}
-	executionGraph := map[string][]string{}
-
-	for _, p := range stackset.Spec.Plugins {
-		dependencyGraph[p.Name] = p.Depends
-		executionGraph[p.Name] = []string{}
-	}
-
-	for _, p := range stackset.Spec.Plugins {
-		for _, d := range p.Depends {
-			executionGraph[d] = append(executionGraph[d], p.Name)
-		}
-	}
-
-	return dependencyGraph, executionGraph
+	return currentSharedInfra, nil
 }

@@ -21,6 +21,27 @@ func NewRPCServer(client client.Client, logger *zap.Logger) *RPCServer {
 	return &RPCServer{Client: client, logger: logger}
 }
 
+type RPCGetRunnerDataArgs struct {
+	Ref         types.NamespacedName
+	ExecutionId string
+}
+
+type RPCGetRunnerDataReply struct {
+	sharedInfra commonv1alpha1.SharedInfra
+}
+
+func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunnerDataReply) error {
+	s.logger.Info("Received rpc call", zap.String("sharedinfra", args.Ref.String()))
+	currentSharedInfra := &commonv1alpha1.SharedInfra{}
+	err := s.Get(context.Background(), args.Ref, currentSharedInfra)
+	if err != nil {
+		return err
+	}
+
+	reply.sharedInfra = *currentSharedInfra
+	return nil
+}
+
 type RPCSetRunnerFinishedArgs struct {
 	Ref         types.NamespacedName
 	ExecutionId string
