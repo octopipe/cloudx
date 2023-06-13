@@ -2,6 +2,7 @@ package runner
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
@@ -90,7 +91,7 @@ func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1al
 						},
 						{
 							Name:  "RPC_SERVER_ADDRESS",
-							Value: "controller.cloudx-system:9000",
+							Value: os.Getenv("RPC_SERVER_ADDRESS"),
 						},
 					},
 					VolumeMounts: podVolumeMounts,

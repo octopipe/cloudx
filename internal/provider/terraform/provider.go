@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -24,7 +25,7 @@ import (
 )
 
 type TerraformProvider interface {
-	Apply(pluginRef string, input providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, error)
+	Apply(pluginRef string, input providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, string, error)
 	Destroy(workdirPath string, state string) error
 }
 
@@ -57,29 +58,26 @@ func NewTerraformProvider(logger *zap.Logger) (TerraformProvider, error) {
 	}, nil
 }
 
-func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.ProviderInput) (string, map[string]interface{}, error) {
+func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.ProviderInput) (string, plugin.Plugin, error) {
 	p.logger.Info("pulling plugin image", zap.String("image", pluginRef))
 	img, err := crane.Pull(pluginRef)
 	if err != nil {
-		return "", nil, err
+		return "", plugin.Plugin{}, err
 	}
 
 	var buf bytes.Buffer
 	err = crane.Export(img, &buf)
 	if err != nil {
-		return "", nil, err
+		return "", plugin.Plugin{}, err
 	}
 
 	tr := tar.NewReader(&buf)
 	content := map[string]string{}
-
 	rawPluginConfig := []byte{}
-
 	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", strconv.Itoa(int(time.Now().UnixNano())))
-
 	err = os.MkdirAll(workdir, os.ModePerm)
 	if err != nil {
-		return "", nil, err
+		return "", plugin.Plugin{}, err
 	}
 
 	for {
@@ -88,23 +86,23 @@ func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.P
 			break
 		}
 		if err != nil {
-			return "", nil, err
+			return "", plugin.Plugin{}, err
 		}
 
 		b, err := io.ReadAll(tr)
 		if err != nil {
-			return "", nil, err
+			return "", plugin.Plugin{}, err
 		}
 
 		content[hdr.Name] = string(b)
 		f, err := os.Create(fmt.Sprintf("%s/%s", workdir, hdr.Name))
 		if err != nil {
-			return "", nil, err
+			return "", plugin.Plugin{}, err
 		}
 
 		_, err = f.Write(b)
 		if err != nil {
-			return "", nil, err
+			return "", plugin.Plugin{}, err
 		}
 
 		if hdr.Name == "plugin.yaml" {
@@ -116,151 +114,98 @@ func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.P
 	decoder := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(rawPluginConfig), 4096)
 	err = decoder.Decode(&pluginConfig)
 	if err != nil {
-		return "", nil, err
+		return "", plugin.Plugin{}, err
 	}
 
-	parsedInput := map[string]interface{}{}
-	for _, i := range pluginConfig.Spec.Inputs {
-		value, ok := input[i.Name]
-		if !ok && i.Required {
-			return "", nil, fmt.Errorf("required field: %s", i.Name)
-		}
-
-		if !ok {
-			parsedInput[i.Name] = i.Default
-			continue
-		}
-
-		parsedInput[i.Name] = value
-	}
-
-	return workdir, parsedInput, nil
+	return workdir, pluginConfig, nil
 }
 
-func (p terraformProvider) Plan(pluginRef string, executionInput providerIO.ProviderInput) (providerIO.ProviderOutput, string, error) {
-	workdirPath, input, err := p.prepareExecution(pluginRef, executionInput)
+func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, string, error) {
+	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, executionInput)
 	if err != nil {
-		return nil, "", err
-	}
-
-	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
-	if err != nil {
-		return nil, "", err
-	}
-
-	p.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
-	err = tf.Init(context.Background(), tfexec.Upgrade(true))
-	if err != nil {
-
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
 	f, err := os.Create(execVarsFilePath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
-	for key, val := range input {
-		f.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, val))
-	}
-
-	p.logger.Info("executing terraform apply", zap.String("workdir", workdirPath))
-	err = tf.Apply(context.Background(), tfexec.VarFile(execVarsFilePath))
-	if err != nil {
-		return nil, "", err
-	}
-
-	out, err := tf.Output(context.Background())
-	if err != nil {
-		return nil, "", err
-	}
-
-	outputs := providerIO.ProviderOutput{}
-
-	for key, res := range out {
-		outputs[key] = providerIO.ProviderOutputMetadata{
-			Value:     string(res.Value),
-			Sensitive: res.Sensitive,
+	for _, i := range pluginConfig.Spec.Inputs {
+		value, ok := executionInput[i.Name]
+		if !ok && i.Required {
+			return providerIO.ProviderOutput{}, "", "", fmt.Errorf("required field: %s", i.Name)
 		}
-	}
 
-	p.logger.Info("get terraform state file", zap.String("workdir", workdirPath))
-	stateFilePath := fmt.Sprintf("%s/terraform.tfstate", workdirPath)
-	stateFile, err := os.ReadFile(stateFilePath)
-	if err != nil {
-		return nil, "", err
-	}
+		if !ok {
+			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, i.Default))
+			continue
+		}
 
-	return outputs, string(stateFile), nil
-}
-
-func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, error) {
-	workdirPath, input, err := p.prepareExecution(pluginRef, executionInput)
-	if err != nil {
-		return nil, "", err
+		f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, value.Value))
 	}
 
 	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	if previousLockDeps != "" {
+		p.logger.Info("using lock file to increase performance")
 		previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
 		previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", err
 		}
 
-		previousLockDepsFile.Write([]byte(previousState))
+		var unescapedJSON string
+		err = json.Unmarshal([]byte(previousLockDeps), &unescapedJSON)
+		if err != nil {
+			return nil, "", "", err
+		}
+		previousLockDepsFile.Write([]byte(unescapedJSON))
 	}
 
 	p.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
 	err = tf.Init(context.Background(), tfexec.Upgrade(true))
 	if err != nil {
 
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	if previousState != "" {
 		previousStateFilePath := filepath.Join(workdirPath, "terraform.tfstate")
 		previousStateFile, err := os.Create(previousStateFilePath)
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", err
+		}
+		var unescapedJSON string
+		err = json.Unmarshal([]byte(previousState), &unescapedJSON)
+		if err != nil {
+			return nil, "", "", err
 		}
 
-		previousStateFile.Write([]byte(previousState))
+		previousStateFile.Write([]byte(unescapedJSON))
 	}
 
-	hasModifications, err := tf.Plan(context.Background())
+	hasModifications, err := tf.Plan(context.Background(), tfexec.VarFile(execVarsFilePath))
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	if hasModifications {
-		execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
-		f, err := os.Create(execVarsFilePath)
-		if err != nil {
-			return nil, "", err
-		}
-
-		p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
-		for key, val := range input {
-			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", key, val))
-		}
-
 		p.logger.Info("executing terraform apply", zap.String("workdir", workdirPath))
 		err = tf.Apply(context.Background(), tfexec.VarFile(execVarsFilePath))
 		if err != nil {
-			return nil, "", err
+			return nil, "", "", err
 		}
 	}
 
 	out, err := tf.Output(context.Background())
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
 	outputs := providerIO.ProviderOutput{}
@@ -276,10 +221,17 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 	stateFilePath := fmt.Sprintf("%s/terraform.tfstate", workdirPath)
 	stateFile, err := os.ReadFile(stateFilePath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
-	return outputs, string(stateFile), nil
+	p.logger.Info("get terraform lock deps", zap.String("workdir", workdirPath))
+	lockDepsFilePath := fmt.Sprintf("%s/.terraform.lock.hcl", workdirPath)
+	lockDepsFile, err := os.ReadFile(lockDepsFilePath)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return outputs, string(stateFile), string(lockDepsFile), nil
 }
 
 func (p terraformProvider) Destroy(workdirPath string, state string) error {

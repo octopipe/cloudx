@@ -99,12 +99,12 @@ func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alp
 	providerInputs := providerIO.ToProviderInput(p.Inputs)
 	lastPluginStatus := c.getLastPluginStatus(p)
 	if p.PluginType == plugin.TerraformPluginType {
-		out, state, err := c.terraformProvider.Apply(p.Ref, providerInputs, lastPluginStatus.State, lastPluginStatus.DependencyLock)
+		out, state, lockFile, err := c.terraformProvider.Apply(p.Ref, providerInputs, lastPluginStatus.State, lastPluginStatus.DependencyLock)
 		if err != nil {
 			return getPluginStatusError(p.Name, startedAt, err), providerIO.ProviderOutput{}, nil
 		}
 
-		return getTerraformPluginStatusSuccess(p.Name, startedAt, state), out, nil
+		return getTerraformPluginStatusSuccess(p.Name, startedAt, state, lockFile), out, nil
 	}
 
 	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, errors.New("invalid plugin type")
@@ -136,7 +136,7 @@ func (c *execution) getLastPluginStatus(currentPlugin commonv1alpha1.SharedInfra
 	return commonv1alpha1.PluginStatus{}
 }
 
-func getTerraformPluginStatusSuccess(name string, startedAt string, state string) commonv1alpha1.PluginStatus {
+func getTerraformPluginStatusSuccess(name string, startedAt string, state string, lockFile string) commonv1alpha1.PluginStatus {
 	escapedState, err := json.Marshal(state)
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
@@ -148,12 +148,24 @@ func getTerraformPluginStatusSuccess(name string, startedAt string, state string
 		}
 	}
 
+	escapedLockFile, err := json.Marshal(lockFile)
+	if err != nil {
+		return commonv1alpha1.PluginStatus{
+			Name:       name,
+			Status:     ExecutionErrorStatus,
+			StartedAt:  startedAt,
+			FinishedAt: time.Now().Format(time.RFC3339),
+			Error:      err.Error(),
+		}
+	}
+
 	return commonv1alpha1.PluginStatus{
-		Name:       name,
-		State:      string(escapedState),
-		Status:     ExecutionSuccessStatus,
-		StartedAt:  startedAt,
-		FinishedAt: time.Now().Format(time.RFC3339),
+		Name:           name,
+		State:          string(escapedState),
+		DependencyLock: string(escapedLockFile),
+		Status:         ExecutionSuccessStatus,
+		StartedAt:      startedAt,
+		FinishedAt:     time.Now().Format(time.RFC3339),
 	}
 }
 

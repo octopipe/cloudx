@@ -2,6 +2,7 @@ package sharedinfra
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,8 +43,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	executionId := uuid.New()
-	newRunner := runner.NewRunner(executionId.String(), req.String(), *currentSharedInfra)
-
 	newSharedInfraExecution := commonv1alpha1.SharedInfraExecutionStatus{
 		Id:        executionId.String(),
 		StartedAt: time.Now().Format(time.RFC3339),
@@ -58,9 +57,13 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	err = c.Create(ctx, newRunner.Pod)
-	if err != nil {
-		return ctrl.Result{}, err
+	if os.Getenv("ENV") != "local" {
+		newRunner := runner.NewRunner(executionId.String(), req.String(), *currentSharedInfra)
+		err = c.Create(ctx, newRunner.Pod)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 	}
 
 	return ctrl.Result{}, nil

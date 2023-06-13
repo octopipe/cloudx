@@ -39,7 +39,10 @@ spec:
         image: mayconjrpacheco/cloudx-controller:latest
         name: controller
         ports:
-          - containerPort: 9000
+        - containerPort: 9000
+        env:
+        - name: RPC_SERVER_ADDRESS
+          value: "controller.cloudx-system:9000"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
