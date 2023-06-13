@@ -19,6 +19,7 @@ const (
 	ExecutionSuccessStatus = "SUCCESS"
 	ExecutionFailedStatus  = "FAILED"
 	ExecutionErrorStatus   = "ERRORS"
+	ExecutionRunningStatus = "RUNNING"
 )
 
 type execution struct {

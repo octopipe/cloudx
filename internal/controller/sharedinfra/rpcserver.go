@@ -27,7 +27,7 @@ type RPCGetRunnerDataArgs struct {
 }
 
 type RPCGetRunnerDataReply struct {
-	sharedInfra commonv1alpha1.SharedInfra
+	SharedInfra commonv1alpha1.SharedInfra
 }
 
 func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunnerDataReply) error {
@@ -38,7 +38,7 @@ func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunne
 		return err
 	}
 
-	reply.sharedInfra = *currentSharedInfra
+	reply.SharedInfra = *currentSharedInfra
 	return nil
 }
 
@@ -61,9 +61,8 @@ func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int
 
 	s.logger.Info("rpc execution", zap.String("status", args.Status))
 
-	newExecutions := []commonv1alpha1.SharedInfraExecutionStatus{}
 	allExecutions := currentSharedInfra.Status.Executions
-
+	newExecutions := []commonv1alpha1.SharedInfraExecutionStatus{}
 	currentExecution := commonv1alpha1.SharedInfraExecutionStatus{}
 
 	for _, e := range allExecutions {

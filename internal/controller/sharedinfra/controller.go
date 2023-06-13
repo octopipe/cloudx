@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/execution"
 	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,7 +47,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	newSharedInfraExecution := commonv1alpha1.SharedInfraExecutionStatus{
 		Id:        executionId.String(),
 		StartedAt: time.Now().Format(time.RFC3339),
-		Status:    "RUNNING",
+		Status:    execution.ExecutionRunningStatus,
 	}
 	currentExecutions := currentSharedInfra.Status.Executions
 	currentExecutions = append(currentExecutions, newSharedInfraExecution)
@@ -57,7 +58,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	err = c.Create(ctx, newRunner.Object)
+	err = c.Create(ctx, newRunner.Pod)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

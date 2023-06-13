@@ -159,10 +159,9 @@ func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executi
 }
 
 func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName, executionId string) (*commonv1alpha1.SharedInfra, error) {
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	args := &sharedinfra.RPCSetRunnerTimeoutArgs{
-		SharedInfraRef: sharedInfraRef,
-		ExecutionId:    executionId,
+	args := &sharedinfra.RPCGetRunnerDataArgs{
+		Ref:         sharedInfraRef,
+		ExecutionId: executionId,
 	}
 
 	var reply sharedinfra.RPCGetRunnerDataReply
@@ -171,5 +170,5 @@ func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName
 		return nil, err
 	}
 
-	return currentSharedInfra, nil
+	return &reply.SharedInfra, nil
 }

@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"time"
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
@@ -84,6 +85,7 @@ func main() {
 	logger.Info("start rpc server")
 	go http.Serve(l, nil)
 
+	time.Sleep(3 * time.Second)
 	logger.Info("start sharedInfra controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)

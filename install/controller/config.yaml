@@ -10,6 +10,7 @@ spec:
     - protocol: TCP
       port: 9000
       targetPort: 9000
+  type: LoadBalancer
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -37,6 +38,8 @@ spec:
         - --leader-elect
         image: mayconjrpacheco/cloudx-controller:latest
         name: controller
+        ports:
+          - containerPort: 9000
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

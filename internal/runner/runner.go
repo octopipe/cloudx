@@ -10,7 +10,8 @@ import (
 )
 
 type Runner struct {
-	Object *v1.Pod
+	Pod     *v1.Pod
+	Service *v1.Service
 }
 
 func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1alpha1.SharedInfra) Runner {
@@ -100,6 +101,6 @@ func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1al
 	}
 
 	return Runner{
-		Object: newRunnerObject,
+		Pod: newRunnerObject,
 	}
 }
