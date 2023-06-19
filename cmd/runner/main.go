@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/rpc"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -52,17 +52,12 @@ func main() {
 		logger:    logger,
 	}
 
-	sharedInfraRef, executionId, err := newRunnerContext.getDataFromCommandArgs()
+	currentSharedInfra, executionId, action, err := newRunnerContext.getDataFromCommandArgs()
 	if err != nil {
 		panic(err)
 	}
 
-	logger.Info("Starting runner", zap.String("sharedinfra", sharedInfraRef.String()))
-
-	currentSharedInfra, err := newRunnerContext.getCurrentSharedInfra(sharedInfraRef, executionId)
-	if err != nil {
-		panic(err)
-	}
+	sharedInfraRef := types.NamespacedName{Name: currentSharedInfra.Name, Namespace: currentSharedInfra.Namespace}
 
 	go newRunnerContext.startTimeout(sharedInfraRef, executionId)
 
@@ -75,19 +70,29 @@ func main() {
 		FinishedAt:  time.Now().Format(time.RFC3339),
 	}
 
-	currentExecution := execution.NewExecution(logger, terraformProvider, *currentSharedInfra)
-	pluginStatus, err := currentExecution.Start()
-	if err != nil {
-		rpcRunnerFinishedArgs.Status = "ERROR"
-		rpcRunnerFinishedArgs.Error = err.Error()
+	currentExecution := execution.NewExecution(logger, terraformProvider, currentSharedInfra)
+	if action == "APPLY" {
+		pluginStatus, err := currentExecution.Apply()
+		if err != nil {
+			rpcRunnerFinishedArgs.Status = "ERROR"
+			rpcRunnerFinishedArgs.Error = err.Error()
+		}
+
+		rpcRunnerFinishedArgs.Plugins = pluginStatus
+
+		var reply int
+		err = rpcClient.Call("RPCServer.SetRunnerFinished", rpcRunnerFinishedArgs, &reply)
+		if err != nil {
+			logger.Fatal("Error to call controller", zap.Error(err))
+		}
 	}
 
-	rpcRunnerFinishedArgs.Plugins = pluginStatus
-
-	var reply int
-	err = rpcClient.Call("RPCServer.SetRunnerFinished", rpcRunnerFinishedArgs, &reply)
-	if err != nil {
-		logger.Fatal("Error to call controller", zap.Error(err))
+	if action == "DESTROY" {
+		err := currentExecution.Destroy()
+		if err != nil {
+			rpcRunnerFinishedArgs.Status = "ERROR"
+			rpcRunnerFinishedArgs.Error = err.Error()
+		}
 	}
 
 	logger.Info("Finish runner execution")
@@ -120,25 +125,26 @@ func (c runnerContext) getLastAppliedConfiguration(sharedInfra commonv1alpha1.Sh
 
 }
 
-func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string, error) {
+func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, string, string, error) {
 	commandArgs := os.Args[1:]
-	sharedInfraRef := commandArgs[0]
 	executionId := commandArgs[1]
+	action := commandArgs[0]
 
-	namespace, name := "", ""
-	s := strings.Split(sharedInfraRef, "/")
-	if len(s) <= 1 {
-		name = s[0]
-	} else {
-		namespace, name = s[0], s[1]
+	var rawSharedInfra string
+	err := json.Unmarshal([]byte(commandArgs[2]), &rawSharedInfra)
+	if err != nil {
+		return commonv1alpha1.SharedInfra{}, "", "", err
 	}
 
-	req := types.NamespacedName{
-		Name:      name,
-		Namespace: namespace,
+	fmt.Println(rawSharedInfra)
+
+	var sharedInfra commonv1alpha1.SharedInfra
+	err = json.Unmarshal([]byte(rawSharedInfra), &sharedInfra)
+	if err != nil {
+		return commonv1alpha1.SharedInfra{}, "", "", err
 	}
 
-	return req, executionId, nil
+	return sharedInfra, executionId, action, nil
 }
 
 func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executionId string) {
@@ -158,7 +164,7 @@ func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executi
 	c.logger.Fatal("Runner timeout")
 }
 
-func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName, executionId string) (*commonv1alpha1.SharedInfra, error) {
+func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName, executionId string) (commonv1alpha1.SharedInfra, error) {
 	args := &sharedinfra.RPCGetRunnerDataArgs{
 		Ref:         sharedInfraRef,
 		ExecutionId: executionId,
@@ -167,8 +173,8 @@ func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName
 	var reply sharedinfra.RPCGetRunnerDataReply
 	err := c.rpcClient.Call("RPCServer.GetRunnerData", args, &reply)
 	if err != nil {
-		return nil, err
+		return commonv1alpha1.SharedInfra{}, err
 	}
 
-	return &reply.SharedInfra, nil
+	return reply.SharedInfra, nil
 }

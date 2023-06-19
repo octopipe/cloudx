@@ -15,7 +15,7 @@ type Runner struct {
 	Service *v1.Service
 }
 
-func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1alpha1.SharedInfra) Runner {
+func NewRunner(executionId string, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, action string) Runner {
 	vFalse := false
 	vTrue := true
 	vUser := int64(65532)
@@ -81,7 +81,7 @@ func NewRunner(executionId string, sharedInfraRef string, sharedInfra commonv1al
 				{
 					Name:            "runner",
 					Image:           "mayconjrpacheco/cloudx-runner:latest",
-					Args:            []string{sharedInfraRef, executionId},
+					Args:            []string{action, executionId, rawSharedInfra},
 					ImagePullPolicy: v1.PullAlways,
 					SecurityContext: securityContext,
 					Env: []v1.EnvVar{

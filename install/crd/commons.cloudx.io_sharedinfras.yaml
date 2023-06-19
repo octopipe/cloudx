@@ -76,10 +76,8 @@ spec:
                     type:
                       type: string
                   required:
-                  - depends
                   - inputs
                   - name
-                  - outputs
                   - ref
                   - type
                   type: object
@@ -114,8 +112,48 @@ spec:
                             type: string
                           finishedAt:
                             type: string
-                          name:
-                            type: string
+                          plugin:
+                            properties:
+                              depends:
+                                items:
+                                  type: string
+                                type: array
+                              inputs:
+                                items:
+                                  properties:
+                                    key:
+                                      type: string
+                                    value:
+                                      type: string
+                                  required:
+                                  - key
+                                  - value
+                                  type: object
+                                type: array
+                              name:
+                                type: string
+                              outputs:
+                                items:
+                                  properties:
+                                    key:
+                                      type: string
+                                    sensitive:
+                                      type: boolean
+                                  required:
+                                  - key
+                                  - sensitive
+                                  type: object
+                                type: array
+                              ref:
+                                type: string
+                              type:
+                                type: string
+                            required:
+                            - inputs
+                            - name
+                            - ref
+                            - type
+                            type: object
                           startedAt:
                             type: string
                           state:

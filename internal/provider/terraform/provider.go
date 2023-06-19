@@ -26,7 +26,7 @@ import (
 
 type TerraformProvider interface {
 	Apply(pluginRef string, input providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, string, error)
-	Destroy(workdirPath string, state string) error
+	Destroy(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) error
 }
 
 type terraformProvider struct {
@@ -234,27 +234,78 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 	return outputs, string(stateFile), string(lockDepsFile), nil
 }
 
-func (p terraformProvider) Destroy(workdirPath string, state string) error {
-	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
-	if err != nil {
-		return err
-	}
-
-	err = tf.Init(context.Background(), tfexec.Upgrade(true))
+func (p terraformProvider) Destroy(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) error {
+	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, executionInput)
 	if err != nil {
 		return err
 	}
 
 	execVarsFilePath := filepath.Join(workdirPath, "exec.tfvars")
-	_, err = os.Create(execVarsFilePath)
+	f, err := os.Create(execVarsFilePath)
 	if err != nil {
 		return err
 	}
 
-	err = tf.Destroy(context.Background(), tfexec.StateOut(""))
+	p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
+	for _, i := range pluginConfig.Spec.Inputs {
+		value, ok := executionInput[i.Name]
+		if !ok && i.Required {
+			return fmt.Errorf("required field: %s", i.Name)
+		}
+
+		if !ok {
+			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, i.Default))
+			continue
+		}
+
+		f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, value.Value))
+	}
+
+	tf, err := tfexec.NewTerraform(workdirPath, p.execPath)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	if previousLockDeps != "" {
+		p.logger.Info("using lock file to increase performance")
+		previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
+		previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
+		if err != nil {
+			return err
+		}
+
+		var unescapedJSON string
+		err = json.Unmarshal([]byte(previousLockDeps), &unescapedJSON)
+		if err != nil {
+			return err
+		}
+		previousLockDepsFile.Write([]byte(unescapedJSON))
+	}
+
+	p.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
+	err = tf.Init(context.Background(), tfexec.Upgrade(true))
+	if err != nil {
+
+		return err
+	}
+
+	if previousState != "" {
+		previousStateFilePath := filepath.Join(workdirPath, "terraform.tfstate")
+		previousStateFile, err := os.Create(previousStateFilePath)
+		if err != nil {
+			return err
+		}
+		var unescapedJSON string
+		err = json.Unmarshal([]byte(previousState), &unescapedJSON)
+		if err != nil {
+			return err
+		}
+
+		previousStateFile.Write([]byte(unescapedJSON))
+	}
+
+	p.logger.Info("executing terraform destroy", zap.String("workdir", workdirPath))
+	err = tf.Destroy(context.Background(), tfexec.VarFile(execVarsFilePath))
+
+	return err
 }

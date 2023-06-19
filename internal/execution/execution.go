@@ -45,9 +45,31 @@ func NewExecution(logger *zap.Logger, terraformProvider terraform.TerraformProvi
 	}
 }
 
-func (c *execution) Start() ([]commonv1alpha1.PluginStatus, error) {
+func (c *execution) Destroy() error {
+	lastExecution := c.getLastExecution()
+
+	for _, executionPlugin := range lastExecution.Plugins {
+		providerInputs := providerIO.ToProviderInput(executionPlugin.Plugin.Inputs)
+		if executionPlugin.Plugin.PluginType == plugin.TerraformPluginType {
+			err := c.terraformProvider.Destroy(executionPlugin.Plugin.Ref, providerInputs, executionPlugin.State, executionPlugin.DependencyLock)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *execution) Apply() ([]commonv1alpha1.PluginStatus, error) {
 	status := []commonv1alpha1.PluginStatus{}
 	eg, _ := errgroup.WithContext(context.Background())
+
+	err := c.deleteDiffExecutionPlugins()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, p := range c.currentSharedInfra.Spec.Plugins {
 		if _, ok := c.executedNodes[p.Name]; !ok && isComplete(c.dependencyGraph[p.Name], c.executedNodes) {
 			eg.Go(func(currentPlugin commonv1alpha1.SharedInfraPlugin) func() error {
@@ -85,7 +107,7 @@ func (c *execution) Start() ([]commonv1alpha1.PluginStatus, error) {
 		return status, nil
 	}
 
-	p, err := c.Start()
+	p, err := c.Apply()
 	if err != nil {
 		return nil, err
 	}
@@ -101,20 +123,48 @@ func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alp
 	if p.PluginType == plugin.TerraformPluginType {
 		out, state, lockFile, err := c.terraformProvider.Apply(p.Ref, providerInputs, lastPluginStatus.State, lastPluginStatus.DependencyLock)
 		if err != nil {
-			return getPluginStatusError(p.Name, startedAt, err), providerIO.ProviderOutput{}, nil
+			return getPluginStatusError(p, startedAt, err), providerIO.ProviderOutput{}, nil
 		}
 
-		return getTerraformPluginStatusSuccess(p.Name, startedAt, state, lockFile), out, nil
+		return getTerraformPluginStatusSuccess(p, startedAt, state, lockFile), out, nil
 	}
 
 	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, errors.New("invalid plugin type")
 }
 
+// TODO: A more inteligent way to do the diff-deleting plugins
+func (c *execution) deleteDiffExecutionPlugins() error {
+	lastExecution := c.getLastExecution()
+
+	for _, executionPlugin := range lastExecution.Plugins {
+		foundPlugin := false
+		for _, currentPlugin := range c.currentSharedInfra.Spec.Plugins {
+			if executionPlugin.Plugin.Name == currentPlugin.Name {
+				foundPlugin = true
+				break
+			}
+		}
+
+		if !foundPlugin {
+			c.logger.Info("Not found plugin in current shared infra, deleting plugin", zap.String("plugin", executionPlugin.Plugin.Name))
+			providerInputs := providerIO.ToProviderInput(executionPlugin.Plugin.Inputs)
+			if executionPlugin.Plugin.PluginType == plugin.TerraformPluginType {
+				err := c.terraformProvider.Destroy(executionPlugin.Plugin.Ref, providerInputs, executionPlugin.State, executionPlugin.DependencyLock)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (c *execution) getLastExecution() commonv1alpha1.SharedInfraExecutionStatus {
 	lastExecution := commonv1alpha1.SharedInfraExecutionStatus{}
 
-	if len(c.currentSharedInfra.Status.Executions) > 0 {
-		lastExecution = c.currentSharedInfra.Status.Executions[0]
+	if len(c.currentSharedInfra.Status.Executions) > 1 {
+		lastExecution = c.currentSharedInfra.Status.Executions[len(c.currentSharedInfra.Status.Executions)-2]
 	}
 
 	return lastExecution
@@ -128,7 +178,7 @@ func (c *execution) getLastPluginStatus(currentPlugin commonv1alpha1.SharedInfra
 	}
 
 	for _, p := range lastExecution.Plugins {
-		if p.Name == currentPlugin.Name {
+		if p.Plugin.Name == currentPlugin.Name {
 			return p
 		}
 	}
@@ -136,11 +186,11 @@ func (c *execution) getLastPluginStatus(currentPlugin commonv1alpha1.SharedInfra
 	return commonv1alpha1.PluginStatus{}
 }
 
-func getTerraformPluginStatusSuccess(name string, startedAt string, state string, lockFile string) commonv1alpha1.PluginStatus {
+func getTerraformPluginStatusSuccess(plugin commonv1alpha1.SharedInfraPlugin, startedAt string, state string, lockFile string) commonv1alpha1.PluginStatus {
 	escapedState, err := json.Marshal(state)
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
-			Name:       name,
+			Plugin:     plugin,
 			Status:     ExecutionErrorStatus,
 			StartedAt:  startedAt,
 			FinishedAt: time.Now().Format(time.RFC3339),
@@ -151,7 +201,7 @@ func getTerraformPluginStatusSuccess(name string, startedAt string, state string
 	escapedLockFile, err := json.Marshal(lockFile)
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
-			Name:       name,
+			Plugin:     plugin,
 			Status:     ExecutionErrorStatus,
 			StartedAt:  startedAt,
 			FinishedAt: time.Now().Format(time.RFC3339),
@@ -160,7 +210,7 @@ func getTerraformPluginStatusSuccess(name string, startedAt string, state string
 	}
 
 	return commonv1alpha1.PluginStatus{
-		Name:           name,
+		Plugin:         plugin,
 		State:          string(escapedState),
 		DependencyLock: string(escapedLockFile),
 		Status:         ExecutionSuccessStatus,
@@ -169,11 +219,11 @@ func getTerraformPluginStatusSuccess(name string, startedAt string, state string
 	}
 }
 
-func getPluginStatusError(name string, startedAt string, err error) commonv1alpha1.PluginStatus {
+func getPluginStatusError(plugin commonv1alpha1.SharedInfraPlugin, startedAt string, err error) commonv1alpha1.PluginStatus {
 	escapedError, err := json.Marshal(err.Error())
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
-			Name:       name,
+			Plugin:     plugin,
 			Status:     ExecutionErrorStatus,
 			StartedAt:  startedAt,
 			FinishedAt: time.Now().Format(time.RFC3339),
@@ -182,7 +232,7 @@ func getPluginStatusError(name string, startedAt string, err error) commonv1alph
 	}
 
 	return commonv1alpha1.PluginStatus{
-		Name:       name,
+		Plugin:     plugin,
 		Status:     ExecutionErrorStatus,
 		StartedAt:  startedAt,
 		FinishedAt: time.Now().Format(time.RFC3339),

@@ -2,6 +2,7 @@ package sharedinfra
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -57,8 +58,21 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	rawSharedInfra, err := json.Marshal(currentSharedInfra)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	action := "APPLY"
+	if len(currentSharedInfra.Finalizers) > 0 {
+		action = "DESTROY"
+	}
+
+	c.logger.Info("reconcile shared-infra", zap.String("shared-infra", string(rawSharedInfra)), zap.String("action", action))
+
 	if os.Getenv("ENV") != "local" {
-		newRunner := runner.NewRunner(executionId.String(), req.String(), *currentSharedInfra)
+		c.logger.Info("creating runner")
+		newRunner := runner.NewRunner(executionId.String(), *currentSharedInfra, string(rawSharedInfra), action)
 		err = c.Create(ctx, newRunner.Pod)
 		if err != nil {
 			return ctrl.Result{}, err

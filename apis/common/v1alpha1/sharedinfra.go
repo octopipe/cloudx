@@ -22,10 +22,10 @@ type SharedInfraPluginOutput struct {
 type SharedInfraPlugin struct {
 	Name       string                    `json:"name"`
 	Ref        string                    `json:"ref"`
-	Depends    []string                  `json:"depends"`
+	Depends    []string                  `json:"depends,omitempty"`
 	PluginType string                    `json:"type"`
 	Inputs     []SharedInfraPluginInput  `json:"inputs"`
-	Outputs    []SharedInfraPluginOutput `json:"outputs"`
+	Outputs    []SharedInfraPluginOutput `json:"outputs,omitempty"`
 }
 
 type SharedInfraRunnerConfig struct {
@@ -41,13 +41,13 @@ type SharedInfraSpec struct {
 }
 
 type PluginStatus struct {
-	Name           string `json:"name,omitempty"`
-	State          string `json:"state,omitempty"`
-	DependencyLock string `json:"dependencyLock,omitempty"`
-	StartedAt      string `json:"startedAt,omitempty"`
-	FinishedAt     string `json:"finishedAt,omitempty"`
-	Status         string `json:"status,omitempty"`
-	Error          string `json:"error,omitempty"`
+	Plugin         SharedInfraPlugin `json:"plugin,omitempty"`
+	State          string            `json:"state,omitempty"`
+	DependencyLock string            `json:"dependencyLock,omitempty"`
+	StartedAt      string            `json:"startedAt,omitempty"`
+	FinishedAt     string            `json:"finishedAt,omitempty"`
+	Status         string            `json:"status,omitempty"`
+	Error          string            `json:"error,omitempty"`
 }
 
 type SharedInfraExecutionStatus struct {

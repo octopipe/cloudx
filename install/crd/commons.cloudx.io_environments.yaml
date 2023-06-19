@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: connectioninterfaces.commons.cloudx.io
+  name: environments.commons.cloudx.io
 spec:
   group: commons.cloudx.io
   names:
-    kind: ConnectionInterface
-    listKind: ConnectionInterfaceList
-    plural: connectioninterfaces
-    singular: connectioninterface
+    kind: Environment
+    listKind: EnvironmentList
+    plural: environments
+    singular: environment
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -34,9 +34,7 @@ spec:
             type: object
           spec:
             properties:
-              GeneratedFrom:
-                type: string
-              Outputs:
+              Inputs:
                 items:
                   properties:
                     key:

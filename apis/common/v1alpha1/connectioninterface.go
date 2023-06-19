@@ -4,6 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ConnectionInterfaceSpecItemSecret struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
 type ConnectionInterfaceSpecItem struct {
 	Key       string `json:"key,omitempty"`
 	Value     string `json:"value,omitempty"`
@@ -11,8 +16,9 @@ type ConnectionInterfaceSpecItem struct {
 }
 
 type ConnectionInterfaceSpec struct {
-	GeneratedFrom string                        `json:"GeneratedFrom,omitempty"`
-	Outputs       []ConnectionInterfaceSpecItem `json:"Outputs,omitempty"`
+	GeneratedFrom string                            `json:"GeneratedFrom,omitempty"`
+	Outputs       []ConnectionInterfaceSpecItem     `json:"Outputs,omitempty"`
+	Secret        ConnectionInterfaceSpecItemSecret `json:"Secret,omitempty"`
 }
 
 type ConnectionInterfaceStatus struct {

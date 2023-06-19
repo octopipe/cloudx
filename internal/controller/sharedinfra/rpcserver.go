@@ -32,13 +32,13 @@ type RPCGetRunnerDataReply struct {
 
 func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunnerDataReply) error {
 	s.logger.Info("Received rpc call", zap.String("sharedinfra", args.Ref.String()))
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, currentSharedInfra)
+	currentSharedInfra := commonv1alpha1.SharedInfra{}
+	err := s.Get(context.Background(), args.Ref, &currentSharedInfra)
 	if err != nil {
 		return err
 	}
 
-	reply.SharedInfra = *currentSharedInfra
+	reply.SharedInfra = currentSharedInfra
 	return nil
 }
 
