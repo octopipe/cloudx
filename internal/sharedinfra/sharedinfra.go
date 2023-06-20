@@ -1,6 +1,8 @@
 package sharedinfra
 
 import (
+	"context"
+
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/pagination"
 )
@@ -12,16 +14,16 @@ type SharedInfra struct {
 }
 
 type UseCase interface {
-	List(chunkPagination pagination.ChunkingPaginationRequest) (pagination.ChunkingPaginationResponse[SharedInfra], error)
-	Create(sharedInfra SharedInfra) (SharedInfra, error)
-	Get(name string) (SharedInfra, error)
-	Update(name string, sharedInfra SharedInfra) (SharedInfra, error)
-	Delete(name string) error
+	List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (pagination.ChunkingPaginationResponse[SharedInfra], error)
+	Create(ctx context.Context, sharedInfra SharedInfra) (SharedInfra, error)
+	Update(ctx context.Context, sharedInfra SharedInfra) (SharedInfra, error)
+	Get(ctx context.Context, name string, namespace string) (SharedInfra, error)
+	Delete(ctx context.Context, name string, namespace string) error
 }
 
 type Repository interface {
-	List() (commonv1alpha1.SharedInfraList, error)
-	Apply(commonv1alpha1.SharedInfra) (commonv1alpha1.SharedInfra, error)
-	Get(name string) (commonv1alpha1.SharedInfra, error)
-	Delete(name string) error
+	List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (commonv1alpha1.SharedInfraList, error)
+	Apply(ctx context.Context, s commonv1alpha1.SharedInfra) (commonv1alpha1.SharedInfra, error)
+	Get(ctx context.Context, name string, namespace string) (commonv1alpha1.SharedInfra, error)
+	Delete(ctx context.Context, name string, namespace string) error
 }

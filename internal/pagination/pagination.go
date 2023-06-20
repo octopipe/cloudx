@@ -1,7 +1,7 @@
 package pagination
 
 type SimplePaginationRequest struct {
-	Limit string `json:"limit"`
+	Limit int64  `json:"limit"`
 	Page  string `json:"page"`
 }
 
@@ -11,7 +11,7 @@ type SimplePaginationResponse[T any] struct {
 }
 
 type ChunkingPaginationRequest struct {
-	Limit string `json:"limit"`
+	Limit int64  `json:"limit"`
 	Chunk string `json:"chunk"`
 }
 
