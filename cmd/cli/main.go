@@ -6,7 +6,7 @@ import (
 
 	"github.com/octopipe/cloudx/cmd/cli/commands"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
-	"github.com/octopipe/cloudx/internal/terraform"
+	"github.com/octopipe/cloudx/internal/provider/terraform"
 	"go.uber.org/zap"
 )
 
@@ -17,7 +17,7 @@ func main() {
 		panic(err)
 	}
 	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
-	pluginCmd := commands.NewPluginRoot(pluginManager)
+	pluginCmd := commands.NewPluginRoot(pluginManager, terraformProvider)
 	sharedInfraCmd := commands.NewSharedInfraRoot(pluginManager)
 
 	commands.RootCmd.AddCommand(pluginCmd)

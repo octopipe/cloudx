@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -125,7 +128,11 @@ func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
 
 func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginStatus, providerIO.ProviderOutput, error) {
 	startedAt := time.Now().Format(time.RFC3339)
-	providerInputs := providerIO.ToProviderInput(p.Inputs)
+	finalInputs, err := c.interpolateInputs(p.Inputs)
+	if err != nil {
+		return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, err
+	}
+	providerInputs := providerIO.ToProviderInput(finalInputs)
 	lastPluginStatus := c.getLastPluginStatus(p)
 	if p.PluginType == plugin.TerraformPluginType {
 		out, state, lockFile, err := c.terraformProvider.Apply(p.Ref, providerInputs, lastPluginStatus.State, lastPluginStatus.DependencyLock)
@@ -137,6 +144,66 @@ func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alp
 	}
 
 	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, errors.New("invalid plugin type")
+}
+
+func (c *execution) manipulateExpression(text string) (string, error) {
+	start, end := 0, 0
+	for index, c := range text {
+		if c == '{' && index > 0 && text[index-1] == '{' {
+			start = index + 1
+		}
+
+		if c == '}' && index < len(text)-1 && text[index+1] == '}' {
+			end = index - 1
+		}
+	}
+	expression := strings.Split(strings.Trim(text[start:end], " "), ".")
+
+	fmt.Println(text, expression, start, end)
+
+	if len(expression) == 3 {
+
+		pluginName, _, outKey := expression[0], expression[1], expression[2]
+
+		out, ok := c.executedNodes[pluginName]
+		if !ok {
+			return "", fmt.Errorf("plugin %s not found", pluginName)
+		}
+
+		outVal, ok := out[outKey]
+		if !ok {
+			return "", fmt.Errorf("output %s in plugin %s not found", outKey, pluginName)
+		}
+
+		reg := regexp.MustCompile(`"([^"]*)"`)
+
+		newExpression := fmt.Sprintf("%s%s%s", text[0:start-2], reg.ReplaceAllString(outVal.Value, "${1}"), text[end+3:])
+
+		fmt.Println("=========================", newExpression)
+
+		return newExpression, nil
+	}
+
+	return text, nil
+
+}
+
+func (c *execution) interpolateInputs(inputs []commonv1alpha1.SharedInfraPluginInput) ([]commonv1alpha1.SharedInfraPluginInput, error) {
+	newInputs := []commonv1alpha1.SharedInfraPluginInput{}
+	for _, i := range inputs {
+
+		inputParsed, err := c.manipulateExpression(i.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		newInputs = append(newInputs, commonv1alpha1.SharedInfraPluginInput{
+			Key:   i.Key,
+			Value: inputParsed,
+		})
+	}
+
+	return newInputs, nil
 }
 
 // TODO: A more inteligent way to do the diff-deleting plugins

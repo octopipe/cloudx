@@ -40,7 +40,7 @@ func NewTerraformProvider(logger *zap.Logger) (TerraformProvider, error) {
 
 	// installer := &releases.ExactVersion{
 	// 	Product:    product.Terraform,
-	// 	Version:    version.Must(version.NewVersion("1.0.6")),
+	// 	Version:    version.Must(version.NewVersion("1.5.0")),
 	// 	InstallDir: installDirPath,
 	// }
 
@@ -51,7 +51,7 @@ func NewTerraformProvider(logger *zap.Logger) (TerraformProvider, error) {
 
 	return terraformProvider{
 		logger:   logger,
-		execPath: "/usr/bin/terraform",
+		execPath: "/opt/homebrew/bin/terraform",
 	}, nil
 }
 

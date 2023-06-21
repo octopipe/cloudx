@@ -1,18 +1,19 @@
 package commands
 
 import (
-	"encoding/json"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/octopipe/cloudx/internal/pluginmanager"
+	"github.com/octopipe/cloudx/internal/provider/terraform"
 	"github.com/spf13/cobra"
 )
 
 type pluginCmd struct {
-	pluginManager pluginmanager.Manager
+	pluginManager     pluginmanager.Manager
+	terraformProvider terraform.TerraformProvider
 }
 
 func (p pluginCmd) NewPluginCmd() *cobra.Command {
@@ -61,32 +62,33 @@ func (p pluginCmd) NewExecutPluginCmd() *cobra.Command {
 		Short: "execute plugin",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			name := args[0]
-			inputPath := args[1]
+			// name := args[0]
+			// inputPath := args[1]
 
-			d, err := os.ReadFile(inputPath)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			// d, err := os.ReadFile(inputPath)
+			// if err != nil {
+			// 	log.Fatalln(err)
+			// }
 
-			input := map[string]interface{}{}
+			// input := map[string]interface{}{}
 
-			err = json.Unmarshal(d, &input)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			// err = json.Unmarshal(d, &input)
+			// if err != nil {
+			// 	log.Fatalln(err)
+			// }
 
-			_, _, err = p.pluginManager.ExecuteTerraformPlugin(name, input)
-			if err != nil {
-				log.Fatalln(err)
-			}
+			// _, _, err = p.terraformProvider.Apply(name, input)
+			// if err != nil {
+			// 	log.Fatalln(err)
+			// }
 		},
 	}
 }
 
-func NewPluginRoot(pluginManager pluginmanager.Manager) *cobra.Command {
+func NewPluginRoot(pluginManager pluginmanager.Manager, terraformProvider terraform.TerraformProvider) *cobra.Command {
 	pluginRoot := pluginCmd{
-		pluginManager: pluginManager,
+		pluginManager:     pluginManager,
+		terraformProvider: terraformProvider,
 	}
 
 	pluginCmd := pluginRoot.NewPluginCmd()

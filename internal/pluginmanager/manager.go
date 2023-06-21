@@ -1,6 +1,8 @@
 package pluginmanager
 
 import (
+	"fmt"
+
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/octopipe/cloudx/internal/provider/terraform"
@@ -24,7 +26,7 @@ func NewPluginManager(logger *zap.Logger, terraformProvider terraform.TerraformP
 }
 
 func (m manager) Publish(pluginName string, filecontents map[string][]byte) error {
-	tag, err := name.NewTag("mayconjrpacheco/celio-plugin:latest")
+	tag, err := name.NewTag(fmt.Sprintf("mayconjrpacheco/plugin:%s", pluginName))
 	if err != nil {
 		return err
 	}
