@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/octopipe/cloudx/internal/provider/terraform"
+	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 )
 

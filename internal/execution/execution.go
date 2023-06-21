@@ -11,9 +11,9 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	providerIO "github.com/octopipe/cloudx/internal/io"
 	"github.com/octopipe/cloudx/internal/plugin"
-	providerIO "github.com/octopipe/cloudx/internal/provider/io"
-	"github.com/octopipe/cloudx/internal/provider/terraform"
+	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -176,10 +176,7 @@ func (c *execution) manipulateExpression(text string) (string, error) {
 		}
 
 		reg := regexp.MustCompile(`"([^"]*)"`)
-
 		newExpression := fmt.Sprintf("%s%s%s", text[0:start-2], reg.ReplaceAllString(outVal.Value, "${1}"), text[end+3:])
-
-		fmt.Println("=========================", newExpression)
 
 		return newExpression, nil
 	}

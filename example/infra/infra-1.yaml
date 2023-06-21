@@ -8,6 +8,9 @@ spec:
   # globalInputs:
   #   - key: name
   #     value: lg
+  providerConfigRef:
+    name: aws-config
+    namespace: default
   plugins:
   - name: test-1
     ref: mayconjrpacheco/plugin:test-1
@@ -19,7 +22,7 @@ spec:
       value: test-1
     # inputs-envs:
   - name: test-2
-    ref: mayconjrpacheco/plugin:test-1
+    ref: mayconjrpacheco/plugin:sns-1
     type: terraform
     depends: 
     - test-1

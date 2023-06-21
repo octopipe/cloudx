@@ -1,0 +1,8 @@
+apiVersion: commons.cloudx.io/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: aws-config
+spec:
+  type: AWS
+  config:
+    source: CurrentAccount

@@ -12,6 +12,7 @@ import (
 	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -70,14 +71,26 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	c.logger.Info("reconcile shared-infra", zap.String("shared-infra", currentSharedInfra.GetName()), zap.String("action", action))
 
+	providerConfig := commonv1alpha1.ProviderConfig{}
+	err = c.Get(ctx, types.NamespacedName{
+		Name:      currentSharedInfra.Spec.ProviderConfigRef.Name,
+		Namespace: currentSharedInfra.Spec.ProviderConfigRef.Namespace,
+	}, &providerConfig)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner")
-		newRunner := runner.NewRunner(executionId.String(), *currentSharedInfra, string(rawSharedInfra), action)
-		err = c.Create(ctx, newRunner.Pod)
+		newRunner, err := runner.NewRunner(executionId.String(), *currentSharedInfra, string(rawSharedInfra), action, providerConfig)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
+		err = c.Create(ctx, newRunner.Pod)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil

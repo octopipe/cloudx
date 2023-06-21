@@ -15,8 +15,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	providerIO "github.com/octopipe/cloudx/internal/io"
 	"github.com/octopipe/cloudx/internal/plugin"
-	providerIO "github.com/octopipe/cloudx/internal/provider/io"
 	"go.uber.org/zap"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -51,7 +51,7 @@ func NewTerraformProvider(logger *zap.Logger) (TerraformProvider, error) {
 
 	return terraformProvider{
 		logger:   logger,
-		execPath: "/opt/homebrew/bin/terraform",
+		execPath: "/usr/bin/terraform",
 	}, nil
 }
 
@@ -187,6 +187,7 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 		previousStateFile.Write([]byte(unescapedJSON))
 	}
 
+	p.logger.Info("executing terraform plan", zap.String("workdir", workdirPath))
 	hasModifications, err := tf.Plan(context.Background(), tfexec.VarFile(execVarsFilePath))
 	if err != nil {
 		return nil, "", "", err

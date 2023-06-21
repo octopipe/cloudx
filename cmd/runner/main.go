@@ -11,7 +11,7 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/execution"
-	"github.com/octopipe/cloudx/internal/provider/terraform"
+	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"

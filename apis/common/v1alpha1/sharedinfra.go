@@ -33,11 +33,17 @@ type SharedInfraRunnerConfig struct {
 	ServiceAccount string `json:"serviceAccount,omitempty"`
 }
 
+type SharedInfraProviderConfigRef struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
 type SharedInfraSpec struct {
-	Author       string                  `json:"author,omitempty" default:"anonymous"`
-	Description  string                  `json:"description,omitempty"`
-	RunnerConfig SharedInfraRunnerConfig `json:"runnerConfig,omitempty"`
-	Plugins      []SharedInfraPlugin     `json:"plugins"`
+	Author            string                       `json:"author,omitempty" default:"anonymous"`
+	Description       string                       `json:"description,omitempty"`
+	ProviderConfigRef SharedInfraProviderConfigRef `json:"providerConfigRef,omitempty"`
+	RunnerConfig      SharedInfraRunnerConfig      `json:"runnerConfig,omitempty"`
+	Plugins           []SharedInfraPlugin          `json:"plugins"`
 }
 
 type PluginStatus struct {

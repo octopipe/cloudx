@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/octopipe/cloudx/internal/pluginmanager"
-	"github.com/octopipe/cloudx/internal/provider/terraform"
+	"github.com/octopipe/cloudx/internal/terraform"
 	"github.com/spf13/cobra"
 )
 

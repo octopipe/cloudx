@@ -6,7 +6,7 @@ import (
 
 	"github.com/octopipe/cloudx/cmd/cli/commands"
 	"github.com/octopipe/cloudx/internal/pluginmanager"
-	"github.com/octopipe/cloudx/internal/provider/terraform"
+	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 )
 

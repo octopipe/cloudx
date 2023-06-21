@@ -1,0 +1,11 @@
+kind: Plugin
+metadata:
+  name: sns
+spec:
+  inputs:
+    - label: Name
+      name: name
+      type: text
+      help: the name of deployment
+      required: true
+

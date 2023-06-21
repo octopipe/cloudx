@@ -82,6 +82,13 @@ spec:
                   - type
                   type: object
                 type: array
+              providerConfigRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
               runnerConfig:
                 properties:
                   nodeSelector:
