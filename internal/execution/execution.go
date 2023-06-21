@@ -63,12 +63,29 @@ func (c *execution) Destroy() error {
 
 func (c *execution) Apply() ([]commonv1alpha1.PluginStatus, error) {
 	status := []commonv1alpha1.PluginStatus{}
-	eg, _ := errgroup.WithContext(context.Background())
 
 	err := c.deleteDiffExecutionPlugins()
 	if err != nil {
 		return nil, err
 	}
+
+	for {
+		if len(c.executedNodes) == len(c.executionGraph) {
+			return status, nil
+		}
+
+		s, err := c.execute()
+		if err != nil {
+			return nil, err
+		}
+
+		status = append(status, s...)
+	}
+}
+
+func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
+	status := []commonv1alpha1.PluginStatus{}
+	eg, _ := errgroup.WithContext(context.Background())
 
 	for _, p := range c.currentSharedInfra.Spec.Plugins {
 		if _, ok := c.executedNodes[p.Name]; !ok && isComplete(c.dependencyGraph[p.Name], c.executedNodes) {
@@ -103,16 +120,6 @@ func (c *execution) Apply() ([]commonv1alpha1.PluginStatus, error) {
 		return nil, err
 	}
 
-	if len(c.executedNodes) == len(c.executionGraph) {
-		return status, nil
-	}
-
-	p, err := c.Apply()
-	if err != nil {
-		return nil, err
-	}
-
-	status = append(status, p...)
 	return status, nil
 }
 

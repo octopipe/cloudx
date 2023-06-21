@@ -68,7 +68,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		action = "DESTROY"
 	}
 
-	c.logger.Info("reconcile shared-infra", zap.String("shared-infra", string(rawSharedInfra)), zap.String("action", action))
+	c.logger.Info("reconcile shared-infra", zap.String("shared-infra", currentSharedInfra.GetName()), zap.String("action", action))
 
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner")

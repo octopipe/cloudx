@@ -5,8 +5,11 @@ metadata:
 spec:
   author: Maycon Pacheco
   description: SharedInfra for example 1
+  # globalInputs:
+  #   - key: name
+  #     value: lg
   plugins:
-  - name: sqs
+  - name: celio-1
     ref: mayconjrpacheco/celio-plugin:latest
     depends: []
     type: terraform
@@ -14,13 +17,13 @@ spec:
     inputs:
     - key: name
       value: matheus
-    inputs-envs:
-      
-  - name: sqs-policy
+    # inputs-envs:
+  - name: celio-2
     ref: mayconjrpacheco/celio-plugin:latest
     type: terraform
-    depends: []
+    depends: 
+    - celio-1
     outputs: []
     inputs:
     - key: name
-      value: leandro
+      value: joao
