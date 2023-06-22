@@ -8,7 +8,7 @@ const SharedInfras = () => {
   const getList = useCallback(async () => {
     const res = await fetch("http://localhost:8080/shared-infras")
     const list = await res.json()
-    console.log(list)
+
     setList(list)
   }, [])
 

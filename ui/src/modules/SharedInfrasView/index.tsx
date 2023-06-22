@@ -1,9 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Accordion, Badge, Button, Card, Col, Container, ListGroup, Row, Tab, Tabs } from "react-bootstrap";
+import { Accordion, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import SharedInfraViewDiagram from "./Diagram";
 import { toEdges, toNodes } from "./utils";
 import "./index.css"
+
+const getBadgeVariants = (status: string) => {
+  if (status === "RUNNING") {
+    return 'primary'
+  }
+
+  if (status === "SUCCESS") {
+    return 'success'
+  }
+
+
+  return 'danger'
+}
 
 const SharedInfraView = () => {
   const { name } = useParams()
@@ -12,7 +25,7 @@ const SharedInfraView = () => {
   const getSharedInfra = useCallback(async (name: string) => {
     const res = await fetch(`http://localhost:8080/shared-infras/${name}`)
     const item = await res.json()
-    console.log(item)
+
     setSharedInfra(item)
   }, [])
 
@@ -20,17 +33,25 @@ const SharedInfraView = () => {
     if (!name)
       return
 
+    const interval = setInterval(() => {
+      getSharedInfra(name)
+    }, 3000)
+
     getSharedInfra(name)
+    return () => clearInterval(interval)
   }, [])
   
   return (
     <>
       <Container fluid>
-        <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+        <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2">
           <h1 className="h2">{sharedInfra?.name}</h1>
           <div className="btn-toolbar mb-2 mb-md-0">
             <Button variant="secondary">Create</Button>
           </div>
+        </div>
+        <div className="mb-3">
+          {sharedInfra?.description}
         </div>
         <Tabs
           defaultActiveKey="overview"
@@ -38,9 +59,41 @@ const SharedInfraView = () => {
           className="mb-3"
         >
           <Tab eventKey="overview" title="Overview">
+            <h1 className="h4">Plugins</h1>
+            {sharedInfra?.plugins?.map((p: any) => (
+              <Card>
+                <Card.Body>
+                <div className="mb-1"><strong>Name: </strong>{p?.name}</div>
+                <div className="mb-1"><strong>Ref: </strong>{p?.ref}</div>
+                <div className="mb-1"><strong>Type: </strong>{p?.type}</div>
+                <div>
+                  <strong>Inputs: </strong>
+                  <Table bordered>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {p?.inputs?.map((i: any) => (
+                        <tr>
+                          <td>{i.key}</td>
+                          <td>{i.value}</td>
+
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+                </Card.Body>
+
+              </Card>
+            ))}
             <SharedInfraViewDiagram
               initialNodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins) : []}
               initialEdges={sharedInfra?.plugins ? toEdges(sharedInfra.plugins) : []}
+              type="default"
             />
           </Tab>
           <Tab eventKey="executions" title="Executions">
@@ -48,7 +101,15 @@ const SharedInfraView = () => {
               <Accordion>
                 {sharedInfra?.status?.executions?.map((item: any, idx: any) => (
                   <Accordion.Item eventKey={idx}>
-                    <Accordion.Header>Execution #{ idx }</Accordion.Header>
+                    <Accordion.Header>
+                      {item?.status === "RUNNING" && (
+                        <Spinner animation="border" role="status" variant="primary" size="sm">
+                          <span className="visually-hidden">Loading...</span>
+                        </Spinner>
+                      )}
+                      <Badge className="mx-2" bg={getBadgeVariants(item?.status)}>{ item?.status }</Badge>
+                      Execution #{ idx }
+                    </Accordion.Header>
                     <Accordion.Body>
                       <SharedInfraViewDiagram
                         initialNodes={item?.plugins ? toNodes(item.plugins) : []}
@@ -61,24 +122,6 @@ const SharedInfraView = () => {
             </div>
           </Tab>
         </Tabs>
-      </Container>
-      <Container fluid>
-        
-        {/* <div>
-          <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-1">
-            <h1 className="h5">Plugins</h1>
-          </div>
-          {sharedInfra?.spec?.plugins?.map((item: any, idx: any) => (
-            <Card className="mb-2">
-              <Card.Body>
-                <Card.Title>{item?.name}</Card.Title>
-                <Card.Subtitle className="mb-2 text-muted">{item?.ref}</Card.Subtitle>
-              </Card.Body>
-            </Card>
-          ))}
-        </div> */}
-
-        
       </Container>
     </>
   )

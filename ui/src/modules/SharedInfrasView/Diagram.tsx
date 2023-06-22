@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType } from 'reactflow';
-import CustonNode from './CustonNode';
+import ExecutionNode from './ExecutionNode';
 import dagre from 'dagre'
 import 'reactflow/dist/style.css';
 
@@ -40,7 +40,7 @@ const getLayoutedElements = (nodes: any, edges: any) => {
 };
 
 const nodeTypes = {
-  customNode: CustonNode,
+  executionNode: ExecutionNode,
 };
 
 const SharedInfraViewDiagram = ({ initialNodes, initialEdges }: any) => {
@@ -63,22 +63,19 @@ const SharedInfraViewDiagram = ({ initialNodes, initialEdges }: any) => {
     setNodes([...layoutedNodes]);
     setEdges([...layoutedEdges]);
 
-
-    console.log(layoutedNodes, layoutedEdges)
-
   }, [initialNodes, initialEdges])
   
   return (
     <div style={{ width: '100%', height: '300px' }}>
       <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      nodeTypes={nodeTypes}
-      fitView
-    ></ReactFlow>
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={nodeTypes}
+        fitView
+      ></ReactFlow>
     </div>
   )
 }

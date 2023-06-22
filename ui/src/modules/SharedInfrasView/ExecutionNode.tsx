@@ -38,11 +38,14 @@ export default memo(({ data, isConnectable }: any) => {
         >
           {data.label}
         </div>
-        <div style={{padding: '10px'}}>
+        { data?.startedAt && data?.finishedAt && (
+          <div style={{padding: '10px'}}>
 
-          {data?.startedAt && data?.finishedAt && getDuration(data?.startedAt, data?.finishedAt)}
+            {getDuration(data?.startedAt, data?.finishedAt)}
 
-        </div>
+          </div>
+        )}
+        
       </div>
       <Handle
         type="source"

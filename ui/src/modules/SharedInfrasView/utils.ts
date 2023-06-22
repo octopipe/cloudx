@@ -2,11 +2,11 @@ const position = { x: 0, y: 0 };
 const edgeType = 'smoothstep';
 
 
-export const toNodes = (plugins: any) => {
+export const toNodes = (plugins: any, type="executionNode") => {
   return plugins.map((p: any) => {
     return {
       id: p.name,
-      type: 'customNode',
+      type: type,
       sourcePosition: 'right',
       targetPosition: 'left',
       data: { 
@@ -35,7 +35,6 @@ export const toEdges = (plugins: any) => {
     }
   }
 
-  console.log(edges)
 
   return edges
 }
