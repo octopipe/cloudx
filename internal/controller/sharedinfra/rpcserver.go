@@ -80,7 +80,7 @@ func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int
 		}
 	}
 
-	newExecutions = append(newExecutions, currentExecution)
+	newExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{currentExecution}, newExecutions...)
 	currentSharedInfra.Status.Executions = newExecutions
 
 	return s.Status().Update(context.TODO(), currentSharedInfra)

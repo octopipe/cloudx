@@ -115,58 +115,43 @@ spec:
                         properties:
                           dependencyLock:
                             type: string
+                          depends:
+                            items:
+                              type: string
+                            type: array
                           error:
                             type: string
                           finishedAt:
                             type: string
-                          plugin:
-                            properties:
-                              depends:
-                                items:
+                          inputs:
+                            items:
+                              properties:
+                                key:
                                   type: string
-                                type: array
-                              inputs:
-                                items:
-                                  properties:
-                                    key:
-                                      type: string
-                                    value:
-                                      type: string
-                                  required:
-                                  - key
-                                  - value
-                                  type: object
-                                type: array
-                              name:
-                                type: string
-                              outputs:
-                                items:
-                                  properties:
-                                    key:
-                                      type: string
-                                    sensitive:
-                                      type: boolean
-                                  required:
-                                  - key
-                                  - sensitive
-                                  type: object
-                                type: array
-                              ref:
-                                type: string
-                              type:
-                                type: string
-                            required:
-                            - inputs
-                            - name
-                            - ref
-                            - type
-                            type: object
+                                value:
+                                  type: string
+                              required:
+                              - key
+                              - value
+                              type: object
+                            type: array
+                          name:
+                            type: string
+                          ref:
+                            type: string
                           startedAt:
                             type: string
                           state:
                             type: string
                           status:
                             type: string
+                          type:
+                            type: string
+                        required:
+                        - inputs
+                        - name
+                        - ref
+                        - type
                         type: object
                       type: array
                     startedAt:

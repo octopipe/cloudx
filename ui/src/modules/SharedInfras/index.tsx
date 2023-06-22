@@ -34,9 +34,9 @@ const SharedInfras = () => {
         >
           <div className="ms-2 me-auto">
             <div className="fw-bold">
-              <Link to={item?.metadata?.name}>{item?.metadata?.name}</Link>
+              <Link to={item?.name}>{item?.name}</Link>
             </div>
-            {item?.spec?.description}
+            {item?.description}
           </div>
           <Badge bg="primary" pill>
             {item?.spec?.plugins?.length}

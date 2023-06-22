@@ -49,12 +49,12 @@ func NewExecution(logger *zap.Logger, terraformProvider terraform.TerraformProvi
 }
 
 func (c *execution) Destroy() error {
-	lastExecution := c.getLastExecution()
+	lastExecution := c.getLastFinishedExecution()
 
 	for _, executionPlugin := range lastExecution.Plugins {
-		providerInputs := providerIO.ToProviderInput(executionPlugin.Plugin.Inputs)
-		if executionPlugin.Plugin.PluginType == plugin.TerraformPluginType {
-			err := c.terraformProvider.Destroy(executionPlugin.Plugin.Ref, providerInputs, executionPlugin.State, executionPlugin.DependencyLock)
+		providerInputs := providerIO.ToProviderInput(executionPlugin.Inputs)
+		if executionPlugin.PluginType == plugin.TerraformPluginType {
+			err := c.terraformProvider.Destroy(executionPlugin.Ref, providerInputs, executionPlugin.State, executionPlugin.DependencyLock)
 			if err != nil {
 				return err
 			}
@@ -119,11 +119,8 @@ func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-
-	return status, nil
+	err := eg.Wait()
+	return status, err
 }
 
 func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginStatus, providerIO.ProviderOutput, error) {
@@ -133,14 +130,14 @@ func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alp
 		return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, err
 	}
 	providerInputs := providerIO.ToProviderInput(finalInputs)
-	lastPluginStatus := c.getLastPluginStatus(p)
+	lastPluginStatus := c.getLastFinishedPluginStatus(p)
 	if p.PluginType == plugin.TerraformPluginType {
 		out, state, lockFile, err := c.terraformProvider.Apply(p.Ref, providerInputs, lastPluginStatus.State, lastPluginStatus.DependencyLock)
 		if err != nil {
-			return getPluginStatusError(p, startedAt, err), providerIO.ProviderOutput{}, nil
+			return getPluginStatusError(p, finalInputs, startedAt, err), providerIO.ProviderOutput{}, nil
 		}
 
-		return getTerraformPluginStatusSuccess(p, startedAt, state, lockFile), out, nil
+		return getTerraformPluginStatusSuccess(p, finalInputs, startedAt, state, lockFile), out, nil
 	}
 
 	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, errors.New("invalid plugin type")
@@ -205,22 +202,22 @@ func (c *execution) interpolateInputs(inputs []commonv1alpha1.SharedInfraPluginI
 
 // TODO: A more inteligent way to do the diff-deleting plugins
 func (c *execution) deleteDiffExecutionPlugins() error {
-	lastExecution := c.getLastExecution()
+	lastExecution := c.getLastFinishedExecution()
 
 	for _, executionPlugin := range lastExecution.Plugins {
 		foundPlugin := false
 		for _, currentPlugin := range c.currentSharedInfra.Spec.Plugins {
-			if executionPlugin.Plugin.Name == currentPlugin.Name {
+			if executionPlugin.Name == currentPlugin.Name {
 				foundPlugin = true
 				break
 			}
 		}
 
 		if !foundPlugin {
-			c.logger.Info("Not found plugin in current shared infra, deleting plugin", zap.String("plugin", executionPlugin.Plugin.Name))
-			providerInputs := providerIO.ToProviderInput(executionPlugin.Plugin.Inputs)
-			if executionPlugin.Plugin.PluginType == plugin.TerraformPluginType {
-				err := c.terraformProvider.Destroy(executionPlugin.Plugin.Ref, providerInputs, executionPlugin.State, executionPlugin.DependencyLock)
+			c.logger.Info("Not found plugin in current shared infra, deleting plugin", zap.String("plugin", executionPlugin.Name))
+			providerInputs := providerIO.ToProviderInput(executionPlugin.Inputs)
+			if executionPlugin.PluginType == plugin.TerraformPluginType {
+				err := c.terraformProvider.Destroy(executionPlugin.Ref, providerInputs, executionPlugin.State, executionPlugin.DependencyLock)
 				if err != nil {
 					return err
 				}
@@ -231,25 +228,25 @@ func (c *execution) deleteDiffExecutionPlugins() error {
 	return nil
 }
 
-func (c *execution) getLastExecution() commonv1alpha1.SharedInfraExecutionStatus {
-	lastExecution := commonv1alpha1.SharedInfraExecutionStatus{}
-
-	if len(c.currentSharedInfra.Status.Executions) > 1 {
-		lastExecution = c.currentSharedInfra.Status.Executions[len(c.currentSharedInfra.Status.Executions)-2]
+func (c *execution) getLastFinishedExecution() commonv1alpha1.SharedInfraExecutionStatus {
+	for _, e := range c.currentSharedInfra.Status.Executions {
+		if e.Status != "RUNNING" {
+			return e
+		}
 	}
 
-	return lastExecution
+	return commonv1alpha1.SharedInfraExecutionStatus{}
 }
 
-func (c *execution) getLastPluginStatus(currentPlugin commonv1alpha1.SharedInfraPlugin) commonv1alpha1.PluginStatus {
-	lastExecution := c.getLastExecution()
+func (c *execution) getLastFinishedPluginStatus(currentPlugin commonv1alpha1.SharedInfraPlugin) commonv1alpha1.PluginStatus {
+	lastExecution := c.getLastFinishedExecution()
 
 	if len(lastExecution.Plugins) <= 0 {
 		return commonv1alpha1.PluginStatus{}
 	}
 
 	for _, p := range lastExecution.Plugins {
-		if p.Plugin.Name == currentPlugin.Name {
+		if p.Name == currentPlugin.Name {
 			return p
 		}
 	}
@@ -257,11 +254,15 @@ func (c *execution) getLastPluginStatus(currentPlugin commonv1alpha1.SharedInfra
 	return commonv1alpha1.PluginStatus{}
 }
 
-func getTerraformPluginStatusSuccess(plugin commonv1alpha1.SharedInfraPlugin, startedAt string, state string, lockFile string) commonv1alpha1.PluginStatus {
+func getTerraformPluginStatusSuccess(plugin commonv1alpha1.SharedInfraPlugin, inputs []commonv1alpha1.SharedInfraPluginInput, startedAt string, state string, lockFile string) commonv1alpha1.PluginStatus {
 	escapedState, err := json.Marshal(state)
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
-			Plugin:     plugin,
+			Name:       plugin.Name,
+			Ref:        plugin.Ref,
+			Inputs:     inputs,
+			Depends:    plugin.Depends,
+			PluginType: plugin.PluginType,
 			Status:     ExecutionErrorStatus,
 			StartedAt:  startedAt,
 			FinishedAt: time.Now().Format(time.RFC3339),
@@ -272,7 +273,11 @@ func getTerraformPluginStatusSuccess(plugin commonv1alpha1.SharedInfraPlugin, st
 	escapedLockFile, err := json.Marshal(lockFile)
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
-			Plugin:     plugin,
+			Name:       plugin.Name,
+			Ref:        plugin.Ref,
+			Depends:    plugin.Depends,
+			Inputs:     inputs,
+			PluginType: plugin.PluginType,
 			Status:     ExecutionErrorStatus,
 			StartedAt:  startedAt,
 			FinishedAt: time.Now().Format(time.RFC3339),
@@ -281,7 +286,11 @@ func getTerraformPluginStatusSuccess(plugin commonv1alpha1.SharedInfraPlugin, st
 	}
 
 	return commonv1alpha1.PluginStatus{
-		Plugin:         plugin,
+		Name:           plugin.Name,
+		Ref:            plugin.Ref,
+		Inputs:         inputs,
+		Depends:        plugin.Depends,
+		PluginType:     plugin.PluginType,
 		State:          string(escapedState),
 		DependencyLock: string(escapedLockFile),
 		Status:         ExecutionSuccessStatus,
@@ -290,11 +299,15 @@ func getTerraformPluginStatusSuccess(plugin commonv1alpha1.SharedInfraPlugin, st
 	}
 }
 
-func getPluginStatusError(plugin commonv1alpha1.SharedInfraPlugin, startedAt string, err error) commonv1alpha1.PluginStatus {
+func getPluginStatusError(plugin commonv1alpha1.SharedInfraPlugin, inputs []commonv1alpha1.SharedInfraPluginInput, startedAt string, err error) commonv1alpha1.PluginStatus {
 	escapedError, err := json.Marshal(err.Error())
 	if err != nil {
 		return commonv1alpha1.PluginStatus{
-			Plugin:     plugin,
+			Name:       plugin.Name,
+			Ref:        plugin.Ref,
+			Inputs:     inputs,
+			Depends:    plugin.Depends,
+			PluginType: plugin.PluginType,
 			Status:     ExecutionErrorStatus,
 			StartedAt:  startedAt,
 			FinishedAt: time.Now().Format(time.RFC3339),
@@ -303,7 +316,11 @@ func getPluginStatusError(plugin commonv1alpha1.SharedInfraPlugin, startedAt str
 	}
 
 	return commonv1alpha1.PluginStatus{
-		Plugin:     plugin,
+		Name:       plugin.Name,
+		Ref:        plugin.Ref,
+		Inputs:     inputs,
+		Depends:    plugin.Depends,
+		PluginType: plugin.PluginType,
 		Status:     ExecutionErrorStatus,
 		StartedAt:  startedAt,
 		FinishedAt: time.Now().Format(time.RFC3339),

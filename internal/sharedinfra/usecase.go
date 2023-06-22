@@ -33,6 +33,7 @@ func (u useCase) Create(ctx context.Context, sharedInfra SharedInfra) (SharedInf
 		Name:            s.GetName(),
 		Namespace:       s.GetNamespace(),
 		SharedInfraSpec: s.Spec,
+		Status:          s.Status,
 	}, nil
 }
 
@@ -52,6 +53,7 @@ func (u useCase) Get(ctx context.Context, name string, namespace string) (Shared
 		Name:            s.GetName(),
 		Namespace:       s.GetNamespace(),
 		SharedInfraSpec: s.Spec,
+		Status:          s.Status,
 	}, nil
 }
 
@@ -68,6 +70,7 @@ func (u useCase) List(ctx context.Context, namespace string, chunkPagination pag
 			Name:            i.GetName(),
 			Namespace:       i.GetNamespace(),
 			SharedInfraSpec: i.Spec,
+			Status:          i.Status,
 		})
 	}
 
@@ -95,5 +98,6 @@ func (u useCase) Update(ctx context.Context, sharedInfra SharedInfra) (SharedInf
 		Name:            s.GetName(),
 		Namespace:       s.GetNamespace(),
 		SharedInfraSpec: s.Spec,
+		Status:          s.Status,
 	}, nil
 }

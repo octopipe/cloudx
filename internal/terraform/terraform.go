@@ -51,7 +51,7 @@ func NewTerraformProvider(logger *zap.Logger) (TerraformProvider, error) {
 
 	return terraformProvider{
 		logger:   logger,
-		execPath: "/usr/bin/terraform",
+		execPath: "/opt/homebrew/bin/terraform",
 	}, nil
 }
 

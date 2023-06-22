@@ -47,13 +47,17 @@ type SharedInfraSpec struct {
 }
 
 type PluginStatus struct {
-	Plugin         SharedInfraPlugin `json:"plugin,omitempty"`
-	State          string            `json:"state,omitempty"`
-	DependencyLock string            `json:"dependencyLock,omitempty"`
-	StartedAt      string            `json:"startedAt,omitempty"`
-	FinishedAt     string            `json:"finishedAt,omitempty"`
-	Status         string            `json:"status,omitempty"`
-	Error          string            `json:"error,omitempty"`
+	Name           string                   `json:"name"`
+	Ref            string                   `json:"ref"`
+	Depends        []string                 `json:"depends,omitempty"`
+	PluginType     string                   `json:"type"`
+	Inputs         []SharedInfraPluginInput `json:"inputs"`
+	State          string                   `json:"state,omitempty"`
+	DependencyLock string                   `json:"dependencyLock,omitempty"`
+	StartedAt      string                   `json:"startedAt,omitempty"`
+	FinishedAt     string                   `json:"finishedAt,omitempty"`
+	Status         string                   `json:"status,omitempty"`
+	Error          string                   `json:"error,omitempty"`
 }
 
 type SharedInfraExecutionStatus struct {

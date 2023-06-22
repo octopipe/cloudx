@@ -1,13 +1,11 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/sharedinfra"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,34 +35,11 @@ func main() {
 
 	r := gin.Default()
 	r.Use(CORSMiddleware())
-	r.GET("/shared-infras", func(c *gin.Context) {
-		sharedInfraList := &commonv1alpha1.SharedInfraList{}
-		err := k8sClient.List(c.Request.Context(), sharedInfraList)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{
-			"items": sharedInfraList.Items,
-		})
-	})
-	r.GET("/shared-infras/:name", func(c *gin.Context) {
-		name := c.Param("name")
-		sharedInfra := &commonv1alpha1.SharedInfra{}
-		err := k8sClient.Get(c.Request.Context(), types.NamespacedName{
-			Name:      name,
-			Namespace: "default",
-		}, sharedInfra)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
-		c.JSON(http.StatusOK, sharedInfra)
-	})
+	sharedInfraRepository := sharedinfra.NewK8sRepository(k8sClient)
+	sharedInfraUseCase := sharedinfra.NewUseCase(sharedInfraRepository)
+
+	r = sharedinfra.NewHTTPHandler(r, sharedInfraUseCase)
+
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
 

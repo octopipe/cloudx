@@ -8,8 +8,9 @@ import (
 )
 
 type SharedInfra struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
+	Name      string                           `json:"name"`
+	Namespace string                           `json:"namespace"`
+	Status    commonv1alpha1.SharedInfraStatus `json:"status"`
 	commonv1alpha1.SharedInfraSpec
 }
 
