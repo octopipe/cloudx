@@ -10,10 +10,9 @@ import (
 
 	"os"
 	"path/filepath"
-	"strconv"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	providerIO "github.com/octopipe/cloudx/internal/io"
 	"github.com/octopipe/cloudx/internal/plugin"
@@ -71,7 +70,7 @@ func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.P
 	tr := tar.NewReader(&buf)
 	content := map[string]string{}
 	rawPluginConfig := []byte{}
-	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", strconv.Itoa(int(time.Now().UnixNano())))
+	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", uuid.New().String())
 	err = os.MkdirAll(workdir, os.ModePerm)
 	if err != nil {
 		return "", plugin.Plugin{}, err

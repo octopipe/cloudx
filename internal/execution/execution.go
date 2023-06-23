@@ -119,7 +119,7 @@ func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
 					})
 					c.cb(status)
 					c.mu.Unlock()
-
+					c.logger.Info("Start plugin execution...", zap.String("name", currentPlugin.Name))
 					pluginStatus, pluginOutput, err := c.executeStep(finalInputs, startedAt, currentPlugin)
 					c.mu.Lock()
 					for i := range status {

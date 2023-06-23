@@ -1,0 +1,21 @@
+kind: Plugin
+metadata:
+  name: sns
+spec:
+  inputs:
+    - label: Lambda name
+      name: lambda_name
+      type: text
+      help: the name of deployment
+      required: true
+    - label: sns_arn
+      name: sns_arn
+      type: text
+      help: the name of deployment
+      required: true
+    - label: Region
+      name: region
+      type: text
+      help: the region of sns
+      required: true
+

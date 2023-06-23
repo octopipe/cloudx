@@ -1,0 +1,69 @@
+apiVersion: commons.cloudx.io/v1alpha1
+kind: SharedInfra
+metadata:
+  name: demo-1
+  labels:
+    revision: 0.0.1
+spec:
+  author: Maycon Pacheco
+  description: SharedInfra for example 2
+  providerConfigRef:
+    name: aws-config
+    namespace: default
+  plugins:
+
+  - name: demo-1-sns
+    ref: mayconjrpacheco/plugin:sns-1
+    depends: []
+    type: terraform
+    outputs: []
+    inputs:
+    - key: name
+      value: demo-1-sns
+    - key: region
+      value: us-east-1
+
+  - name: demo-1-lambda-role
+    ref: mayconjrpacheco/plugin:lambda-role-1
+    depends: []
+    type: terraform
+    outputs: []
+    inputs:
+    - key: lambda_name
+      value: demo-1-function
+    - key: region
+      value: us-east-1
+
+  - name: demo-1-lambda
+    ref: mayconjrpacheco/plugin:lambda-1
+    depends:
+    - demo-1-lambda-role
+    type: terraform
+    outputs: []
+    inputs:
+    - key: name
+      value: demo-1-function
+    - key: region
+      value: us-east-1
+    - key: role_arn
+      value: "{{ demo-1-lambda-role.outputs.arn }}"
+    - key: image_uri
+      value: "218551854063.dkr.ecr.us-east-1.amazonaws.com/lambda-tests:latest"
+
+  - name: demo-1-lambda-sns-trigger
+    ref: mayconjrpacheco/plugin:sns-lambda-trigger-1
+    depends:
+    - demo-1-lambda
+    - demo-1-sns
+    type: terraform
+    outputs: []
+    inputs:
+    - key: lambda_name
+      value: "{{ demo-1-lambda.outputs.name }}"
+    - key: sns_arn
+      value: "{{ demo-1-sns.outputs.arn }}"
+    - key: region
+      value: us-east-1
+
+
+

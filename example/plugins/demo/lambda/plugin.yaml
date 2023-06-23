@@ -1,0 +1,26 @@
+kind: Plugin
+metadata:
+  name: lambda
+spec:
+  inputs:
+    - label: Name
+      name: name
+      type: text
+      help: the name of deployment
+      required: true
+    - label: Region
+      name: region
+      type: text
+      help: the region of sns
+      required: true
+    - label: Role arn
+      name: role_arn
+      type: text
+      help: the region of sns
+      required: true
+    - label: Image
+      name: image_uri
+      type: text
+      help: the region of sns
+      required: true
+

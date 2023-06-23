@@ -1,0 +1,16 @@
+kind: Plugin
+metadata:
+  name: lambda_role
+spec:
+  inputs:
+    - label: Lambda name
+      name: lambda_name
+      type: text
+      help: the name of deployment
+      required: true
+    - label: Region
+      name: region
+      type: text
+      help: the region of sns
+      required: true
+
