@@ -6,6 +6,25 @@ The runtime-engine helps you to orchestrate applications and infrastructure no m
 
 The runtime-engine manage your infrastructure in any cloud based in [IDP principles](https://internaldeveloperplatform.org/).
 
+
+### FEATURES:
+- Multiple plugin dependencies
+- Destroy infrastructure
+- Plugins diff
+- Terraform execution per version
+- No needed of terraform code customization
+- Each execution with only credentials of target
+- Can watch progress of partial executions
+- Historical execution data
+- Can re-run with new plugins versions
+- Fix the problem of plugin having the files with same names
+- When possible parallel execution is performed
+
+### TODO: 
+- Delete plugins using dependencies tree
+- Add author per execution
+- Add execution sensitives data in secrets
+
 ## How to run?
 
 Apply a shared infra manifest in the cluster, example:

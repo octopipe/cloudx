@@ -51,10 +51,10 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		Status:    execution.ExecutionRunningStatus,
 	}
 	currentExecutions := currentSharedInfra.Status.Executions
-	currentExecutions = append(currentExecutions, newSharedInfraExecution)
+	currentExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{newSharedInfraExecution}, currentExecutions...)
 	currentSharedInfra.Status.Executions = currentExecutions
 
-	err = c.Status().Update(ctx, currentSharedInfra)
+	err = updateStatus(c.Client, currentSharedInfra)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

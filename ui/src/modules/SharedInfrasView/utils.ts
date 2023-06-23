@@ -13,7 +13,8 @@ export const toNodes = (plugins: any, type="executionNode") => {
         label: p.name,
         status: p?.status,
         startedAt: p?.startedAt,
-        finishedAt: p?.finishedAt
+        finishedAt: p?.finishedAt,
+        error: p?.error
       },
       position,
     }

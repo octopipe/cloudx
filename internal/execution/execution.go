@@ -21,7 +21,7 @@ import (
 const (
 	ExecutionSuccessStatus = "SUCCESS"
 	ExecutionFailedStatus  = "FAILED"
-	ExecutionErrorStatus   = "ERRORS"
+	ExecutionErrorStatus   = "ERROR"
 	ExecutionRunningStatus = "RUNNING"
 )
 
@@ -34,9 +34,10 @@ type execution struct {
 	dependencyGraph    map[string][]string
 	executionGraph     map[string][]string
 	executedNodes      map[string]providerIO.ProviderOutput
+	cb                 func(plugins []commonv1alpha1.PluginStatus) error
 }
 
-func NewExecution(logger *zap.Logger, terraformProvider terraform.TerraformProvider, sharedInfra commonv1alpha1.SharedInfra) execution {
+func NewExecution(logger *zap.Logger, terraformProvider terraform.TerraformProvider, sharedInfra commonv1alpha1.SharedInfra, cb func(plugins []commonv1alpha1.PluginStatus) error) execution {
 	dependencyGraph, executionGraph := createGraphs(sharedInfra)
 	return execution{
 		logger:             logger,
@@ -45,6 +46,7 @@ func NewExecution(logger *zap.Logger, terraformProvider terraform.TerraformProvi
 		executionGraph:     executionGraph,
 		currentSharedInfra: sharedInfra,
 		executedNodes:      map[string]providerIO.ProviderOutput{},
+		cb:                 cb,
 	}
 }
 
@@ -78,11 +80,11 @@ func (c *execution) Apply() ([]commonv1alpha1.PluginStatus, error) {
 		}
 
 		s, err := c.execute()
+		status = append(status, s...)
 		if err != nil {
 			return nil, err
 		}
 
-		status = append(status, s...)
 	}
 }
 
@@ -100,14 +102,35 @@ func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
 						inputs[i.Key] = i.Value
 					}
 
-					pluginStatus, pluginOutput, err := c.executeStep(currentPlugin)
-					status = append(status, pluginStatus)
+					startedAt := time.Now().Format(time.RFC3339)
+					finalInputs, err := c.interpolateInputs(currentPlugin.Inputs)
 					if err != nil {
 						return err
 					}
+					c.mu.Lock()
+					status = append(status, commonv1alpha1.PluginStatus{
+						Name:       currentPlugin.Name,
+						Ref:        currentPlugin.Ref,
+						PluginType: currentPlugin.PluginType,
+						Depends:    currentPlugin.Depends,
+						Status:     ExecutionRunningStatus,
+						StartedAt:  startedAt,
+						Inputs:     finalInputs,
+					})
+					c.cb(status)
+					c.mu.Unlock()
 
-					if pluginStatus.Error != "" {
-						return errors.New(pluginStatus.Error)
+					pluginStatus, pluginOutput, err := c.executeStep(finalInputs, startedAt, currentPlugin)
+					c.mu.Lock()
+					for i := range status {
+						if status[i].Name == pluginStatus.Name {
+							status[i] = pluginStatus
+						}
+					}
+					c.cb(status)
+					c.mu.Unlock()
+					if err != nil {
+						return err
 					}
 
 					c.mu.Lock()
@@ -123,21 +146,16 @@ func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
 	return status, err
 }
 
-func (c *execution) executeStep(p commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginStatus, providerIO.ProviderOutput, error) {
-	startedAt := time.Now().Format(time.RFC3339)
-	finalInputs, err := c.interpolateInputs(p.Inputs)
-	if err != nil {
-		return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, err
-	}
-	providerInputs := providerIO.ToProviderInput(finalInputs)
+func (c *execution) executeStep(inputs []commonv1alpha1.SharedInfraPluginInput, startedAt string, p commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginStatus, providerIO.ProviderOutput, error) {
+	providerInputs := providerIO.ToProviderInput(inputs)
 	lastPluginStatus := c.getLastFinishedPluginStatus(p)
 	if p.PluginType == plugin.TerraformPluginType {
 		out, state, lockFile, err := c.terraformProvider.Apply(p.Ref, providerInputs, lastPluginStatus.State, lastPluginStatus.DependencyLock)
 		if err != nil {
-			return getPluginStatusError(p, finalInputs, startedAt, err), providerIO.ProviderOutput{}, nil
+			return getPluginStatusError(p, inputs, startedAt, err), providerIO.ProviderOutput{}, nil
 		}
 
-		return getTerraformPluginStatusSuccess(p, finalInputs, startedAt, state, lockFile), out, nil
+		return getTerraformPluginStatusSuccess(p, inputs, startedAt, state, lockFile), out, nil
 	}
 
 	return commonv1alpha1.PluginStatus{}, providerIO.ProviderOutput{}, errors.New("invalid plugin type")
@@ -155,8 +173,6 @@ func (c *execution) manipulateExpression(text string) (string, error) {
 		}
 	}
 	expression := strings.Split(strings.Trim(text[start:end], " "), ".")
-
-	fmt.Println(text, expression, start, end)
 
 	if len(expression) == 3 {
 

@@ -83,10 +83,11 @@ func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int
 	newExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{currentExecution}, newExecutions...)
 	currentSharedInfra.Status.Executions = newExecutions
 
-	return s.Status().Update(context.TODO(), currentSharedInfra)
+	return updateStatus(s.Client, currentSharedInfra)
 }
 
 type RPCSetRunnerTimeoutArgs struct {
+	Plugins        []commonv1alpha1.PluginStatus `json:"plugins,omitempty"`
 	SharedInfraRef types.NamespacedName
 	ExecutionId    string
 	FinishedAt     string
@@ -114,7 +115,9 @@ func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) 
 	}
 
 	allExecutions := currentSharedInfra.Status.Executions
+	newExecutions := []commonv1alpha1.SharedInfraExecutionStatus{}
 	currentExecution := commonv1alpha1.SharedInfraExecutionStatus{}
+
 	for _, e := range allExecutions {
 		if e.Id == args.ExecutionId {
 			currentExecution = commonv1alpha1.SharedInfraExecutionStatus{
@@ -123,11 +126,15 @@ func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) 
 				Status:     "TIMEOUT",
 				FinishedAt: args.FinishedAt,
 				Error:      "runner time exceeded",
+				Plugins:    args.Plugins,
 			}
+		} else {
+			newExecutions = append(newExecutions, e)
 		}
 	}
-	allExecutions = append(allExecutions, currentExecution)
-	currentSharedInfra.Status.Executions = allExecutions
 
-	return s.Status().Update(context.TODO(), currentSharedInfra)
+	newExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{currentExecution}, newExecutions...)
+	currentSharedInfra.Status.Executions = newExecutions
+
+	return updateStatus(s.Client, currentSharedInfra)
 }

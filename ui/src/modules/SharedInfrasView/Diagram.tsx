@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType } from 'reactflow';
 import ExecutionNode from './ExecutionNode';
 import dagre from 'dagre'
 import 'reactflow/dist/style.css';
+import { Alert, Button, Modal } from 'react-bootstrap';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -46,6 +47,11 @@ const nodeTypes = {
 const SharedInfraViewDiagram = ({ initialNodes, initialEdges }: any) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = useState<any>()
+  const [show, setShow] = useState(false);
+
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
   const onConnect = useCallback(
     (params: any) =>
       setEdges((eds) =>
@@ -53,6 +59,11 @@ const SharedInfraViewDiagram = ({ initialNodes, initialEdges }: any) => {
       ),
     []
   );
+  const onNodeClick = (event: any, node: any) => {
+    setSelectedNode(node)
+    handleShow()
+  }
+
 
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -74,8 +85,27 @@ const SharedInfraViewDiagram = ({ initialNodes, initialEdges }: any) => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        onNodeClick={onNodeClick}
         fitView
       ></ReactFlow>
+      <Modal show={show} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>{selectedNode?.data?.label}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedNode?.data?.error && (<Alert variant='danger'>
+            {selectedNode?.data?.error?.replace(/(?:\\n|\\\\n)/g, '\n')}
+          </Alert>)}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClose}>
+            Close
+          </Button>
+          <Button variant="primary" onClick={handleClose}>
+            Save Changes
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }

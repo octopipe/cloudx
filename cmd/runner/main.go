@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/rpc"
 	"os"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/execution"
+	"github.com/octopipe/cloudx/internal/rpcclient"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,14 +30,14 @@ func init() {
 
 type runnerContext struct {
 	logger    *zap.Logger
-	rpcClient *rpc.Client
+	rpcClient rpcclient.Client
 }
 
 func main() {
 	logger, _ := zap.NewProduction()
 	_ = godotenv.Load()
 
-	rpcClient, err := rpc.DialHTTP("tcp", os.Getenv("RPC_SERVER_ADDRESS"))
+	rpcClient, err := rpcclient.NewRPCClient(os.Getenv("RPC_SERVER_ADDRESS"))
 	if err != nil {
 		logger.Fatal("Error to connect with controllerr", zap.Error(err), zap.String("address", os.Getenv("RPC_SERVER_ADDRESS")))
 	}
@@ -70,12 +70,17 @@ func main() {
 		FinishedAt:  time.Now().Format(time.RFC3339),
 	}
 
-	currentExecution := execution.NewExecution(logger, terraformProvider, currentSharedInfra)
+	currentExecution := execution.NewExecution(logger, terraformProvider, currentSharedInfra, newRunnerContext.setRunnerStatus(*rpcRunnerFinishedArgs))
 	if action == "APPLY" {
 		pluginStatus, err := currentExecution.Apply()
 		if err != nil {
 			rpcRunnerFinishedArgs.Status = "ERROR"
 			rpcRunnerFinishedArgs.Error = err.Error()
+		}
+
+		if newRunnerContext.hasErrorsInPluginExecutions(pluginStatus) {
+			rpcRunnerFinishedArgs.Status = "ERROR"
+			rpcRunnerFinishedArgs.Error = "Found error in plugin execution"
 		}
 
 		rpcRunnerFinishedArgs.Plugins = pluginStatus
@@ -98,31 +103,24 @@ func main() {
 	logger.Info("Finish runner execution")
 }
 
-func (c runnerContext) getLastAppliedConfiguration(sharedInfra commonv1alpha1.SharedInfra) (commonv1alpha1.SharedInfra, error) {
-	lastSharedInfra := commonv1alpha1.SharedInfra{}
-	annotations := sharedInfra.GetAnnotations()
-	currentLastApliedConfig := ""
-	kubectlLastAppliedConf, ok := annotations["kubectl.kubernetes.io/last-applied-configuration"]
-	if ok {
-		currentLastApliedConfig = kubectlLastAppliedConf
-	}
-
-	ownerLastAppliedConf, ok := annotations["commons.cloudx.io/last-applied-configuration"]
-	if ok {
-		currentLastApliedConfig = ownerLastAppliedConf
-	}
-
-	if ok && currentLastApliedConfig != "" {
-		err := json.Unmarshal([]byte(currentLastApliedConfig), &lastSharedInfra)
-		if err != nil {
-			return lastSharedInfra, err
+func (c runnerContext) hasErrorsInPluginExecutions(pluginStatus []commonv1alpha1.PluginStatus) bool {
+	for _, p := range pluginStatus {
+		if p.Status == execution.ExecutionErrorStatus || p.Status == execution.ExecutionFailedStatus {
+			return true
 		}
-
-		return lastSharedInfra, nil
 	}
 
-	return lastSharedInfra, nil
+	return false
+}
 
+func (c runnerContext) setRunnerStatus(args sharedinfra.RPCSetRunnerFinishedArgs) func(plugins []commonv1alpha1.PluginStatus) error {
+	return func(plugins []commonv1alpha1.PluginStatus) error {
+		var reply int
+		args.Plugins = plugins
+
+		err := c.rpcClient.Call("RPCServer.SetRunnerFinished", args, &reply)
+		return err
+	}
 }
 
 func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, string, string, error) {
@@ -162,19 +160,4 @@ func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executi
 	}
 
 	c.logger.Fatal("Runner timeout")
-}
-
-func (c runnerContext) getCurrentSharedInfra(sharedInfraRef types.NamespacedName, executionId string) (commonv1alpha1.SharedInfra, error) {
-	args := &sharedinfra.RPCGetRunnerDataArgs{
-		Ref:         sharedInfraRef,
-		ExecutionId: executionId,
-	}
-
-	var reply sharedinfra.RPCGetRunnerDataReply
-	err := c.rpcClient.Call("RPCServer.GetRunnerData", args, &reply)
-	if err != nil {
-		return commonv1alpha1.SharedInfra{}, err
-	}
-
-	return reply.SharedInfra, nil
 }

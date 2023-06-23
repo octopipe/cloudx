@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Accordion, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
+import { Accordion, Alert, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import SharedInfraViewDiagram from "./Diagram";
 import { toEdges, toNodes } from "./utils";
@@ -60,40 +60,45 @@ const SharedInfraView = () => {
         >
           <Tab eventKey="overview" title="Overview">
             <h1 className="h4">Plugins</h1>
-            {sharedInfra?.plugins?.map((p: any) => (
-              <Card>
-                <Card.Body>
-                <div className="mb-1"><strong>Name: </strong>{p?.name}</div>
-                <div className="mb-1"><strong>Ref: </strong>{p?.ref}</div>
-                <div className="mb-1"><strong>Type: </strong>{p?.type}</div>
-                <div>
-                  <strong>Inputs: </strong>
-                  <Table bordered>
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p?.inputs?.map((i: any) => (
+            <Accordion>
+              {sharedInfra?.plugins?.map((p: any, idx: any) => (
+
+                <Accordion.Item eventKey={idx}>
+                  <Accordion.Header>
+                    {p?.name}
+                  </Accordion.Header>
+                  <Accordion.Body>
+                  <div className="mb-1"><strong>Name: </strong>{p?.name}</div>
+                  <div className="mb-1"><strong>Ref: </strong>{p?.ref}</div>
+                  <div className="mb-1"><strong>Type: </strong>{p?.type}</div>
+                  <div>
+                    <strong>Inputs: </strong>
+                    <Table bordered>
+                      <thead>
                         <tr>
-                          <td>{i.key}</td>
-                          <td>{i.value}</td>
-
+                          <th>Name</th>
+                          <th>Value</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </div>
-                </Card.Body>
+                      </thead>
+                      <tbody>
+                        {p?.inputs?.map((i: any) => (
+                          <tr>
+                            <td>{i.key}</td>
+                            <td>{i.value}</td>
 
-              </Card>
-            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                  </Accordion.Body>
+
+                </Accordion.Item>
+              ))}
+            </Accordion>
             <SharedInfraViewDiagram
-              initialNodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins) : []}
+              initialNodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins, "default") : []}
               initialEdges={sharedInfra?.plugins ? toEdges(sharedInfra.plugins) : []}
-              type="default"
             />
           </Tab>
           <Tab eventKey="executions" title="Executions">
@@ -108,13 +113,19 @@ const SharedInfraView = () => {
                         </Spinner>
                       )}
                       <Badge className="mx-2" bg={getBadgeVariants(item?.status)}>{ item?.status }</Badge>
-                      Execution #{ idx }
+                      Execution #{ sharedInfra?.status?.executions?.length - idx }
                     </Accordion.Header>
                     <Accordion.Body>
-                      <SharedInfraViewDiagram
-                        initialNodes={item?.plugins ? toNodes(item.plugins) : []}
-                        initialEdges={item?.plugins ? toEdges(item.plugins) : []}
-                      />
+                      {item?.status === "ERROR" && (
+                        <Alert variant="danger">{item?.error?.replace(/(?:\\n|\\\\n)/g, '\n')}</Alert>
+                      )}
+                      {item?.plugins && item?.plugins?.length && (
+                        <SharedInfraViewDiagram
+                          initialNodes={item?.plugins ? toNodes(item.plugins) : []}
+                          initialEdges={item?.plugins ? toEdges(item.plugins) : []}
+                        />
+                      )}
+                      
                     </Accordion.Body>
                   </Accordion.Item>
                 ))}
@@ -126,5 +137,7 @@ const SharedInfraView = () => {
     </>
   )
 }
+
+const replaceBreakLines = (text: string) => text.replace(/(?:\\n|\\\\n)/g, '<br/>')
 
 export default SharedInfraView

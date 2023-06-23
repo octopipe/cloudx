@@ -2,12 +2,11 @@ apiVersion: commons.cloudx.io/v1alpha1
 kind: SharedInfra
 metadata:
   name: stackset-1
+  labels:
+    revision: 0.0.3
 spec:
   author: Maycon Pacheco
   description: SharedInfra for example 1
-  # globalInputs:
-  #   - key: name
-  #     value: lg
   providerConfigRef:
     name: aws-config
     namespace: default
@@ -20,3 +19,6 @@ spec:
     inputs:
     - key: name
       value: test-1
+
+
+

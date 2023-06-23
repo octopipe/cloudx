@@ -1,10 +1,12 @@
 import React, { memo } from 'react';
+import { Button } from 'react-bootstrap';
 import { Handle, Position } from 'reactflow';
 
 const colorByStatus: any = {
   'SUCCESS': 'green',
   'RUNNING': 'gray',
-  'FAILED': 'red'
+  'FAILED': 'red',
+  'ERROR': 'red'
 }
 
 const getDuration = (startedAt: any, finishedAt: any) => {
@@ -42,6 +44,9 @@ export default memo(({ data, isConnectable }: any) => {
           <div style={{padding: '10px'}}>
 
             {getDuration(data?.startedAt, data?.finishedAt)}
+            {/* {(data?.status === "ERROR" || data?.status === "FAILED") && (
+              <Button variant='danger'>See error</Button>
+            )} */}
 
           </div>
         )}
