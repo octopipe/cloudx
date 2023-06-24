@@ -10,8 +10,8 @@ spec:
   providerConfigRef:
     name: aws-config
     namespace: default
-  plugins:
 
+  plugins:
   - name: demo-1-sns
     ref: mayconjrpacheco/plugin:sns-1
     depends: []
@@ -59,7 +59,7 @@ spec:
     outputs: []
     inputs:
     - key: lambda_name
-      value: "{{ demo-1-lambda.outputs.name }}"
+      value: demo-1-function
     - key: sns_arn
       value: "{{ demo-1-sns.outputs.arn }}"
     - key: region

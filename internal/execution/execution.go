@@ -82,9 +82,8 @@ func (c *execution) Apply() ([]commonv1alpha1.PluginStatus, error) {
 		s, err := c.execute()
 		status = append(status, s...)
 		if err != nil {
-			return nil, err
+			return status, err
 		}
-
 	}
 }
 
@@ -94,44 +93,49 @@ func (c *execution) execute() ([]commonv1alpha1.PluginStatus, error) {
 
 	for _, p := range c.currentSharedInfra.Spec.Plugins {
 		if _, ok := c.executedNodes[p.Name]; !ok && isComplete(c.dependencyGraph[p.Name], c.executedNodes) {
+			c.logger.Info("Start plugin execution...", zap.String("name", p.Name))
 			eg.Go(func(currentPlugin commonv1alpha1.SharedInfraPlugin) func() error {
 				return func() error {
-					inputs := map[string]interface{}{}
-
-					for _, i := range currentPlugin.Inputs {
-						inputs[i.Key] = i.Value
-					}
 
 					startedAt := time.Now().Format(time.RFC3339)
 					finalInputs, err := c.interpolateInputs(currentPlugin.Inputs)
 					if err != nil {
 						return err
 					}
-					c.mu.Lock()
-					status = append(status, commonv1alpha1.PluginStatus{
-						Name:       currentPlugin.Name,
-						Ref:        currentPlugin.Ref,
-						PluginType: currentPlugin.PluginType,
-						Depends:    currentPlugin.Depends,
-						Status:     ExecutionRunningStatus,
-						StartedAt:  startedAt,
-						Inputs:     finalInputs,
-					})
-					c.cb(status)
-					c.mu.Unlock()
+					// c.mu.Lock()
+					// status = append(status, commonv1alpha1.PluginStatus{
+					// 	Name:       currentPlugin.Name,
+					// 	Ref:        currentPlugin.Ref,
+					// 	PluginType: currentPlugin.PluginType,
+					// 	Depends:    currentPlugin.Depends,
+					// 	Status:     ExecutionRunningStatus,
+					// 	StartedAt:  startedAt,
+					// 	Inputs:     finalInputs,
+					// })
+					// c.cb(status)
+					// c.mu.Unlock()
 					c.logger.Info("Start plugin execution...", zap.String("name", currentPlugin.Name))
 					pluginStatus, pluginOutput, err := c.executeStep(finalInputs, startedAt, currentPlugin)
-					c.mu.Lock()
-					for i := range status {
-						if status[i].Name == pluginStatus.Name {
-							status[i] = pluginStatus
-						}
-					}
-					c.cb(status)
-					c.mu.Unlock()
+					status = append(status, pluginStatus)
+					// c.mu.Lock()
+					// for i := range status {
+					// 	if status[i].Name == pluginStatus.Name {
+					// 		status[i] = pluginStatus
+					// 	}
+					// }
+					// // c.cb(status)
+					// c.mu.Unlock()
+
 					if err != nil {
 						return err
 					}
+
+					if pluginStatus.Error != "" {
+						c.logger.Error("Plugin execution failed", zap.String("name", currentPlugin.Name), zap.String("error", pluginStatus.Error))
+						return errors.New(pluginStatus.Error)
+					}
+
+					c.logger.Info("Finish plugin execution...", zap.String("name", currentPlugin.Name))
 
 					c.mu.Lock()
 					defer c.mu.Unlock()
