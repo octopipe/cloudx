@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/execution"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -43,65 +44,51 @@ func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunne
 }
 
 type RPCSetRunnerFinishedArgs struct {
-	Ref         types.NamespacedName
-	ExecutionId string
-	Plugins     []commonv1alpha1.PluginStatus `json:"plugins,omitempty"`
-	FinishedAt  string                        `json:"finishedAt,omitempty"`
-	Status      string                        `json:"status,omitempty"`
-	Error       string                        `json:"error,omitempty"`
+	Ref        types.NamespacedName
+	Plugins    []commonv1alpha1.PluginExecutionStatus `json:"plugins,omitempty"`
+	FinishedAt string                                 `json:"finishedAt,omitempty"`
+	Status     string                                 `json:"status,omitempty"`
+	Error      string                                 `json:"error,omitempty"`
 }
 
 func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int) error {
 	s.logger.Info("Received rpc call", zap.String("sharedinfra", args.Ref.String()))
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, currentSharedInfra)
+	currentExecution := &commonv1alpha1.Execution{}
+	err := s.Get(context.Background(), args.Ref, currentExecution)
 	if err != nil {
 		return err
 	}
 
 	s.logger.Info("rpc execution", zap.String("status", args.Status))
 
-	allExecutions := currentSharedInfra.Status.Executions
-	newExecutions := []commonv1alpha1.SharedInfraExecutionStatus{}
-	currentExecution := commonv1alpha1.SharedInfraExecutionStatus{}
-
-	for _, e := range allExecutions {
-		if e.Id == args.ExecutionId {
-			currentExecution = commonv1alpha1.SharedInfraExecutionStatus{
-				Id:         e.Id,
-				StartedAt:  e.StartedAt,
-				Status:     args.Status,
-				FinishedAt: args.FinishedAt,
-				Error:      args.Error,
-				Plugins:    args.Plugins,
-			}
-		} else {
-			newExecutions = append(newExecutions, e)
-		}
+	currentExecutionStatus := commonv1alpha1.ExecutionStatus{
+		StartedAt:  currentExecution.Status.StartedAt,
+		Status:     args.Status,
+		FinishedAt: args.FinishedAt,
+		Error:      args.Error,
+		Plugins:    args.Plugins,
 	}
 
-	newExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{currentExecution}, newExecutions...)
-	currentSharedInfra.Status.Executions = newExecutions
+	currentExecution.Status = currentExecutionStatus
 
-	return updateStatus(s.Client, currentSharedInfra)
+	return updateExecutionStatus(s.Client, currentExecution)
 }
 
 type RPCSetRunnerTimeoutArgs struct {
-	Plugins        []commonv1alpha1.PluginStatus `json:"plugins,omitempty"`
-	SharedInfraRef types.NamespacedName
-	ExecutionId    string
-	FinishedAt     string
+	Plugins    []commonv1alpha1.PluginExecutionStatus
+	Ref        types.NamespacedName
+	FinishedAt string
 }
 
 func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) error {
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.SharedInfraRef, currentSharedInfra)
+	currentExecution := &commonv1alpha1.Execution{}
+	err := s.Get(context.Background(), args.Ref, currentExecution)
 	if err != nil {
 		return err
 	}
 
 	runnerList := &v1.PodList{}
-	selector, _ := labels.Parse(fmt.Sprintf("commons.cloudx.io/execution-id=%s", args.ExecutionId))
+	selector, _ := labels.Parse(fmt.Sprintf("commons.cloudx.io/execution=%s", args.Ref.String()))
 	err = s.List(context.Background(), runnerList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		return err
@@ -114,27 +101,48 @@ func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) 
 		}
 	}
 
-	allExecutions := currentSharedInfra.Status.Executions
-	newExecutions := []commonv1alpha1.SharedInfraExecutionStatus{}
-	currentExecution := commonv1alpha1.SharedInfraExecutionStatus{}
+	currentExecutionStatus := commonv1alpha1.ExecutionStatus{
+		StartedAt:  currentExecution.Status.StartedAt,
+		Status:     execution.ExecutionTimeout,
+		FinishedAt: args.FinishedAt,
+		Error:      "Runner time exceeded",
+		Plugins:    args.Plugins,
+	}
 
-	for _, e := range allExecutions {
-		if e.Id == args.ExecutionId {
-			currentExecution = commonv1alpha1.SharedInfraExecutionStatus{
-				Id:         e.Id,
-				StartedAt:  e.StartedAt,
-				Status:     "TIMEOUT",
-				FinishedAt: args.FinishedAt,
-				Error:      "runner time exceeded",
-				Plugins:    args.Plugins,
-			}
-		} else {
-			newExecutions = append(newExecutions, e)
+	currentExecution.Status = currentExecutionStatus
+
+	return updateExecutionStatus(s.Client, currentExecution)
+}
+
+type RPCGetLastExecutionArgs struct {
+	Ref types.NamespacedName
+}
+
+func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commonv1alpha1.Execution) error {
+	currentExecution := &commonv1alpha1.Execution{}
+	err := s.Get(context.Background(), args.Ref, currentExecution)
+	if err != nil {
+		return err
+	}
+
+	currentSharedInfra := &commonv1alpha1.SharedInfra{}
+	err = s.Get(context.Background(), args.Ref, currentSharedInfra)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range currentSharedInfra.Status.Executions {
+		executionApi := &commonv1alpha1.Execution{}
+		err = s.Get(context.Background(), types.NamespacedName{Name: e.Name, Namespace: e.Namespace}, executionApi)
+		if err != nil {
+			return err
+		}
+
+		if executionApi.Status.Status != execution.ExecutionRunningStatus {
+			reply = executionApi
+			return nil
 		}
 	}
 
-	newExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{currentExecution}, newExecutions...)
-	currentSharedInfra.Status.Executions = newExecutions
-
-	return updateStatus(s.Client, currentSharedInfra)
+	return nil
 }

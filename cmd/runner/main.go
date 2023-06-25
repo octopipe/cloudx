@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -52,27 +52,26 @@ func main() {
 		logger:    logger,
 	}
 
-	currentSharedInfra, executionId, action, err := newRunnerContext.getDataFromCommandArgs()
+	currentSharedInfra, executionRef, action, err := newRunnerContext.getDataFromCommandArgs()
 	if err != nil {
 		panic(err)
 	}
 
-	sharedInfraRef := types.NamespacedName{Name: currentSharedInfra.Name, Namespace: currentSharedInfra.Namespace}
+	go newRunnerContext.startTimeout(executionRef)
 
-	go newRunnerContext.startTimeout(sharedInfraRef, executionId)
+	lastExecution := newRunnerContext.getLastExecution(executionRef)
 
 	rpcRunnerFinishedArgs := &sharedinfra.RPCSetRunnerFinishedArgs{
-		ExecutionId: executionId,
-		Ref:         sharedInfraRef,
-		Error:       "",
-		Plugins:     []commonv1alpha1.PluginStatus{},
-		Status:      "SUCCESS",
-		FinishedAt:  time.Now().Format(time.RFC3339),
+		Ref:        executionRef,
+		Error:      "",
+		Plugins:    []commonv1alpha1.PluginExecutionStatus{},
+		Status:     "SUCCESS",
+		FinishedAt: time.Now().Format(time.RFC3339),
 	}
 
-	currentExecution := execution.NewExecution(logger, terraformProvider, currentSharedInfra, newRunnerContext.setRunnerStatus(*rpcRunnerFinishedArgs))
+	currentExecution := execution.NewExecution(logger, terraformProvider, currentSharedInfra)
 	if action == "APPLY" {
-		pluginStatus, err := currentExecution.Apply()
+		pluginStatus, err := currentExecution.Apply(lastExecution)
 		if err != nil {
 			rpcRunnerFinishedArgs.Status = "ERROR"
 			rpcRunnerFinishedArgs.Error = err.Error()
@@ -93,7 +92,7 @@ func main() {
 	}
 
 	if action == "DESTROY" {
-		err := currentExecution.Destroy()
+		err := currentExecution.Destroy(lastExecution)
 		if err != nil {
 			rpcRunnerFinishedArgs.Status = "ERROR"
 			rpcRunnerFinishedArgs.Error = err.Error()
@@ -103,7 +102,7 @@ func main() {
 	logger.Info("Finish runner execution")
 }
 
-func (c runnerContext) hasErrorsInPluginExecutions(pluginStatus []commonv1alpha1.PluginStatus) bool {
+func (c runnerContext) hasErrorsInPluginExecutions(pluginStatus []commonv1alpha1.PluginExecutionStatus) bool {
 	for _, p := range pluginStatus {
 		if p.Status == execution.ExecutionErrorStatus || p.Status == execution.ExecutionFailedStatus {
 			return true
@@ -113,45 +112,43 @@ func (c runnerContext) hasErrorsInPluginExecutions(pluginStatus []commonv1alpha1
 	return false
 }
 
-func (c runnerContext) setRunnerStatus(args sharedinfra.RPCSetRunnerFinishedArgs) func(plugins []commonv1alpha1.PluginStatus) error {
-	return func(plugins []commonv1alpha1.PluginStatus) error {
-		var reply int
-		args.Plugins = plugins
-
-		err := c.rpcClient.Call("RPCServer.SetRunnerFinished", args, &reply)
-		return err
-	}
-}
-
-func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, string, string, error) {
+func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, types.NamespacedName, string, error) {
 	commandArgs := os.Args[1:]
-	executionId := commandArgs[1]
+	rawExecutionRef := commandArgs[1]
 	action := commandArgs[0]
 
 	var rawSharedInfra string
 	err := json.Unmarshal([]byte(commandArgs[2]), &rawSharedInfra)
 	if err != nil {
-		return commonv1alpha1.SharedInfra{}, "", "", err
+		return commonv1alpha1.SharedInfra{}, types.NamespacedName{}, "", err
 	}
-
-	fmt.Println(rawSharedInfra)
 
 	var sharedInfra commonv1alpha1.SharedInfra
 	err = json.Unmarshal([]byte(rawSharedInfra), &sharedInfra)
 	if err != nil {
-		return commonv1alpha1.SharedInfra{}, "", "", err
+		return commonv1alpha1.SharedInfra{}, types.NamespacedName{}, "", err
 	}
 
-	return sharedInfra, executionId, action, nil
+	executionRef := types.NamespacedName{}
+
+	s := strings.Split(rawExecutionRef, "/")
+	if len(s) > 1 {
+		executionRef.Namespace = s[0]
+		executionRef.Name = s[1]
+	} else {
+		executionRef.Name = s[0]
+		executionRef.Namespace = "default"
+	}
+
+	return sharedInfra, executionRef, action, nil
 }
 
-func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executionId string) {
+func (c runnerContext) startTimeout(executionRef types.NamespacedName) {
 	time.Sleep(5 * time.Minute)
 
 	var reply int
 	args := &sharedinfra.RPCSetRunnerTimeoutArgs{
-		SharedInfraRef: sharedInfraRef,
-		ExecutionId:    executionId,
+		Ref: executionRef,
 	}
 
 	err := c.rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
@@ -160,4 +157,18 @@ func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, executi
 	}
 
 	c.logger.Fatal("Runner timeout")
+}
+
+func (c runnerContext) getLastExecution(executionRef types.NamespacedName) commonv1alpha1.Execution {
+	var reply commonv1alpha1.Execution
+	args := &sharedinfra.RPCGetLastExecutionArgs{
+		Ref: executionRef,
+	}
+
+	err := c.rpcClient.Call("RPCServer.GetLastExecution", args, &reply)
+	if err != nil {
+		c.logger.Fatal("call rpc get last execution error")
+	}
+
+	return reply
 }

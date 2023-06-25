@@ -2,15 +2,13 @@ package sharedinfra
 
 import (
 	"context"
-	"encoding/json"
-	"os"
+	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/execution"
-	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,32 +42,10 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	executionId := uuid.New()
-	newSharedInfraExecution := commonv1alpha1.SharedInfraExecutionStatus{
-		Id:        executionId.String(),
-		StartedAt: time.Now().Format(time.RFC3339),
-		Status:    execution.ExecutionRunningStatus,
-	}
-	currentExecutions := currentSharedInfra.Status.Executions
-	currentExecutions = append([]commonv1alpha1.SharedInfraExecutionStatus{newSharedInfraExecution}, currentExecutions...)
-	currentSharedInfra.Status.Executions = currentExecutions
-
-	err = updateStatus(c.Client, currentSharedInfra)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	rawSharedInfra, err := json.Marshal(currentSharedInfra)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	action := "APPLY"
 	if len(currentSharedInfra.Finalizers) > 0 {
 		action = "DESTROY"
 	}
-
-	c.logger.Info("reconcile shared-infra", zap.String("shared-infra", currentSharedInfra.GetName()), zap.String("action", action))
 
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
@@ -77,23 +53,56 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		Namespace: currentSharedInfra.Spec.ProviderConfigRef.Namespace,
 	}, &providerConfig)
 	if err != nil {
+		c.logger.Error("error to get provider config", zap.Error(err))
 		return ctrl.Result{}, err
 	}
 
-	if os.Getenv("ENV") != "local" {
-		c.logger.Info("creating runner")
-		newRunner, err := runner.NewRunner(executionId.String(), *currentSharedInfra, string(rawSharedInfra), action, providerConfig)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		err = c.Create(ctx, newRunner.Pod)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+	newExecution := commonv1alpha1.Execution{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("execution-%s-%d", currentSharedInfra.GetName(), time.Now().UnixMilli()),
+			Namespace: currentSharedInfra.GetNamespace(),
+		},
+		Spec: commonv1alpha1.ExecutionSpec{
+			Action: action,
+			SharedInfra: commonv1alpha1.Ref{
+				Name:      currentSharedInfra.GetName(),
+				Namespace: currentSharedInfra.GetNamespace(),
+			},
+		},
 	}
 
-	return ctrl.Result{}, nil
+	c.logger.Info("creating new execution", zap.String("shared-infra", currentSharedInfra.Name))
+	err = c.Create(ctx, &newExecution)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	newExecution.Status = commonv1alpha1.ExecutionStatus{
+		StartedAt: time.Now().Format(time.RFC3339),
+		Status:    execution.ExecutionRunningStatus,
+	}
+
+	err = updateExecutionStatus(c.Client, &newExecution)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	currentSharedInfra.Status.Executions = append(
+		[]commonv1alpha1.Ref{{Name: newExecution.Name, Namespace: newExecution.Namespace}},
+		currentSharedInfra.Status.Executions...,
+	)
+
+	err = updateSharedInfraStatus(c.Client, currentSharedInfra)
+	return ctrl.Result{}, err
+}
+
+func (c *controller) hasExecutionRunning(ctx context.Context) (bool, error) {
+	executionList := commonv1alpha1.ExecutionList{}
+
+	err := c.List(ctx, &executionList)
+	if err != nil {
+		return nil
+	}
 }
 
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {

@@ -45,7 +45,13 @@ func main() {
 
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 
-	terraformController := sharedinfra.NewController(
+	sharedInfraController := sharedinfra.NewController(
+		logger,
+		mgr.GetClient(),
+		mgr.GetScheme(),
+	)
+
+	executionController := sharedinfra.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
@@ -58,7 +64,11 @@ func main() {
 		k8sClient,
 	)
 
-	if err := terraformController.SetupWithManager(mgr); err != nil {
+	if err := sharedInfraController.SetupWithManager(mgr); err != nil {
+		panic(err)
+	}
+
+	if err := executionController.SetupWithManager(mgr); err != nil {
 		panic(err)
 	}
 
@@ -84,7 +94,7 @@ func main() {
 	logger.Info("start rpc server")
 	go http.Serve(l, nil)
 
-	logger.Info("start sharedInfra controller")
+	logger.Info("start controllers")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
 	}

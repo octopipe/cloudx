@@ -11,6 +11,7 @@ import (
 	"github.com/octopipe/cloudx/internal/provider"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type Runner struct {
@@ -18,7 +19,7 @@ type Runner struct {
 	Service *v1.Service
 }
 
-func NewRunner(executionId string, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, action string, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
+func NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
 	vFalse := false
 	vTrue := true
 	vUser := int64(65532)
@@ -84,6 +85,11 @@ func NewRunner(executionId string, sharedInfra commonv1alpha1.SharedInfra, rawSh
 
 	defaultVars = append(defaultVars, varsCreds...)
 
+	executionRef := types.NamespacedName{
+		Name:      execution.Name,
+		Namespace: execution.Namespace,
+	}
+
 	newRunnerObject := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-runner-%d", sharedInfra.GetName(), time.Now().Unix()),
@@ -91,7 +97,7 @@ func NewRunner(executionId string, sharedInfra commonv1alpha1.SharedInfra, rawSh
 			Labels: map[string]string{
 				"commons.cloudx.io/sharedinfra-name":      sharedInfra.GetName(),
 				"commons.cloudx.io/sharedinfra-namespace": sharedInfra.GetNamespace(),
-				"commons.cloudx.io/execution-id":          executionId,
+				"commons.cloudx.io/execution":             executionRef.String(),
 				"app.kubernetes.io/managed-by":            "cloudx",
 			},
 		},
@@ -102,7 +108,7 @@ func NewRunner(executionId string, sharedInfra commonv1alpha1.SharedInfra, rawSh
 				{
 					Name:            "runner",
 					Image:           "mayconjrpacheco/cloudx-runner:latest",
-					Args:            []string{action, executionId, rawSharedInfra},
+					Args:            []string{execution.Spec.Action, executionRef.String(), rawSharedInfra},
 					ImagePullPolicy: v1.PullAlways,
 					SecurityContext: securityContext,
 					Env:             defaultVars,

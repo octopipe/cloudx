@@ -20,12 +20,13 @@ type SharedInfraPluginOutput struct {
 }
 
 type SharedInfraPlugin struct {
-	Name       string                    `json:"name"`
-	Ref        string                    `json:"ref"`
-	Depends    []string                  `json:"depends,omitempty"`
-	PluginType string                    `json:"type"`
-	Inputs     []SharedInfraPluginInput  `json:"inputs"`
-	Outputs    []SharedInfraPluginOutput `json:"outputs,omitempty"`
+	Name             string                    `json:"name"`
+	Ref              string                    `json:"ref"`
+	Depends          []string                  `json:"depends,omitempty"`
+	PluginType       string                    `json:"type"`
+	TerraformVersion string                    `json:"terraformVersion,omitempty"`
+	Inputs           []SharedInfraPluginInput  `json:"inputs"`
+	Outputs          []SharedInfraPluginOutput `json:"outputs,omitempty"`
 }
 
 type SharedInfraRunnerConfig struct {
@@ -33,44 +34,21 @@ type SharedInfraRunnerConfig struct {
 	ServiceAccount string `json:"serviceAccount,omitempty"`
 }
 
-type SharedInfraProviderConfigRef struct {
+type Ref struct {
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
 }
 
 type SharedInfraSpec struct {
-	Author            string                       `json:"author,omitempty" default:"anonymous"`
-	Description       string                       `json:"description,omitempty"`
-	ProviderConfigRef SharedInfraProviderConfigRef `json:"providerConfigRef,omitempty"`
-	RunnerConfig      SharedInfraRunnerConfig      `json:"runnerConfig,omitempty"`
-	Plugins           []SharedInfraPlugin          `json:"plugins"`
-}
-
-type PluginStatus struct {
-	Name           string                   `json:"name"`
-	Ref            string                   `json:"ref"`
-	Depends        []string                 `json:"depends,omitempty"`
-	PluginType     string                   `json:"type"`
-	Inputs         []SharedInfraPluginInput `json:"inputs"`
-	State          string                   `json:"state,omitempty"`
-	DependencyLock string                   `json:"dependencyLock,omitempty"`
-	StartedAt      string                   `json:"startedAt,omitempty"`
-	FinishedAt     string                   `json:"finishedAt,omitempty"`
-	Status         string                   `json:"status,omitempty"`
-	Error          string                   `json:"error,omitempty"`
-}
-
-type SharedInfraExecutionStatus struct {
-	Id         string         `json:"id,omitempty"`
-	Plugins    []PluginStatus `json:"plugins,omitempty"`
-	StartedAt  string         `json:"startedAt,omitempty"`
-	FinishedAt string         `json:"finishedAt,omitempty"`
-	Status     string         `json:"status,omitempty"`
-	Error      string         `json:"error,omitempty"`
+	Author            string                  `json:"author,omitempty" default:"anonymous"`
+	Description       string                  `json:"description,omitempty"`
+	ProviderConfigRef Ref                     `json:"providerConfigRef,omitempty"`
+	RunnerConfig      SharedInfraRunnerConfig `json:"runnerConfig,omitempty"`
+	Plugins           []SharedInfraPlugin     `json:"plugins"`
 }
 
 type SharedInfraStatus struct {
-	Executions []SharedInfraExecutionStatus `json:"executions,omitempty"`
+	Executions []Ref `json:"executions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
