@@ -21,12 +21,21 @@ const getBadgeVariants = (status: string) => {
 const SharedInfraView = () => {
   const { name } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
+  const [selectedExecution, setSelectedExecution] = useState<any>()
 
   const getSharedInfra = useCallback(async (name: string) => {
     const res = await fetch(`http://localhost:8080/shared-infras/${name}`)
     const item = await res.json()
 
     setSharedInfra(item)
+  }, [])
+
+
+  const getExecution = useCallback(async (name: string) => {
+    const res = await fetch(`http://localhost:8080/executions/${name}`)
+    const item = await res.json()
+
+    setSelectedExecution(item)
   }, [])
 
   useEffect(() => {
@@ -106,23 +115,23 @@ const SharedInfraView = () => {
               <Accordion>
                 {sharedInfra?.status?.executions?.map((item: any, idx: any) => (
                   <Accordion.Item eventKey={idx}>
-                    <Accordion.Header>
+                    <Accordion.Header onClick={() => getExecution(item?.name)}>
                       {item?.status === "RUNNING" && (
                         <Spinner animation="border" role="status" variant="primary" size="sm">
                           <span className="visually-hidden">Loading...</span>
                         </Spinner>
                       )}
-                      <Badge className="mx-2" bg={getBadgeVariants(item?.status)}>{ item?.status }</Badge>
+                      {/* <Badge className="mx-2" bg={getBadgeVariants(selectedExecution?.status?.status)}>{ selectedExecution?.status?.status }</Badge> */}
                       Execution #{ sharedInfra?.status?.executions?.length - idx }
                     </Accordion.Header>
                     <Accordion.Body>
-                      {item?.status === "ERROR" && (
-                        <Alert variant="danger">{item?.error?.replace(/(?:\\n|\\\\n)/g, '\n')}</Alert>
+                      {selectedExecution?.status?.status === "ERROR" && (
+                        <Alert variant="danger">{selectedExecution?.status?.error?.replace(/(?:\\n|\\\\n)/g, '\n')}</Alert>
                       )}
-                      {item?.plugins && item?.plugins?.length && (
+                      {selectedExecution?.status?.plugins && selectedExecution?.status?.plugins?.length && (
                         <SharedInfraViewDiagram
-                          initialNodes={item?.plugins ? toNodes(item.plugins) : []}
-                          initialEdges={item?.plugins ? toEdges(item.plugins) : []}
+                          initialNodes={selectedExecution?.status?.plugins ? toNodes(selectedExecution?.status?.plugins) : []}
+                          initialEdges={selectedExecution?.status?.plugins ? toEdges(selectedExecution?.status?.plugins) : []}
                         />
                       )}
                       

@@ -48,7 +48,7 @@ spec:
     - key: role_arn
       value: "{{ demo-1-lambda-role.outputs.arn }}"
     - key: image_uri
-      value: "218551854063.dkr.ecr.us-east-1.amazonaws.com/lambda-tests:latest"
+      value: "009602941962.dkr.ecr.us-east-1.amazonaws.com/demo-1"
 
   - name: demo-1-lambda-sns-trigger
     ref: mayconjrpacheco/plugin:sns-lambda-trigger-1

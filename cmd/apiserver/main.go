@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/execution"
 	"github.com/octopipe/cloudx/internal/sharedinfra"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,9 +36,13 @@ func main() {
 
 	r := gin.Default()
 	r.Use(CORSMiddleware())
+	executionRepository := execution.NewK8sRepository(k8sClient)
+	executionUseCase := execution.NewUseCase(executionRepository)
+
 	sharedInfraRepository := sharedinfra.NewK8sRepository(k8sClient)
 	sharedInfraUseCase := sharedinfra.NewUseCase(sharedInfraRepository)
 
+	r = execution.NewHTTPHandler(r, executionUseCase)
 	r = sharedinfra.NewHTTPHandler(r, sharedInfraUseCase)
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")

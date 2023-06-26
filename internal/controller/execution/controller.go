@@ -6,7 +6,7 @@ import (
 	"os"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/execution"
+	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,7 +42,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if currentExecution.Status.Status != execution.ExecutionRunningStatus {
+	if currentExecution.Status.Status != engine.ExecutionRunningStatus {
 		return ctrl.Result{}, nil
 	}
 

@@ -13,6 +13,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/hc-install/product"
+	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	providerIO "github.com/octopipe/cloudx/internal/io"
 	"github.com/octopipe/cloudx/internal/plugin"
@@ -30,27 +33,32 @@ type terraformProvider struct {
 	execPath string
 }
 
-func NewTerraformProvider(logger *zap.Logger) (TerraformProvider, error) {
+func NewTerraformProvider(logger *zap.Logger, terraformVersion string) (TerraformProvider, error) {
 	installDirPath := "/tmp/terraform-ins"
 	err := os.MkdirAll(installDirPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
 
-	// installer := &releases.ExactVersion{
-	// 	Product:    product.Terraform,
-	// 	Version:    version.Must(version.NewVersion("1.5.0")),
-	// 	InstallDir: installDirPath,
-	// }
+	currentTerraformVersion := "1.5.0"
+	if terraformVersion != "" {
+		currentTerraformVersion = terraformVersion
+	}
 
-	// execPath, err := installer.Install(context.Background())
-	// if err != nil {
-	// 	return nil, err
-	// }
+	installer := &releases.ExactVersion{
+		Product:    product.Terraform,
+		Version:    version.Must(version.NewVersion(currentTerraformVersion)),
+		InstallDir: installDirPath,
+	}
+
+	execPath, err := installer.Install(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	return terraformProvider{
 		logger:   logger,
-		execPath: "/usr/bin/terraform",
+		execPath: execPath,
 	}, nil
 }
 

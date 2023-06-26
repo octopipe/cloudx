@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/execution"
+	"github.com/octopipe/cloudx/internal/engine"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -103,7 +103,7 @@ func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) 
 
 	currentExecutionStatus := commonv1alpha1.ExecutionStatus{
 		StartedAt:  currentExecution.Status.StartedAt,
-		Status:     execution.ExecutionTimeout,
+		Status:     engine.ExecutionTimeout,
 		FinishedAt: args.FinishedAt,
 		Error:      "Runner time exceeded",
 		Plugins:    args.Plugins,
@@ -119,14 +119,21 @@ type RPCGetLastExecutionArgs struct {
 }
 
 func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commonv1alpha1.Execution) error {
+
 	currentExecution := &commonv1alpha1.Execution{}
 	err := s.Get(context.Background(), args.Ref, currentExecution)
 	if err != nil {
 		return err
 	}
 
+	s.logger.Info("current execution", zap.String("name", args.Ref.String()))
+
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err = s.Get(context.Background(), args.Ref, currentSharedInfra)
+	sharedInfraRef := types.NamespacedName{
+		Name:      currentExecution.Spec.SharedInfra.Name,
+		Namespace: currentExecution.Spec.SharedInfra.Namespace,
+	}
+	err = s.Get(context.Background(), sharedInfraRef, currentSharedInfra)
 	if err != nil {
 		return err
 	}
@@ -138,8 +145,8 @@ func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commo
 			return err
 		}
 
-		if executionApi.Status.Status != execution.ExecutionRunningStatus {
-			reply = executionApi
+		if executionApi.Status.Status != engine.ExecutionRunningStatus {
+			*reply = *executionApi
 			return nil
 		}
 	}

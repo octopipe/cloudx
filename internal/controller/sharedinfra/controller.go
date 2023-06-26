@@ -6,7 +6,7 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/execution"
+	"github.com/octopipe/cloudx/internal/engine"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,6 +71,16 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		},
 	}
 
+	hasExecutionRunning, err := c.hasExecutionRunning(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if hasExecutionRunning {
+		c.logger.Info("the shared infra has a execution running", zap.String("shared-infra", currentSharedInfra.Name))
+		return ctrl.Result{}, nil
+	}
+
 	c.logger.Info("creating new execution", zap.String("shared-infra", currentSharedInfra.Name))
 	err = c.Create(ctx, &newExecution)
 	if err != nil {
@@ -79,7 +89,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	newExecution.Status = commonv1alpha1.ExecutionStatus{
 		StartedAt: time.Now().Format(time.RFC3339),
-		Status:    execution.ExecutionRunningStatus,
+		Status:    engine.ExecutionRunningStatus,
 	}
 
 	err = updateExecutionStatus(c.Client, &newExecution)
@@ -101,8 +111,16 @@ func (c *controller) hasExecutionRunning(ctx context.Context) (bool, error) {
 
 	err := c.List(ctx, &executionList)
 	if err != nil {
-		return nil
+		return false, err
 	}
+
+	for _, i := range executionList.Items {
+		if i.Status.Status == engine.ExecutionRunningStatus {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {

@@ -11,6 +11,8 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/go-containerregistry v0.15.1
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/hc-install v0.5.1
 	github.com/hashicorp/terraform-exec v0.18.1
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.7.0
@@ -61,8 +63,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
-	github.com/hashicorp/hc-install v0.5.1 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/terraform-json v0.15.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -97,6 +98,7 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect

@@ -9,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
-	"github.com/octopipe/cloudx/internal/execution"
+	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/rpcclient"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
@@ -37,14 +37,11 @@ func main() {
 	logger, _ := zap.NewProduction()
 	_ = godotenv.Load()
 
+	logger.Info("starting runner")
+
 	rpcClient, err := rpcclient.NewRPCClient(os.Getenv("RPC_SERVER_ADDRESS"))
 	if err != nil {
 		logger.Fatal("Error to connect with controllerr", zap.Error(err), zap.String("address", os.Getenv("RPC_SERVER_ADDRESS")))
-	}
-
-	terraformProvider, err := terraform.NewTerraformProvider(logger)
-	if err != nil {
-		panic(err)
 	}
 
 	newRunnerContext := runnerContext{
@@ -59,7 +56,15 @@ func main() {
 
 	go newRunnerContext.startTimeout(executionRef)
 
+	logger.Info("getting last execution")
+
 	lastExecution := newRunnerContext.getLastExecution(executionRef)
+
+	logger.Info("installing terraform provider")
+	terraformProvider, err := terraform.NewTerraformProvider(logger, "")
+	if err != nil {
+		panic(err)
+	}
 
 	rpcRunnerFinishedArgs := &sharedinfra.RPCSetRunnerFinishedArgs{
 		Ref:        executionRef,
@@ -69,7 +74,7 @@ func main() {
 		FinishedAt: time.Now().Format(time.RFC3339),
 	}
 
-	currentExecution := execution.NewExecution(logger, terraformProvider, currentSharedInfra)
+	currentExecution := engine.NewExecution(logger, terraformProvider, currentSharedInfra)
 	if action == "APPLY" {
 		pluginStatus, err := currentExecution.Apply(lastExecution)
 		if err != nil {
@@ -104,7 +109,7 @@ func main() {
 
 func (c runnerContext) hasErrorsInPluginExecutions(pluginStatus []commonv1alpha1.PluginExecutionStatus) bool {
 	for _, p := range pluginStatus {
-		if p.Status == execution.ExecutionErrorStatus || p.Status == execution.ExecutionFailedStatus {
+		if p.Status == engine.ExecutionErrorStatus || p.Status == engine.ExecutionFailedStatus {
 			return true
 		}
 	}
