@@ -10,7 +10,6 @@ spec:
   providerConfigRef:
     name: aws-config
     namespace: default
-
   plugins:
   - name: demo-1-sns
     ref: mayconjrpacheco/plugin:sns-1
@@ -34,7 +33,7 @@ spec:
     - key: region
       value: us-east-1
 
-  - name: demo-1-lambda
+  - name: demo-2-lambda
     ref: mayconjrpacheco/plugin:lambda-1
     depends:
     - demo-1-lambda-role
@@ -42,18 +41,18 @@ spec:
     outputs: []
     inputs:
     - key: name
-      value: demo-1-function
+      value: demo-2-function
     - key: region
       value: us-east-1
     - key: role_arn
-      value: "{{ demo-1-lambda-role.outputs.arn }}"
+      value: "{{ this.demo-1-lambda-role.arn }}"
     - key: image_uri
-      value: "009602941962.dkr.ecr.us-east-1.amazonaws.com/demo-1"
+      value: "{{ connection-interfaces.ecr-test.repository_url }}"
 
   - name: demo-1-lambda-sns-trigger
     ref: mayconjrpacheco/plugin:sns-lambda-trigger-1
     depends:
-    - demo-1-lambda
+    - demo-2-lambda
     - demo-1-sns
     type: terraform
     outputs: []
