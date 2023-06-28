@@ -18,6 +18,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	ThisInterpolationOrigin                = "this"
+	ConnectionInterfaceInterpolationOrigin = "connection-interface"
+)
+
 type DependencyGraph map[string][]string
 
 type pipeline struct {
@@ -37,7 +42,7 @@ func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvid
 	}
 }
 
-func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra) commonv1alpha1.ExecutionStatus {
+func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan<- commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	status := commonv1alpha1.ExecutionStatus{
 		Status:  ExecutionSuccessStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
@@ -202,8 +207,8 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 		for _, t := range tokens {
 			if t.Type == TokenVariable {
 				s := strings.Split(strings.Trim(t.Value, " "), ".")
-				if len(t.Value) == 3 {
-					return nil, fmt.Errorf("invalid size of output variable %s with value %s", i.Key, i.Value)
+				if len(s) != 3 {
+					return nil, fmt.Errorf("malformed input variable %s with value %s", i.Key, i.Value)
 				}
 
 				value, err := p.getDataByOrigin(s[0], s[1], s[2])
@@ -211,7 +216,7 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 					return nil, err
 				}
 
-				data[t.Value] = value
+				data[t.Value] = strings.Trim(value, "\"")
 			}
 		}
 
@@ -226,7 +231,7 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 
 func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (string, error) {
 	switch origin {
-	case "this":
+	case ThisInterpolationOrigin:
 		p.logger.Info("interpolate this origin")
 		execution, ok := p.executionContext[name]
 		if !ok {
@@ -240,7 +245,7 @@ func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (str
 
 		return executionAttr.(string), nil
 
-	case "connection-interface":
+	case ConnectionInterfaceInterpolationOrigin:
 		p.logger.Info("interpolate this connection-interface")
 		connectionInterface := commonv1alpha1.ConnectionInterface{}
 		err := p.rpcClient.Call("ConnectionInterfaceRPCHandler.GetConnectionInterface", connectioninterface.RPCGetConnectionInterfaceArgs{

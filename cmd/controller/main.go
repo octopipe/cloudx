@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/connectioninterface"
+	executionController "github.com/octopipe/cloudx/internal/controller/execution"
 	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"go.uber.org/zap"
@@ -52,7 +53,7 @@ func main() {
 		mgr.GetScheme(),
 	)
 
-	executionController := sharedinfra.NewController(
+	executionController := executionController.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/controller/utils"
 	"github.com/octopipe/cloudx/internal/engine"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -37,6 +37,7 @@ func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Sch
 }
 
 func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	fmt.Println(req)
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
 	err := c.Get(ctx, req.NamespacedName, currentSharedInfra)
 	if err != nil {
@@ -46,16 +47,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	action := "APPLY"
 	if len(currentSharedInfra.Finalizers) > 0 {
 		action = "DESTROY"
-	}
-
-	providerConfig := commonv1alpha1.ProviderConfig{}
-	err = c.Get(ctx, types.NamespacedName{
-		Name:      currentSharedInfra.Spec.ProviderConfigRef.Name,
-		Namespace: currentSharedInfra.Spec.ProviderConfigRef.Namespace,
-	}, &providerConfig)
-	if err != nil {
-		c.logger.Error("error to get provider config", zap.Error(err))
-		return ctrl.Result{}, err
 	}
 
 	newExecution := commonv1alpha1.Execution{
@@ -72,13 +63,13 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		},
 	}
 
-	hasExecutionRunning, err := c.hasExecutionRunning(ctx)
+	hasExecutionRunning, err := c.hasExecutionRunning(ctx, req)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if hasExecutionRunning {
-		c.logger.Info("the shared infra has a execution running", zap.String("shared-infra", currentSharedInfra.Name))
+		c.logger.Info("the shared infra has a execution in status running", zap.String("shared-infra", currentSharedInfra.Name))
 		return ctrl.Result{}, nil
 	}
 
@@ -93,21 +84,15 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		Status:    engine.ExecutionRunningStatus,
 	}
 
-	err = updateExecutionStatus(c.Client, &newExecution)
+	err = utils.UpdateExecutionStatus(c.Client, newExecution)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	currentSharedInfra.Status.Executions = append(
-		[]commonv1alpha1.Ref{{Name: newExecution.Name, Namespace: newExecution.Namespace}},
-		currentSharedInfra.Status.Executions...,
-	)
-
-	err = updateSharedInfraStatus(c.Client, currentSharedInfra)
-	return ctrl.Result{}, err
+	return ctrl.Result{}, nil
 }
 
-func (c *controller) hasExecutionRunning(ctx context.Context) (bool, error) {
+func (c *controller) hasExecutionRunning(ctx context.Context, sharedInfraRef ctrl.Request) (bool, error) {
 	executionList := commonv1alpha1.ExecutionList{}
 
 	err := c.List(ctx, &executionList)
@@ -116,7 +101,7 @@ func (c *controller) hasExecutionRunning(ctx context.Context) (bool, error) {
 	}
 
 	for _, i := range executionList.Items {
-		if i.Status.Status == engine.ExecutionRunningStatus {
+		if i.Spec.SharedInfra.Name == sharedInfraRef.Name && i.Spec.SharedInfra.Namespace == sharedInfraRef.Namespace && i.Status.Status == engine.ExecutionRunningStatus {
 			return true, nil
 		}
 	}

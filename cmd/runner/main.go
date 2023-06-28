@@ -58,7 +58,9 @@ func main() {
 
 	lastExecution := newRunnerContext.getLastExecution(executionRef)
 
-	go newRunnerContext.startTimeout(executionRef, lastExecution)
+	currentExecutionStatusChann := make(chan commonv1alpha1.ExecutionStatus)
+
+	go newRunnerContext.startTimeout(executionRef, lastExecution, currentExecutionStatusChann)
 
 	logger.Info("installing terraform provider")
 	terraformProvider, err := terraform.NewTerraformProvider(logger, "")
@@ -72,9 +74,9 @@ func main() {
 
 	currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
 	if action == "APPLY" {
-		rpcRunnerFinishedArgs.ExecutionStatus = currentExecution.Apply(lastExecution, currentSharedInfra)
+		rpcRunnerFinishedArgs.ExecutionStatus = currentExecution.Apply(lastExecution, currentSharedInfra, currentExecutionStatusChann)
 	} else {
-		rpcRunnerFinishedArgs.ExecutionStatus = currentExecution.Destroy(lastExecution, currentSharedInfra)
+		rpcRunnerFinishedArgs.ExecutionStatus = currentExecution.Destroy(lastExecution, currentSharedInfra, currentExecutionStatusChann)
 	}
 
 	var reply int
@@ -117,14 +119,14 @@ func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, typ
 	return sharedInfra, executionRef, action, nil
 }
 
-func (c runnerContext) startTimeout(executionRef types.NamespacedName, lastExecution commonv1alpha1.Execution) {
+func (c runnerContext) startTimeout(executionRef types.NamespacedName, lastExecution commonv1alpha1.Execution, currentExecutionStatusChann <-chan commonv1alpha1.ExecutionStatus) {
 	time.Sleep(5 * time.Minute)
 
 	lastExecution.Status.Status = engine.ExecutionTimeout
 	lastExecution.Status.Error = "Time exceeded"
 	rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
 		Ref:             executionRef,
-		ExecutionStatus: lastExecution.Status,
+		ExecutionStatus: <-currentExecutionStatusChann,
 	}
 
 	var reply int

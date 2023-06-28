@@ -6,6 +6,7 @@ import (
 	"os"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/controller/utils"
 	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
@@ -13,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 type Controller interface {
@@ -36,6 +36,7 @@ func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Sch
 }
 
 func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
 	currentExecution := &commonv1alpha1.Execution{}
 	err := c.Get(ctx, req.NamespacedName, currentExecution)
 	if err != nil {
@@ -45,6 +46,8 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if currentExecution.Status.Status != engine.ExecutionRunningStatus {
 		return ctrl.Result{}, nil
 	}
+
+	c.logger.Info("starting new execution...")
 
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
 	sharedInfraRef := types.NamespacedName{
@@ -61,7 +64,21 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	c.logger.Info("reconcile shared-infra", zap.String("shared-infra", currentSharedInfra.GetName()), zap.String("action", currentExecution.Spec.Action))
+	for _, e := range currentSharedInfra.Status.Executions {
+		if e.Name == req.Name && e.Namespace == req.Namespace {
+			return ctrl.Result{}, nil
+		}
+	}
+
+	currentSharedInfra.Status.Executions = append(
+		[]commonv1alpha1.Ref{{Name: currentExecution.Name, Namespace: currentExecution.Namespace}},
+		currentSharedInfra.Status.Executions...,
+	)
+
+	err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
@@ -91,6 +108,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&commonv1alpha1.Execution{}).
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})).
+		// WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Complete(c)
 }

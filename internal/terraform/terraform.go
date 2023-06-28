@@ -278,11 +278,11 @@ func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.Sha
 			}
 		}
 
-		if value.Value != "" && i.Required {
+		if value.Value == "" && i.Required {
 			return fmt.Errorf("required field: %s", i.Name)
 		}
 
-		if value.Value != "" {
+		if value.Value == "" {
 			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, i.Default))
 			continue
 		}
@@ -295,21 +295,21 @@ func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.Sha
 		return err
 	}
 
-	if previousLockDeps != "" {
-		p.logger.Info("using lock file to increase performance")
-		previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
-		previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
-		if err != nil {
-			return err
-		}
+	// if previousLockDeps != "" {
+	// 	p.logger.Info("using lock file to increase performance")
+	// 	previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
+	// 	previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		var unescapedJSON string
-		err = json.Unmarshal([]byte(previousLockDeps), &unescapedJSON)
-		if err != nil {
-			return err
-		}
-		previousLockDepsFile.Write([]byte(unescapedJSON))
-	}
+	// 	var unescapedJSON string
+	// 	err = json.Unmarshal([]byte(previousLockDeps), &unescapedJSON)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	previousLockDepsFile.Write([]byte(unescapedJSON))
+	// }
 
 	p.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
 	err = tf.Init(context.Background(), tfexec.Upgrade(true))
@@ -319,18 +319,18 @@ func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.Sha
 	}
 
 	if previousState != "" {
+		rawPreviousState, err := base64.StdEncoding.DecodeString(strings.Trim(previousState, "\""))
+		if err != nil {
+			return err
+		}
+
 		previousStateFilePath := filepath.Join(workdirPath, "terraform.tfstate")
 		previousStateFile, err := os.Create(previousStateFilePath)
 		if err != nil {
 			return err
 		}
-		var unescapedJSON string
-		err = json.Unmarshal([]byte(previousState), &unescapedJSON)
-		if err != nil {
-			return err
-		}
 
-		previousStateFile.Write([]byte(unescapedJSON))
+		previousStateFile.Write(rawPreviousState)
 	}
 
 	p.logger.Info("executing terraform destroy", zap.String("workdir", workdirPath))

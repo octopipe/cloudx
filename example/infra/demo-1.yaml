@@ -58,9 +58,9 @@ spec:
     outputs: []
     inputs:
     - key: lambda_name
-      value: demo-1-function
+      value: demo-2-function
     - key: sns_arn
-      value: "{{ demo-1-sns.outputs.arn }}"
+      value: "{{ this.demo-1-sns.arn }}"
     - key: region
       value: us-east-1
 

@@ -4,9 +4,11 @@ import { Handle, Position } from 'reactflow';
 
 const colorByStatus: any = {
   'SUCCESS': 'green',
+  'APPLIED': 'green',
   'RUNNING': 'gray',
   'FAILED': 'red',
-  'ERROR': 'red'
+  'ERROR': 'red',
+  'APPLY_ERROR': 'red'
 }
 
 const getDuration = (startedAt: any, finishedAt: any) => {

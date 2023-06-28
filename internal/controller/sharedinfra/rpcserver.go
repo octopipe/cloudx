@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/controller/utils"
 	"github.com/octopipe/cloudx/internal/engine"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -60,7 +61,7 @@ func (s *RPCServer) SetExecutionStatus(args *RPCSetExecutionStatusArgs, reply *i
 
 	currentExecution.Status = args.ExecutionStatus
 
-	return updateExecutionStatus(s.Client, currentExecution)
+	return utils.UpdateExecutionStatus(s.Client, *currentExecution)
 }
 
 type RPCSetRunnerTimeoutArgs struct {
@@ -100,7 +101,7 @@ func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) 
 
 	currentExecution.Status = currentExecutionStatus
 
-	return updateExecutionStatus(s.Client, currentExecution)
+	return utils.UpdateExecutionStatus(s.Client, *currentExecution)
 }
 
 type RPCGetLastExecutionArgs struct {
@@ -108,14 +109,13 @@ type RPCGetLastExecutionArgs struct {
 }
 
 func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commonv1alpha1.Execution) error {
+	s.logger.Info("get last execution rpc all", zap.String("name", args.Ref.String()))
 
 	currentExecution := &commonv1alpha1.Execution{}
 	err := s.Get(context.Background(), args.Ref, currentExecution)
 	if err != nil {
 		return err
 	}
-
-	s.logger.Info("current execution", zap.String("name", args.Ref.String()))
 
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
 	sharedInfraRef := types.NamespacedName{

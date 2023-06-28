@@ -25,7 +25,7 @@ export const toNodes = (plugins: any, type="executionNode") => {
 export const toEdges = (plugins: any) => {
   let edges: any = []
   for (let i = 0; i < plugins.length; i++) {
-    for (let j = 0; j < plugins[i]?.depends?.length; i++) {
+    for (let j = 0; j < plugins[i]?.depends?.length; j++) {
       edges = [...edges,  {
         id: `e-${plugins[i].name}-${plugins[i].depends[j]}`,
         source: plugins[i].depends[j],
