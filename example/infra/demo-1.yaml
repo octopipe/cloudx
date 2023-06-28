@@ -47,7 +47,7 @@ spec:
     - key: role_arn
       value: "{{ this.demo-1-lambda-role.arn }}"
     - key: image_uri
-      value: "{{ connection-interfaces.ecr-test.repository_url }}"
+      value: "{{ connection-interface.ecr-conn.repository_url }}:latest"
 
   - name: demo-1-lambda-sns-trigger
     ref: mayconjrpacheco/plugin:sns-lambda-trigger-1

@@ -34,7 +34,7 @@ spec:
             type: object
           spec:
             properties:
-              Outputs:
+              outputs:
                 items:
                   properties:
                     key:
@@ -45,7 +45,7 @@ spec:
                       type: string
                   type: object
                 type: array
-              Secret:
+              secret:
                 properties:
                   name:
                     type: string

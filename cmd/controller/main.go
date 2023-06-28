@@ -87,7 +87,7 @@ func main() {
 	connectionInterfaceRepository := connectioninterface.NewK8sRepository(mgr.GetClient())
 
 	sharedInfraRPCServer := sharedinfra.NewRPCServer(mgr.GetClient(), logger)
-	connectionInterfaceRPCServer := connectioninterface.NewRPCHandler(connectionInterfaceRepository)
+	connectionInterfaceRPCServer := connectioninterface.NewConnectionInterfaceRPCHandler(connectionInterfaceRepository)
 	rpc.Register(sharedInfraRPCServer)
 	rpc.Register(connectionInterfaceRPCServer)
 	rpc.HandleHTTP()

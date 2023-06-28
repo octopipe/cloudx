@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -121,6 +122,14 @@ func (c *controller) hasExecutionRunning(ctx context.Context) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func ignoreDeletionPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return e.ObjectOld.GetGeneration() != e.ObjectNew.GetGeneration()
+		},
+	}
 }
 
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {

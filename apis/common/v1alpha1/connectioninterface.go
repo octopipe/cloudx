@@ -17,8 +17,8 @@ type ConnectionInterfaceSpecItem struct {
 
 type ConnectionInterfaceSpec struct {
 	SharedInfra Ref                           `json:"sharedInfra,omitempty"`
-	Outputs     []ConnectionInterfaceSpecItem `json:"Outputs,omitempty"`
-	Secret      Ref                           `json:"Secret,omitempty"`
+	Outputs     []ConnectionInterfaceSpecItem `json:"outputs,omitempty"`
+	Secret      Ref                           `json:"secret,omitempty"`
 }
 
 type ConnectionInterfaceStatus struct {

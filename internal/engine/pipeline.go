@@ -227,6 +227,7 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (string, error) {
 	switch origin {
 	case "this":
+		p.logger.Info("interpolate this origin")
 		execution, ok := p.executionContext[name]
 		if !ok {
 			return "", fmt.Errorf("not found plugin %s in execution context", name)
@@ -240,8 +241,9 @@ func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (str
 		return executionAttr.(string), nil
 
 	case "connection-interface":
+		p.logger.Info("interpolate this connection-interface")
 		connectionInterface := commonv1alpha1.ConnectionInterface{}
-		err := p.rpcClient.Call("GetConnectionInterface", connectioninterface.RPCGetConnectionInterfaceArgs{
+		err := p.rpcClient.Call("ConnectionInterfaceRPCHandler.GetConnectionInterface", connectioninterface.RPCGetConnectionInterfaceArgs{
 			Ref: types.NamespacedName{Name: name, Namespace: "default"},
 		}, &connectionInterface)
 		if err != nil {

@@ -4,9 +4,11 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"os"
 	"path/filepath"
@@ -121,10 +123,6 @@ func (p terraformProvider) prepareExecution(pluginRef string, input []commonv1al
 	return workdir, pluginConfig, nil
 }
 
-func (p terraformProvider) validateInputs(pluginConfig []plugin.Plugin) {
-
-}
-
 func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]any, string, string, error) {
 	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, inputs)
 	if err != nil {
@@ -152,7 +150,7 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 			return nil, "", "", fmt.Errorf("required field: %s", i.Name)
 		}
 
-		if value.Value != "" {
+		if value.Value == "" {
 			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, i.Default))
 			continue
 		}
@@ -165,42 +163,44 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 		return nil, "", "", err
 	}
 
-	if previousLockDeps != "" {
-		p.logger.Info("using lock file to increase performance")
-		previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
-		previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
-		if err != nil {
-			return nil, "", "", err
-		}
+	// if previousLockDeps != "" {
+	// 	fmt.Println("LOCK DEPS", previousLockDeps)
+	// 	rawPreviousLockDeps, err := base64.StdEncoding.DecodeString(strings.Trim(previousLockDeps, "\""))
+	// 	if err != nil {
+	// 		return nil, "", "", err
+	// 	}
 
-		var unescapedJSON string
-		err = json.Unmarshal([]byte(previousLockDeps), &unescapedJSON)
-		if err != nil {
-			return nil, "", "", err
-		}
-		previousLockDepsFile.Write([]byte(unescapedJSON))
-	}
+	// 	fmt.Println("RAW", string(rawPreviousLockDeps))
+
+	// 	p.logger.Info("using lock file to increase performance")
+	// 	previousLockDepsFilePath := filepath.Join(workdirPath, ".terraform.lock.hcl")
+	// 	previousLockDepsFile, err := os.Create(previousLockDepsFilePath)
+	// 	if err != nil {
+	// 		return nil, "", "", err
+	// 	}
+
+	// 	previousLockDepsFile.Write(rawPreviousLockDeps)
+	// }
 
 	p.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
 	err = tf.Init(context.Background(), tfexec.Upgrade(true))
 	if err != nil {
-
 		return nil, "", "", err
 	}
 
 	if previousState != "" {
+		rawPreviousState, err := base64.StdEncoding.DecodeString(strings.Trim(previousState, "\""))
+		if err != nil {
+			return nil, "", "", err
+		}
+
 		previousStateFilePath := filepath.Join(workdirPath, "terraform.tfstate")
 		previousStateFile, err := os.Create(previousStateFilePath)
 		if err != nil {
 			return nil, "", "", err
 		}
-		var unescapedJSON string
-		err = json.Unmarshal([]byte(previousState), &unescapedJSON)
-		if err != nil {
-			return nil, "", "", err
-		}
 
-		previousStateFile.Write([]byte(unescapedJSON))
+		previousStateFile.Write(rawPreviousState)
 	}
 
 	p.logger.Info("executing terraform plan", zap.String("workdir", workdirPath))
@@ -220,12 +220,6 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 	out, err := tf.Output(context.Background())
 	if err != nil {
 		return nil, "", "", err
-	}
-
-	outputs := map[string]any{}
-
-	for key, res := range out {
-		outputs[key] = res.Value
 	}
 
 	p.logger.Info("get terraform state file", zap.String("workdir", workdirPath))
@@ -250,6 +244,12 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 	escapedLockFile, err := json.Marshal(lockDepsFile)
 	if err != nil {
 		return nil, "", "", err
+	}
+
+	outputs := map[string]any{}
+
+	for key, res := range out {
+		outputs[key] = string(res.Value)
 	}
 
 	return outputs, string(escapedState), string(escapedLockFile), nil

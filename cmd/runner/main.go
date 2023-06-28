@@ -54,11 +54,11 @@ func main() {
 		panic(err)
 	}
 
-	go newRunnerContext.startTimeout(executionRef)
-
 	logger.Info("getting last execution")
 
 	lastExecution := newRunnerContext.getLastExecution(executionRef)
+
+	go newRunnerContext.startTimeout(executionRef, lastExecution)
 
 	logger.Info("installing terraform provider")
 	terraformProvider, err := terraform.NewTerraformProvider(logger, "")
@@ -84,16 +84,6 @@ func main() {
 	}
 
 	logger.Info("Finish runner execution")
-}
-
-func (c runnerContext) hasErrorsInPluginExecutions(pluginStatus []commonv1alpha1.PluginExecutionStatus) bool {
-	for _, p := range pluginStatus {
-		if p.Status == engine.ExecutionErrorStatus || p.Status == engine.ExecutionFailedStatus {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, types.NamespacedName, string, error) {
@@ -127,17 +117,20 @@ func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, typ
 	return sharedInfra, executionRef, action, nil
 }
 
-func (c runnerContext) startTimeout(executionRef types.NamespacedName) {
+func (c runnerContext) startTimeout(executionRef types.NamespacedName, lastExecution commonv1alpha1.Execution) {
 	time.Sleep(5 * time.Minute)
 
-	var reply int
-	args := &sharedinfra.RPCSetRunnerTimeoutArgs{
-		Ref: executionRef,
+	lastExecution.Status.Status = engine.ExecutionTimeout
+	lastExecution.Status.Error = "Time exceeded"
+	rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
+		Ref:             executionRef,
+		ExecutionStatus: lastExecution.Status,
 	}
 
-	err := c.rpcClient.Call("RPCServer.SetRunnerTimeout", args, &reply)
+	var reply int
+	err := c.rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
 	if err != nil {
-		c.logger.Fatal("call rpc timeout error")
+		c.logger.Fatal("Error to call controller", zap.Error(err))
 	}
 
 	c.logger.Fatal("Runner timeout")

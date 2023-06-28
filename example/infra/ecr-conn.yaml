@@ -1,0 +1,10 @@
+apiVersion: commons.cloudx.io/v1alpha1
+kind: ConnectionInterface
+metadata:
+  name: ecr-conn
+  labels:
+    revision: 0.0.1
+spec:
+  outputs:
+  - key: repository_url
+    value: repository.org
