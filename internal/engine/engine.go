@@ -11,7 +11,6 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	providerIO "github.com/octopipe/cloudx/internal/io"
 	"github.com/octopipe/cloudx/internal/plugin"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"

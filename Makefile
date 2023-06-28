@@ -15,6 +15,13 @@ CONTROLLER_TOOLS_VERSION ?= v0.9.2
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 
+.PHONY: vendor
+vendor:
+	go mod vendor
+
+mocks: vendor
+	go run vendor/github.com/vektra/mockery/v2/main.go --all --dir ./internal --keeptree --case underscore
+
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)

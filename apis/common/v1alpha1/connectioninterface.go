@@ -16,9 +16,9 @@ type ConnectionInterfaceSpecItem struct {
 }
 
 type ConnectionInterfaceSpec struct {
-	GeneratedFrom string                            `json:"GeneratedFrom,omitempty"`
-	Outputs       []ConnectionInterfaceSpecItem     `json:"Outputs,omitempty"`
-	Secret        ConnectionInterfaceSpecItemSecret `json:"Secret,omitempty"`
+	SharedInfra Ref                           `json:"sharedInfra,omitempty"`
+	Outputs     []ConnectionInterfaceSpecItem `json:"Outputs,omitempty"`
+	Secret      Ref                           `json:"Secret,omitempty"`
 }
 
 type ConnectionInterfaceStatus struct {

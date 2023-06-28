@@ -2,14 +2,19 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/plugin"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type DependencyGraph map[string][]string
@@ -18,93 +23,191 @@ type pipeline struct {
 	logger            *zap.Logger
 	terraformProvider terraform.TerraformProvider
 	mu                sync.Mutex
+	executionContext  map[string]map[string]any
+	k8sClient         client.Client
 }
 
-func NewPipeline(terraformProvider terraform.TerraformProvider) pipeline {
+func NewPipeline(logger *zap.Logger, k8sClient client.Client, terraformProvider terraform.TerraformProvider) pipeline {
 	return pipeline{
+		logger:            logger,
 		terraformProvider: terraformProvider,
+		executionContext:  make(map[string]map[string]any),
+		k8sClient:         k8sClient,
 	}
 }
 
-func (p *pipeline) Execute(sharedInfra commonv1alpha1.SharedInfra) {
-	eg, _ := errgroup.WithContext(context.Background())
-	graph := createDependencyGraph(sharedInfra)
-	inDegrees := make(map[string]int)
-	queue := make(chan string)
-	result := make(chan string)
-
-	for node := range graph {
-		inDegrees[node] = 0
+func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra) commonv1alpha1.ExecutionStatus {
+	status := commonv1alpha1.ExecutionStatus{
+		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
 
-	for _, dependencies := range graph {
-		for _, dependency := range dependencies {
-			inDegrees[dependency]++
-		}
+	eg, _ := errgroup.WithContext(context.Background())
+	inDegrees := make(map[string]int)
+
+	for node, deps := range graph {
+		inDegrees[node] = len(deps)
 	}
 
 	for {
-		select {
-		case item := <-queue:
-
+		if len(p.executionContext) == len(graph) {
+			return status
 		}
-	}
 
-	for node := range graph {
-		if inDegrees[node] == 0 {
-			eg.Go(func() error {
-				pluginExecutionStatus, err := p.processNode(node, graph, sharedInfra, inDegrees, queue)
-				if err != nil {
+		for node, deps := range inDegrees {
+			if _, ok := p.executionContext[node]; !ok && deps == 0 {
+				eg.Go(func(node string) func() error {
+					return func() error {
+						p.logger.Info("starting plugin execution...", zap.String("name", node))
+						currentPlugin := commonv1alpha1.SharedInfraPlugin{}
+						for _, specPlugin := range sharedInfra.Spec.Plugins {
+							if specPlugin.Name == node {
+								currentPlugin = specPlugin
+								break
+							}
+						}
+						pluginExecutionStatus, pluginOutput := p.processPlugin(action, lastExecution, currentPlugin)
 
-				}
-			})
-		}
-	}
+						p.mu.Lock()
+						defer p.mu.Unlock()
 
-	if err := eg.Wait(); err != nil {
-		return
-	}
+						status.Plugins = append(status.Plugins, pluginExecutionStatus)
+						if pluginExecutionStatus.Status != ExecutionSuccessStatus {
+							status.Status = ExecutionErrorStatus
+							status.Error = pluginExecutionStatus.Error
+							return errors.New(pluginExecutionStatus.Error)
+						}
 
-	var executionOrder []string
-	for node := range result {
-		executionOrder = append(executionOrder, node)
-	}
+						p.executionContext[node] = pluginOutput
 
-	return executionOrder
-}
+						for n, deps := range graph {
+							for _, dep := range deps {
+								if dep == node {
+									inDegrees[n]--
+								}
+							}
+						}
 
-func (p *pipeline) processNode(node string, graph DependencyGraph, sharedInfra commonv1alpha1.SharedInfra, inDegrees map[string]int, queue chan<- string) (commonv1alpha1.PluginExecutionStatus, error) {
+						return nil
+					}
+				}(node))
 
-	// for _, plugin := range sharedInfra.Spec.Plugins {
-	// 	if plugin.Name == node {
-	// 		p.terraformProvider.Apply()
-	// 	}
-	// }
-
-	fmt.Println(node)
-
-	time.Sleep(3 * time.Second)
-
-	if dependencies, ok := graph[node]; ok {
-		for _, dependency := range dependencies {
-			if inDegrees[dependency] > 0 {
-				inDegrees[dependency]--
-				if inDegrees[dependency] == 0 {
-					queue <- dependency
-				}
 			}
 		}
-	}
 
-	return commonv1alpha1.PluginExecutionStatus{}, nil
+		if err := eg.Wait(); err != nil {
+			return status
+		}
+	}
 }
 
-func createDependencyGraph(sharedInfra commonv1alpha1.SharedInfra) DependencyGraph {
-	dependencyGraph := DependencyGraph{}
+func (p *pipeline) processPlugin(action ExecutionActionType, lastExecution commonv1alpha1.Execution, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]any) {
+	lastPluginExecutionStatus := commonv1alpha1.PluginExecutionStatus{}
 
-	for _, plugin := range sharedInfra.Spec.Plugins {
-		dependencyGraph[plugin.Name] = plugin.Depends
+	for _, e := range lastExecution.Status.Plugins {
+		if e.Name == currentPlugin.Name {
+			lastPluginExecutionStatus = e
+		}
 	}
 
-	return dependencyGraph
+	status := commonv1alpha1.PluginExecutionStatus{
+		Name:       currentPlugin.Name,
+		Ref:        currentPlugin.Ref,
+		Depends:    currentPlugin.Depends,
+		Inputs:     currentPlugin.Inputs,
+		PluginType: currentPlugin.PluginType,
+		Status:     ExecutionSuccessStatus,
+		StartedAt:  time.Now().Format(time.RFC3339),
+	}
+	inputs, err := p.interpolatePluginInputsByExecutionContext(currentPlugin)
+	if err != nil {
+		status.Error = err.Error()
+		status.Status = ExecutionErrorStatus
+		return status, nil
+	}
+
+	status.Inputs = inputs
+
+	if currentPlugin.PluginType == plugin.TerraformPluginType {
+		out, state, lockfile, err := p.terraformProvider.Apply(currentPlugin.Ref, inputs, lastPluginExecutionStatus.State, lastPluginExecutionStatus.DependencyLock)
+		status.FinishedAt = time.Now().Format(time.RFC3339)
+		if err != nil {
+			status.Error = err.Error()
+			status.Status = ExecutionErrorStatus
+			return status, nil
+		}
+
+		status.DependencyLock = lockfile
+		status.State = state
+
+		return status, out
+	}
+
+	status.Error = "invalid plugin type"
+	status.Status = ExecutionErrorStatus
+
+	return status, nil
+}
+
+func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alpha1.SharedInfraPlugin) ([]commonv1alpha1.SharedInfraPluginInput, error) {
+	inputs := []commonv1alpha1.SharedInfraPluginInput{}
+	for _, i := range plugin.Inputs {
+		tokens := Lex(i.Value)
+		data := map[string]string{}
+		for _, t := range tokens {
+			if t.Type == TokenVariable {
+				s := strings.Split(strings.Trim(t.Value, " "), ".")
+				if len(t.Value) == 3 {
+					return nil, fmt.Errorf("invalid size of output variable %s with value %s", i.Key, i.Value)
+				}
+
+				value, err := p.getDataByOrigin(s[0], s[1], s[2])
+				if err != nil {
+					return nil, err
+				}
+
+				data[t.Value] = value
+			}
+		}
+
+		inputs = append(inputs, commonv1alpha1.SharedInfraPluginInput{
+			Key:   i.Key,
+			Value: Interpolate(tokens, data),
+		})
+	}
+
+	return inputs, nil
+}
+
+func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (string, error) {
+	switch origin {
+	case "this":
+		execution, ok := p.executionContext[name]
+		if !ok {
+			return "", fmt.Errorf("not found plugin %s in execution context", name)
+		}
+
+		executionAttr, ok := execution[attr]
+		if !ok {
+			return "", fmt.Errorf("not found attr %s in finished plugin execution %s", attr, name)
+		}
+
+		return executionAttr.(string), nil
+
+	case "connection-interface":
+		connectionInterface := commonv1alpha1.ConnectionInterface{}
+		err := p.k8sClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: "default"}, &connectionInterface)
+		if err != nil {
+			return "", err
+		}
+
+		for _, out := range connectionInterface.Spec.Outputs {
+			if out.Key == attr {
+				return out.Value, nil
+			}
+		}
+
+		return "", fmt.Errorf("not found attr in connection-interface %s", name)
+	default:
+		return "", fmt.Errorf("invalid origin type %s", origin)
+	}
 }

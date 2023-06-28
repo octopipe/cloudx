@@ -13,19 +13,16 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/uuid"
-	"github.com/hashicorp/go-version"
-	"github.com/hashicorp/hc-install/product"
-	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	providerIO "github.com/octopipe/cloudx/internal/io"
+	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/plugin"
 	"go.uber.org/zap"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type TerraformProvider interface {
-	Apply(pluginRef string, input providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, string, error)
-	Destroy(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) error
+	Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]any, string, string, error)
+	Destroy(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error
 }
 
 type terraformProvider struct {
@@ -40,29 +37,29 @@ func NewTerraformProvider(logger *zap.Logger, terraformVersion string) (Terrafor
 		return nil, err
 	}
 
-	currentTerraformVersion := "1.5.0"
-	if terraformVersion != "" {
-		currentTerraformVersion = terraformVersion
-	}
+	// currentTerraformVersion := "1.5.0"
+	// if terraformVersion != "" {
+	// 	currentTerraformVersion = terraformVersion
+	// }
 
-	installer := &releases.ExactVersion{
-		Product:    product.Terraform,
-		Version:    version.Must(version.NewVersion(currentTerraformVersion)),
-		InstallDir: installDirPath,
-	}
+	// installer := &releases.ExactVersion{
+	// 	Product:    product.Terraform,
+	// 	Version:    version.Must(version.NewVersion(currentTerraformVersion)),
+	// 	InstallDir: installDirPath,
+	// }
 
-	execPath, err := installer.Install(context.Background())
-	if err != nil {
-		return nil, err
-	}
+	// execPath, err := installer.Install(context.Background())
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return terraformProvider{
 		logger:   logger,
-		execPath: execPath,
+		execPath: "/usr/bin/terraform",
 	}, nil
 }
 
-func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.ProviderInput) (string, plugin.Plugin, error) {
+func (p terraformProvider) prepareExecution(pluginRef string, input []commonv1alpha1.SharedInfraPluginInput) (string, plugin.Plugin, error) {
 	p.logger.Info("pulling plugin image", zap.String("image", pluginRef))
 	img, err := crane.Pull(pluginRef)
 	if err != nil {
@@ -124,8 +121,12 @@ func (p terraformProvider) prepareExecution(pluginRef string, input providerIO.P
 	return workdir, pluginConfig, nil
 }
 
-func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) (providerIO.ProviderOutput, string, string, error) {
-	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, executionInput)
+func (p terraformProvider) validateInputs(pluginConfig []plugin.Plugin) {
+
+}
+
+func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]any, string, string, error) {
+	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, inputs)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -138,12 +139,20 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 
 	p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
 	for _, i := range pluginConfig.Spec.Inputs {
-		value, ok := executionInput[i.Name]
-		if !ok && i.Required {
-			return providerIO.ProviderOutput{}, "", "", fmt.Errorf("required field: %s", i.Name)
+
+		var value commonv1alpha1.SharedInfraPluginInput
+		for _, s := range inputs {
+			if i.Name == s.Key {
+				value = s
+				break
+			}
 		}
 
-		if !ok {
+		if value.Value != "" && i.Required {
+			return nil, "", "", fmt.Errorf("required field: %s", i.Name)
+		}
+
+		if value.Value != "" {
 			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, i.Default))
 			continue
 		}
@@ -213,13 +222,10 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 		return nil, "", "", err
 	}
 
-	outputs := providerIO.ProviderOutput{}
+	outputs := map[string]any{}
 
 	for key, res := range out {
-		outputs[key] = providerIO.ProviderOutputMetadata{
-			Value:     string(res.Value),
-			Sensitive: res.Sensitive,
-		}
+		outputs[key] = res.Value
 	}
 
 	p.logger.Info("get terraform state file", zap.String("workdir", workdirPath))
@@ -236,11 +242,21 @@ func (p terraformProvider) Apply(pluginRef string, executionInput providerIO.Pro
 		return nil, "", "", err
 	}
 
-	return outputs, string(stateFile), string(lockDepsFile), nil
+	escapedState, err := json.Marshal(stateFile)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	escapedLockFile, err := json.Marshal(lockDepsFile)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return outputs, string(escapedState), string(escapedLockFile), nil
 }
 
-func (p terraformProvider) Destroy(pluginRef string, executionInput providerIO.ProviderInput, previousState string, previousLockDeps string) error {
-	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, executionInput)
+func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error {
+	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, inputs)
 	if err != nil {
 		return err
 	}
@@ -253,12 +269,20 @@ func (p terraformProvider) Destroy(pluginRef string, executionInput providerIO.P
 
 	p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
 	for _, i := range pluginConfig.Spec.Inputs {
-		value, ok := executionInput[i.Name]
-		if !ok && i.Required {
+
+		var value commonv1alpha1.SharedInfraPluginInput
+		for _, s := range inputs {
+			if i.Name == s.Key {
+				value = s
+				break
+			}
+		}
+
+		if value.Value != "" && i.Required {
 			return fmt.Errorf("required field: %s", i.Name)
 		}
 
-		if !ok {
+		if value.Value != "" {
 			f.WriteString(fmt.Sprintf("%s = \"%s\"\n", i.Name, i.Default))
 			continue
 		}

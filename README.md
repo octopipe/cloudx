@@ -26,6 +26,8 @@ The runtime-engine manage your infrastructure in any cloud based in [IDP princip
 - Add execution sensitives data in secrets
 - Create recycle logic for executions and give option to external save
 - Search ways to encrypt sensitive data in execution
+- create terraform cache version and verify
+- get log stream by plugins in a job
 
 ## How to run?
 
