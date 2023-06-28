@@ -9,12 +9,13 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/connectioninterface"
 	"github.com/octopipe/cloudx/internal/plugin"
+	"github.com/octopipe/cloudx/internal/rpcclient"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type DependencyGraph map[string][]string
@@ -24,20 +25,21 @@ type pipeline struct {
 	terraformProvider terraform.TerraformProvider
 	mu                sync.Mutex
 	executionContext  map[string]map[string]any
-	k8sClient         client.Client
+	rpcClient         rpcclient.Client
 }
 
-func NewPipeline(logger *zap.Logger, k8sClient client.Client, terraformProvider terraform.TerraformProvider) pipeline {
+func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvider terraform.TerraformProvider) pipeline {
 	return pipeline{
 		logger:            logger,
 		terraformProvider: terraformProvider,
 		executionContext:  make(map[string]map[string]any),
-		k8sClient:         k8sClient,
+		rpcClient:         rpcClient,
 	}
 }
 
 func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra) commonv1alpha1.ExecutionStatus {
 	status := commonv1alpha1.ExecutionStatus{
+		Status:  ExecutionSuccessStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
 
@@ -57,21 +59,34 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 			if _, ok := p.executionContext[node]; !ok && deps == 0 {
 				eg.Go(func(node string) func() error {
 					return func() error {
-						p.logger.Info("starting plugin execution...", zap.String("name", node))
-						currentPlugin := commonv1alpha1.SharedInfraPlugin{}
-						for _, specPlugin := range sharedInfra.Spec.Plugins {
-							if specPlugin.Name == node {
-								currentPlugin = specPlugin
-								break
+						p.logger.Info("starting plugin execution...", zap.String("name", node), zap.Any("action", action))
+
+						pluginExecutionStatus, pluginOutput := commonv1alpha1.PluginExecutionStatus{}, map[string]any{}
+						if action == DestroyAction {
+							lastPluginExecution := commonv1alpha1.PluginExecutionStatus{}
+							for _, statusPlugin := range lastExecution.Status.Plugins {
+								if statusPlugin.Name == node {
+									lastPluginExecution = statusPlugin
+									break
+								}
 							}
+							pluginExecutionStatus = p.destroyPlugin(lastExecution, lastPluginExecution)
+						} else {
+							currentPlugin := commonv1alpha1.SharedInfraPlugin{}
+							for _, specPlugin := range sharedInfra.Spec.Plugins {
+								if specPlugin.Name == node {
+									currentPlugin = specPlugin
+									break
+								}
+							}
+							pluginExecutionStatus, pluginOutput = p.applyPlugin(lastExecution, currentPlugin)
 						}
-						pluginExecutionStatus, pluginOutput := p.processPlugin(action, lastExecution, currentPlugin)
 
 						p.mu.Lock()
 						defer p.mu.Unlock()
 
 						status.Plugins = append(status.Plugins, pluginExecutionStatus)
-						if pluginExecutionStatus.Status != ExecutionSuccessStatus {
+						if pluginExecutionStatus.Status == ExecutionApplyErrorStatus || pluginExecutionStatus.Status == ExecutionDestroyErrorStatus {
 							status.Status = ExecutionErrorStatus
 							status.Error = pluginExecutionStatus.Error
 							return errors.New(pluginExecutionStatus.Error)
@@ -95,12 +110,43 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 		}
 
 		if err := eg.Wait(); err != nil {
-			return status
+			break
 		}
 	}
+
+	return status
 }
 
-func (p *pipeline) processPlugin(action ExecutionActionType, lastExecution commonv1alpha1.Execution, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]any) {
+func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.Execution, lastExecutionPlugin commonv1alpha1.PluginExecutionStatus) commonv1alpha1.PluginExecutionStatus {
+	status := commonv1alpha1.PluginExecutionStatus{
+		Name:       lastExecutionPlugin.Name,
+		Ref:        lastExecutionPlugin.Ref,
+		Depends:    lastExecutionPlugin.Depends,
+		Inputs:     lastExecutionPlugin.Inputs,
+		PluginType: lastExecutionPlugin.PluginType,
+		Status:     ExecutionDestroyed,
+		StartedAt:  time.Now().Format(time.RFC3339),
+	}
+
+	inputs := lastExecutionPlugin.Inputs
+	if lastExecutionPlugin.PluginType == plugin.TerraformPluginType {
+		err := p.terraformProvider.Destroy(lastExecutionPlugin.Ref, inputs, lastExecutionPlugin.State, lastExecutionPlugin.DependencyLock)
+		if err != nil {
+			status.Error = err.Error()
+			status.Status = ExecutionDestroyErrorStatus
+			return status
+		}
+
+		return status
+	}
+
+	status.Error = "invalid plugin type"
+	status.Status = ExecutionDestroyErrorStatus
+
+	return status
+}
+
+func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.Execution, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]any) {
 	lastPluginExecutionStatus := commonv1alpha1.PluginExecutionStatus{}
 
 	for _, e := range lastExecution.Status.Plugins {
@@ -115,24 +161,24 @@ func (p *pipeline) processPlugin(action ExecutionActionType, lastExecution commo
 		Depends:    currentPlugin.Depends,
 		Inputs:     currentPlugin.Inputs,
 		PluginType: currentPlugin.PluginType,
-		Status:     ExecutionSuccessStatus,
+		Status:     ExecutionAppliedStatus,
 		StartedAt:  time.Now().Format(time.RFC3339),
 	}
+
 	inputs, err := p.interpolatePluginInputsByExecutionContext(currentPlugin)
 	if err != nil {
 		status.Error = err.Error()
-		status.Status = ExecutionErrorStatus
+		status.Status = ExecutionApplyErrorStatus
 		return status, nil
 	}
 
 	status.Inputs = inputs
-
 	if currentPlugin.PluginType == plugin.TerraformPluginType {
 		out, state, lockfile, err := p.terraformProvider.Apply(currentPlugin.Ref, inputs, lastPluginExecutionStatus.State, lastPluginExecutionStatus.DependencyLock)
 		status.FinishedAt = time.Now().Format(time.RFC3339)
 		if err != nil {
 			status.Error = err.Error()
-			status.Status = ExecutionErrorStatus
+			status.Status = ExecutionApplyErrorStatus
 			return status, nil
 		}
 
@@ -143,7 +189,7 @@ func (p *pipeline) processPlugin(action ExecutionActionType, lastExecution commo
 	}
 
 	status.Error = "invalid plugin type"
-	status.Status = ExecutionErrorStatus
+	status.Status = ExecutionApplyErrorStatus
 
 	return status, nil
 }
@@ -195,7 +241,9 @@ func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (str
 
 	case "connection-interface":
 		connectionInterface := commonv1alpha1.ConnectionInterface{}
-		err := p.k8sClient.Get(context.Background(), types.NamespacedName{Name: name, Namespace: "default"}, &connectionInterface)
+		err := p.rpcClient.Call("GetConnectionInterface", connectioninterface.RPCGetConnectionInterfaceArgs{
+			Ref: types.NamespacedName{Name: name, Namespace: "default"},
+		}, &connectionInterface)
 		if err != nil {
 			return "", err
 		}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/connectioninterface"
 	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"go.uber.org/zap"
@@ -83,8 +84,12 @@ func main() {
 		panic(err)
 	}
 
-	rpcServer := sharedinfra.NewRPCServer(mgr.GetClient(), logger)
-	rpc.Register(rpcServer)
+	connectionInterfaceRepository := connectioninterface.NewK8sRepository(mgr.GetClient())
+
+	sharedInfraRPCServer := sharedinfra.NewRPCServer(mgr.GetClient(), logger)
+	connectionInterfaceRPCServer := connectioninterface.NewRPCHandler(connectionInterfaceRepository)
+	rpc.Register(sharedInfraRPCServer)
+	rpc.Register(connectionInterfaceRPCServer)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":9000")
 	if e != nil {

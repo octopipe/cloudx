@@ -43,15 +43,12 @@ func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunne
 	return nil
 }
 
-type RPCSetRunnerFinishedArgs struct {
-	Ref        types.NamespacedName
-	Plugins    []commonv1alpha1.PluginExecutionStatus `json:"plugins,omitempty"`
-	FinishedAt string                                 `json:"finishedAt,omitempty"`
-	Status     string                                 `json:"status,omitempty"`
-	Error      string                                 `json:"error,omitempty"`
+type RPCSetExecutionStatusArgs struct {
+	Ref             types.NamespacedName
+	ExecutionStatus commonv1alpha1.ExecutionStatus
 }
 
-func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int) error {
+func (s *RPCServer) SetExecutionStatus(args *RPCSetExecutionStatusArgs, reply *int) error {
 	s.logger.Info("Received rpc call", zap.String("sharedinfra", args.Ref.String()))
 	currentExecution := &commonv1alpha1.Execution{}
 	err := s.Get(context.Background(), args.Ref, currentExecution)
@@ -59,17 +56,9 @@ func (s *RPCServer) SetRunnerFinished(args *RPCSetRunnerFinishedArgs, reply *int
 		return err
 	}
 
-	s.logger.Info("rpc execution", zap.String("status", args.Status))
+	s.logger.Info("rpc execution", zap.String("status", args.ExecutionStatus.Status))
 
-	currentExecutionStatus := commonv1alpha1.ExecutionStatus{
-		StartedAt:  currentExecution.Status.StartedAt,
-		Status:     args.Status,
-		FinishedAt: args.FinishedAt,
-		Error:      args.Error,
-		Plugins:    args.Plugins,
-	}
-
-	currentExecution.Status = currentExecutionStatus
+	currentExecution.Status = args.ExecutionStatus
 
 	return updateExecutionStatus(s.Client, currentExecution)
 }

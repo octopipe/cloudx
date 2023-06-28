@@ -148,7 +148,7 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 			}
 		}
 
-		if value.Value != "" && i.Required {
+		if value.Value == "" && i.Required {
 			return nil, "", "", fmt.Errorf("required field: %s", i.Name)
 		}
 

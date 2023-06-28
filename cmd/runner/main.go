@@ -66,42 +66,21 @@ func main() {
 		panic(err)
 	}
 
-	rpcRunnerFinishedArgs := &sharedinfra.RPCSetRunnerFinishedArgs{
-		Ref:        executionRef,
-		Error:      "",
-		Plugins:    []commonv1alpha1.PluginExecutionStatus{},
-		Status:     "SUCCESS",
-		FinishedAt: time.Now().Format(time.RFC3339),
+	rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
+		Ref: executionRef,
 	}
 
-	currentExecution := engine.NewExecution(logger, terraformProvider, currentSharedInfra)
+	currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
 	if action == "APPLY" {
-		pluginStatus, err := currentExecution.Apply(lastExecution)
-		if err != nil {
-			rpcRunnerFinishedArgs.Status = "ERROR"
-			rpcRunnerFinishedArgs.Error = err.Error()
-		}
-
-		if newRunnerContext.hasErrorsInPluginExecutions(pluginStatus) {
-			rpcRunnerFinishedArgs.Status = "ERROR"
-			rpcRunnerFinishedArgs.Error = "Found error in plugin execution"
-		}
-
-		rpcRunnerFinishedArgs.Plugins = pluginStatus
-
-		var reply int
-		err = rpcClient.Call("RPCServer.SetRunnerFinished", rpcRunnerFinishedArgs, &reply)
-		if err != nil {
-			logger.Fatal("Error to call controller", zap.Error(err))
-		}
+		rpcRunnerFinishedArgs.ExecutionStatus = currentExecution.Apply(lastExecution, currentSharedInfra)
+	} else {
+		rpcRunnerFinishedArgs.ExecutionStatus = currentExecution.Destroy(lastExecution, currentSharedInfra)
 	}
 
-	if action == "DESTROY" {
-		err := currentExecution.Destroy(lastExecution)
-		if err != nil {
-			rpcRunnerFinishedArgs.Status = "ERROR"
-			rpcRunnerFinishedArgs.Error = err.Error()
-		}
+	var reply int
+	err = rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
+	if err != nil {
+		logger.Fatal("Error to call controller", zap.Error(err))
 	}
 
 	logger.Info("Finish runner execution")
