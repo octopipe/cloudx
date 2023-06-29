@@ -1,4 +1,4 @@
-package execution
+package providerconfig
 
 import (
 	"context"
@@ -21,11 +21,11 @@ func NewK8sRepository(c client.Client) Repository {
 }
 
 // Apply implements Repository.
-func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.Execution) (v1alpha1.Execution, error) {
+func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.ProviderConfig) (v1alpha1.ProviderConfig, error) {
 	err := r.client.Create(ctx, &s)
 	if err != nil && errors.IsAlreadyExists(err) {
 		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			current := commonv1alpha1.Execution{}
+			current := commonv1alpha1.ProviderConfig{}
 			err = r.client.Get(ctx, types.NamespacedName{
 				Name:      s.Name,
 				Namespace: s.Namespace,
@@ -45,26 +45,26 @@ func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.Execution) (v1alpha
 }
 
 // Get implements Repository.
-func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.Execution, error) {
-	var execution v1alpha1.Execution
-	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &execution)
-	return execution, err
+func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.ProviderConfig, error) {
+	var providerConfig v1alpha1.ProviderConfig
+	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &providerConfig)
+	return providerConfig, err
 }
 
 // Delete implements Repository.
 func (r k8sRepository) Delete(ctx context.Context, name string, namespace string) error {
-	execution, err := r.Get(ctx, name, namespace)
+	providerConfig, err := r.Get(ctx, name, namespace)
 	if err != nil {
 		return nil
 	}
 
-	err = r.client.Delete(ctx, &execution)
+	err = r.client.Delete(ctx, &providerConfig)
 	return err
 }
 
 // List implements Repository.
-func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ExecutionList, error) {
-	var executionList v1alpha1.ExecutionList
-	err := r.client.List(ctx, &executionList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
-	return executionList, err
+func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ProviderConfigList, error) {
+	var providerConfigList v1alpha1.ProviderConfigList
+	err := r.client.List(ctx, &providerConfigList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
+	return providerConfigList, err
 }

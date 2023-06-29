@@ -4,8 +4,11 @@ import (
 	"context"
 
 	"github.com/octopipe/cloudx/apis/common/v1alpha1"
+	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/pagination"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -20,6 +23,24 @@ func NewK8sRepository(c client.Client) Repository {
 // Apply implements Repository.
 func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.SharedInfra) (v1alpha1.SharedInfra, error) {
 	err := r.client.Create(ctx, &s)
+	if err != nil && errors.IsAlreadyExists(err) {
+		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			current := commonv1alpha1.SharedInfra{}
+			err = r.client.Get(ctx, types.NamespacedName{
+				Name:      s.Name,
+				Namespace: s.Namespace,
+			}, &current)
+			if err != nil {
+				return err
+			}
+
+			current.Spec = s.Spec
+
+			return r.client.Update(ctx, &current)
+		})
+
+	}
+
 	return s, err
 }
 

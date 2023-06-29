@@ -24,7 +24,7 @@ const Main = () => {
             <Nav activeKey={location.pathname} className="flex-column pt-3">
               <Nav.Link href="/">Shared infras</Nav.Link>
               <Nav.Link href="/connection-interfaces">Connection Interfaces</Nav.Link>
-              <Nav.Link href="/cloud-accounts">Cloud accounts</Nav.Link>
+              <Nav.Link href="/providers-config">Providers Config</Nav.Link>
               <Nav.Link href="/plugins">Plugins</Nav.Link>
             </Nav>
           </Col>

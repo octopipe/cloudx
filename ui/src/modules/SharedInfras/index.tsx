@@ -26,7 +26,7 @@ const SharedInfras = () => {
           </div>
         </div>
       </Container>
-      <ListGroup as="ol">
+      <ListGroup as="ul">
         {list?.items?.map((item: any, idx: any) => (
         <ListGroup.Item
           as="li"

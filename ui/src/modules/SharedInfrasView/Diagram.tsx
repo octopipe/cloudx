@@ -3,7 +3,7 @@ import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType } 
 import ExecutionNode from './ExecutionNode';
 import dagre from 'dagre'
 import 'reactflow/dist/style.css';
-import { Alert, Button, Modal } from 'react-bootstrap';
+import { Alert, Badge, Button, ListGroup, Modal } from 'react-bootstrap';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -96,6 +96,20 @@ const SharedInfraViewDiagram = ({ initialNodes, initialEdges }: any) => {
           {selectedNode?.data?.error && (<Alert variant='danger'>
             {selectedNode?.data?.error?.replace(/(?:\\n|\\\\n)/g, '\n')}
           </Alert>)}
+          <h1 className='h5'>Info</h1>
+          <div className='mb-3'>
+            <strong>Type: </strong><Badge>{selectedNode?.data?.type}</Badge><br/>
+            <strong>Ref: </strong>{selectedNode?.data?.ref}
+          </div>
+          <h1 className='h5'>Inputs</h1>
+          <ListGroup>
+            { selectedNode?.data?.inputs?.map((i: any) => (
+              <ListGroup.Item>
+                <strong>{i?.key}: </strong>{i?.value}
+              </ListGroup.Item>
+            )) }
+          </ListGroup>
+          {/* <pre>{JSON.stringify(selectedNode?.data, null, 2)}</pre> */}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>

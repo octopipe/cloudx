@@ -16,7 +16,10 @@ func NewHTTPHandler(e *gin.Engine, sharedInfraUseCase UseCase) *gin.Engine {
 	h := httpHandler{sharedInfraUseCase: sharedInfraUseCase}
 
 	e.GET("/shared-infras", h.List)
+	e.POST("/shared-infras", h.Create)
 	e.GET("/shared-infras/:name", h.Get)
+	e.PUT("/shared-infras/:name", h.Update)
+	e.DELETE("/shared-infras/:name", h.Delete)
 
 	return e
 }
@@ -75,4 +78,77 @@ func (h httpHandler) Get(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, item)
+}
+
+func (h httpHandler) Create(c *gin.Context) {
+	// namespace := "default"
+
+	// if c.Query("namespace") != "" {
+	// 	namespace = c.Query("namespace")
+	// }
+	// name := c.Param("name")
+
+	sharedInfra := SharedInfra{}
+	if err := c.BindJSON(&sharedInfra); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	item, err := h.sharedInfraUseCase.Create(c.Request.Context(), sharedInfra)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, item)
+}
+
+func (h httpHandler) Update(c *gin.Context) {
+	// namespace := "default"
+
+	// if c.Query("namespace") != "" {
+	// 	namespace = c.Query("namespace")
+	// }
+	// name := c.Param("name")
+
+	sharedInfra := SharedInfra{}
+	if err := c.BindJSON(&sharedInfra); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	item, err := h.sharedInfraUseCase.Update(c.Request.Context(), sharedInfra)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
+}
+
+func (h httpHandler) Delete(c *gin.Context) {
+	namespace := "default"
+
+	if c.Query("namespace") != "" {
+		namespace = c.Query("namespace")
+	}
+	name := c.Param("name")
+
+	err := h.sharedInfraUseCase.Delete(c.Request.Context(), name, namespace)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
 }

@@ -128,7 +128,9 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 		},
 	}
 
-	status := newEngine.Apply(lastExecution, *currentSharedInfra)
+	chann := make(chan commonv1alpha1.ExecutionStatus)
+
+	status := newEngine.Apply(lastExecution, *currentSharedInfra, chann)
 	assert.Empty(suite.T(), status.Error)
 	assert.Equal(suite.T(), engine.ExecutionSuccessStatus, status.Status)
 }

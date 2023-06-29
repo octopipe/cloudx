@@ -37,7 +37,6 @@ func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Sch
 }
 
 func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	fmt.Println(req)
 	currentSharedInfra := &commonv1alpha1.SharedInfra{}
 	err := c.Get(ctx, req.NamespacedName, currentSharedInfra)
 	if err != nil {

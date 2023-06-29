@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Container, ListGroup, Modal } from "react-bootstrap";
+import { Badge, Button, Container, Form, ListGroup, Modal } from "react-bootstrap";
 import AceEditor from "react-ace";
 import { Link } from "react-router-dom";
 
@@ -8,19 +8,15 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/ext-language_tools";
 
 const initialValue = {
-  "name": "",
+  "name": "aws-config",
   "namespace": "default",
-  "sharedInfra": {},
-  "outputs": [
-    {
-      "key": "example-key",
-      "value": "example-value"
-    }
-  ],
-  "secret": {}
+  "type": "AWS",
+  "config": {
+    "source": "CurrentAccount"
+  }
 }
 
-const ConnectionInterfaces = () => {
+const ProvidersConfigs = () => {
   const [list, setList] = useState<any>()
   const [selectedNode, setSelectedNode] = useState<any>()
   const [action, setAction] = useState<string>("VIEW")
@@ -31,7 +27,7 @@ const ConnectionInterfaces = () => {
   const handleShow = () => setShow(true);
 
   const getList = useCallback(async () => {
-    const res = await fetch("http://localhost:8080/connections-interfaces")
+    const res = await fetch("http://localhost:8080/providers-configs")
     const list = await res.json()
 
     setList(list)
@@ -40,25 +36,26 @@ const ConnectionInterfaces = () => {
   const saveChanges = useCallback(async () => {
     const method = action == "CREATE" ? "POST" : "PUT"
     const path = action == "CREATE" ? "" : `/${selectedNode.name}`
-    const res = await fetch(`http://localhost:8080/connections-interfaces${path}`, {
+    const res = await fetch(`http://localhost:8080/providers-configs${path}`, {
       method,
       body: value, 
     })
 
     getList()
     handleClose()
-    setSelectedNode(null)
   }, [value, action, selectedNode])
 
   const deleteNode = useCallback(async () => {
     const path = `/${selectedNode.name}`
-    const res = await fetch(`http://localhost:8080/connections-interfaces${path}`, {
+    const res = await fetch(`http://localhost:8080/providers-configs${path}`, {
       method: "DELETE",
     })
 
     getList()
     handleClose()
   }, [value, action, selectedNode])
+
+  
 
   useEffect(() => {
     getList()
@@ -68,7 +65,7 @@ const ConnectionInterfaces = () => {
     <>
       <Container fluid>
         <div className="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 className="h2">Connections Interfaces</h1>
+          <h1 className="h2">Providers config</h1>
           <div className="btn-toolbar mb-2 mb-md-0">
             <Button
               variant="secondary"
@@ -143,14 +140,8 @@ const ConnectionInterfaces = () => {
           </div>
           {action == "VIEW" && (
             <>
-              <ListGroup>
-                {selectedNode?.outputs?.map((i: any) => (
-                  <ListGroup.Item>
-                    <div><small><strong>{i?.key}</strong></small></div>
-                    <div>{i?.value}</div>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
+              <div><strong>Type: </strong>{selectedNode?.type}</div>
+              <div><strong>Source: </strong>{selectedNode?.config?.source}</div>              
             </>
           )}
 
@@ -183,4 +174,4 @@ const ConnectionInterfaces = () => {
   )
 }
 
-export default ConnectionInterfaces
+export default ProvidersConfigs

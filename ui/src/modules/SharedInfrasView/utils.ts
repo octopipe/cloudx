@@ -10,11 +10,8 @@ export const toNodes = (plugins: any, type="executionNode") => {
       sourcePosition: 'right',
       targetPosition: 'left',
       data: { 
+        ...p,
         label: p.name,
-        status: p?.status,
-        startedAt: p?.startedAt,
-        finishedAt: p?.finishedAt,
-        error: p?.error
       },
       position,
     }

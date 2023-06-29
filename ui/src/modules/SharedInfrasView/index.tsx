@@ -68,8 +68,8 @@ const SharedInfraView = () => {
           className="mb-3"
         >
           <Tab eventKey="overview" title="Overview">
-            <h1 className="h4">Plugins</h1>
-            <Accordion>
+            {/* <h1 className="h4">Plugins</h1> */}
+            {/* <Accordion>
               {sharedInfra?.plugins?.map((p: any, idx: any) => (
 
                 <Accordion.Item eventKey={idx}>
@@ -104,7 +104,7 @@ const SharedInfraView = () => {
 
                 </Accordion.Item>
               ))}
-            </Accordion>
+            </Accordion> */}
             <SharedInfraViewDiagram
               initialNodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins, "default") : []}
               initialEdges={sharedInfra?.plugins ? toEdges(sharedInfra.plugins) : []}

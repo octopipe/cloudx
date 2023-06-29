@@ -1,4 +1,4 @@
-package execution
+package providerconfig
 
 import (
 	"net/http"
@@ -9,17 +9,17 @@ import (
 )
 
 type httpHandler struct {
-	executionUseCase UseCase
+	providerConfigUseCase UseCase
 }
 
-func NewHTTPHandler(e *gin.Engine, executionUseCase UseCase) *gin.Engine {
-	h := httpHandler{executionUseCase: executionUseCase}
+func NewHTTPHandler(e *gin.Engine, providerConfigUseCase UseCase) *gin.Engine {
+	h := httpHandler{providerConfigUseCase: providerConfigUseCase}
 
-	e.GET("/executions", h.List)
-	e.POST("/executions", h.Create)
-	e.GET("/executions/:name", h.Get)
-	e.PUT("/executions/:name", h.Update)
-	e.DELETE("/executions/:name", h.Delete)
+	e.GET("/providers-configs", h.List)
+	e.POST("/providers-configs", h.Create)
+	e.GET("/providers-configs/:name", h.Get)
+	e.PUT("/providers-configs/:name", h.Update)
+	e.DELETE("/providers-configs/:name", h.Delete)
 
 	return e
 }
@@ -47,7 +47,7 @@ func (h httpHandler) List(c *gin.Context) {
 		chunk = c.Query("chunk")
 	}
 
-	list, err := h.executionUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
+	list, err := h.providerConfigUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
 		Limit: int64(limit),
 		Chunk: chunk,
 	})
@@ -69,7 +69,7 @@ func (h httpHandler) Get(c *gin.Context) {
 	}
 	name := c.Param("name")
 
-	item, err := h.executionUseCase.Get(c.Request.Context(), name, namespace)
+	item, err := h.providerConfigUseCase.Get(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -88,15 +88,15 @@ func (h httpHandler) Create(c *gin.Context) {
 	// }
 	// name := c.Param("name")
 
-	execution := Execution{}
-	if err := c.BindJSON(&execution); err != nil {
+	providerConfig := ProviderConfig{}
+	if err := c.BindJSON(&providerConfig); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	item, err := h.executionUseCase.Create(c.Request.Context(), execution)
+	item, err := h.providerConfigUseCase.Create(c.Request.Context(), providerConfig)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -115,15 +115,15 @@ func (h httpHandler) Update(c *gin.Context) {
 	// }
 	// name := c.Param("name")
 
-	execution := Execution{}
-	if err := c.BindJSON(&execution); err != nil {
+	providerConfig := ProviderConfig{}
+	if err := c.BindJSON(&providerConfig); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	item, err := h.executionUseCase.Update(c.Request.Context(), execution)
+	item, err := h.providerConfigUseCase.Update(c.Request.Context(), providerConfig)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -142,7 +142,7 @@ func (h httpHandler) Delete(c *gin.Context) {
 	}
 	name := c.Param("name")
 
-	err := h.executionUseCase.Delete(c.Request.Context(), name, namespace)
+	err := h.providerConfigUseCase.Delete(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
