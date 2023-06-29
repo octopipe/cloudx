@@ -11,6 +11,9 @@ rules:
   - commons.cloudx.io
   resources:
   - sharedinfras
+  - executions
+  - connectioninterfaces
+  - providerconfigs
   verbs:
   - create
   - delete

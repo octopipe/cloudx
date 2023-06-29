@@ -114,6 +114,7 @@ func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commo
 	currentExecution := &commonv1alpha1.Execution{}
 	err := s.Get(context.Background(), args.Ref, currentExecution)
 	if err != nil {
+		s.logger.Error("failed to get current execution", zap.Error(err))
 		return err
 	}
 
@@ -124,6 +125,7 @@ func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commo
 	}
 	err = s.Get(context.Background(), sharedInfraRef, currentSharedInfra)
 	if err != nil {
+		s.logger.Error("failed to get shared infra", zap.Error(err))
 		return err
 	}
 
@@ -131,6 +133,7 @@ func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commo
 		executionApi := &commonv1alpha1.Execution{}
 		err = s.Get(context.Background(), types.NamespacedName{Name: e.Name, Namespace: e.Namespace}, executionApi)
 		if err != nil {
+			s.logger.Error("failed to get execution from shared infra", zap.Error(err))
 			return err
 		}
 
