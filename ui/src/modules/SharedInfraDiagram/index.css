@@ -1,20 +1,43 @@
-.react-flow__node-executionNode {
-  font-size: 12px;
-  background: #fff;
-  border-radius: 5px;
-  text-align: center;
-  width: 160px;
-  height: 70px;
+.shared-infra-diagram {
+  flex-direction: column;
+  display: flex;
+  flex-grow: 1;
+  height: 100%;
 }
 
-.react-flow__node-defaultNode {
+.shared-infra-diagram .reactflow-wrapper {
+  flex-grow: 1;
+  height: 100%;
+}
+
+.react-flow__node {
   font-size: 12px;
   background: #fff;
   border-radius: 5px;
   text-align: center;
   width: 160px;
   height: 70px;
+  padding: 0 !important;
 }
+
+.react-flow__node-connection-interface {
+  font-size: 12px;
+  background: #e65100;
+  border-radius: 5px;
+  text-align: center;
+  width: 160px;
+  height: 70px;
+  padding: 0 !important;
+}
+
+/* .react-flow__node-defaultNode {
+  font-size: 12px;
+  background: #fff;
+  border-radius: 5px;
+  text-align: center;
+  width: 160px;
+  height: 70px;
+} */
 
 .shared-infra-view__content {
   height: 100vh;

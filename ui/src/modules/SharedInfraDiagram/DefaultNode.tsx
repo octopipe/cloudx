@@ -13,8 +13,15 @@ const getDuration = (startedAt: any, finishedAt: any) => {
   return `${Math.floor(diff / 1e3)} seconds`
 }
 
-const colorByStatus: any = {
-  'terraform': '#7b00db',
+const getColorByType = (dataType: string) => {
+  if (dataType === 'terraform') {
+    return '#7b00db'
+  }
+
+  if (dataType === 'aws') {
+    return '#FF9900'
+  }
+  return 'grey'
 }
 
 export default memo(({ data, isConnectable }: any) => {
@@ -30,12 +37,11 @@ export default memo(({ data, isConnectable }: any) => {
       <div>
         <div
           style={{
-            background: colorByStatus[data?.type],
+            background: getColorByType(data?.category || data?.type),
             color: '#fff',
             padding: '5px',
             borderTopRightRadius: '5px',
             borderTopLeftRadius: '5px'
-
           }}
         >
           {data.label}

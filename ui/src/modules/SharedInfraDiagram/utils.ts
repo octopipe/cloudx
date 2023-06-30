@@ -12,6 +12,7 @@ export const toNodes = (plugins: any, type="executionNode") => {
       data: { 
         ...p,
         label: p.name,
+        category: type,
       },
       position,
     }

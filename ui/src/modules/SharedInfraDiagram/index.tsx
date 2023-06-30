@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType, Background } from 'reactflow';
+import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType, Background, ReactFlowProvider } from 'reactflow';
 import DefaultNode from './DefaultNode'
 import ExecutionNode from './ExecutionNode';
 import dagre from 'dagre'
@@ -7,6 +7,7 @@ import 'reactflow/dist/style.css';
 import './index.css'
 import NodePanel from './NodePanel';
 import AddPanel from './AddPanel';
+import ConnectionInterfaceNode from './ConnectionInterfaceNode';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -44,7 +45,9 @@ const getLayoutedElements = (nodes: any, edges: any) => {
 };
 
 const nodeTypes = {
-  defaultNode: DefaultNode,
+  default: DefaultNode,
+  aws: DefaultNode,
+  'connection-interface': ConnectionInterfaceNode,
   executionNode: ExecutionNode,
 };
 
@@ -58,20 +61,21 @@ const SharedInfraDiagram = ({ nodes: initialNodes, edges: initialEdges, action }
   const [selectedNode, setSelectedNode] = useState<any>()
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
-  const onConnect = useCallback(
-    (params: any) =>
-      setEdges((eds) =>
-        addEdge({ ...params, type: ConnectionLineType.SmoothStep, animated: true }, eds)
-      ),
-    []
-  );
+  const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), []);
+
   const onNodeClick = (event: any, node: any) => {
     setSelectedNode(node)
   }
-  const onClosePlane = () => {
-    setSelectedNode(null)
-  }
 
+  const onChangeNodePanel = (node: any) => {
+    setNodes((nodes: any) => nodes.map((n: any) => {
+      if (n.id == node.id) {
+        return node
+      }
+
+      return n
+    }))
+  }
 
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -96,7 +100,6 @@ const SharedInfraDiagram = ({ nodes: initialNodes, edges: initialEdges, action }
       const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow');
 
-      // check if the dropped element is valid
       if (typeof type === 'undefined' || !type) {
         return;
       }
@@ -109,7 +112,14 @@ const SharedInfraDiagram = ({ nodes: initialNodes, edges: initialEdges, action }
         id: getId(),
         type,
         position,
-        data: { label: `${type} node` },
+        data: { 
+          label: `${type}`, 
+          name: `${type}`, 
+          category: type,
+          inputs: [
+            { key: 'example-key', value: 'example-value' }
+          ]
+        },
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -118,24 +128,29 @@ const SharedInfraDiagram = ({ nodes: initialNodes, edges: initialEdges, action }
   );
 
   return (
-    <>
-      <div className="reactflow-wrapper" ref={reactFlowWrapper} style={{width: '100%', height: '100%'}}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodeClick={onNodeClick}
-          onInit={setReactFlowInstance}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          fitView
-        >
-          <Background />
-        </ReactFlow>
-      </div>
-      { !!selectedNode && <NodePanel node={selectedNode} onClose={() => setSelectedNode(null)} /> }
-      { (action == "CREATE" || action == "UPDATE") && <AddPanel onClose={() => setSelectedNode(null)} /> }
-    </>
+    <div className='shared-infra-diagram'>
+      <ReactFlowProvider>
+        <div className="reactflow-wrapper" ref={reactFlowWrapper}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            onInit={setReactFlowInstance}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onConnect={onConnect}
+            fitView
+          >
+            <Background />
+          </ReactFlow>
+        </div>
+      </ReactFlowProvider>
+      { !!selectedNode && <NodePanel selectedNode={selectedNode} action={action} onClose={() => setSelectedNode(null)} onChange={onChangeNodePanel} /> }
+      { (action == "CREATE" || action == "UPDATE" ) && !selectedNode && <AddPanel onClose={() => setSelectedNode(null)} /> }
+    </div>
   )
 
 }
