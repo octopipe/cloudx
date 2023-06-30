@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import './style.css'
-import { Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const Main = () => {
   const location = useLocation()
@@ -14,25 +15,18 @@ const Main = () => {
           <Navbar.Brand href="#home" style={{color: "#fff"}}>Cloudx</Navbar.Brand>
         </Container>
       </Navbar>
-      <Container fluid className="main">
-        <Row>
-          <Col 
-            md={3}
-            lg={2}
-            className="d-md-block bg-light sidebar"
-          >
-            <Nav activeKey={location.pathname} className="flex-column pt-3">
-              <Nav.Link href="/">Shared infras</Nav.Link>
-              <Nav.Link href="/connection-interfaces">Connection Interfaces</Nav.Link>
-              <Nav.Link href="/providers-config">Providers Config</Nav.Link>
-              <Nav.Link href="/plugins">Plugins</Nav.Link>
-            </Nav>
-          </Col>
-          <Col md={9} lg={10} className="px-md-4 ms-sm-auto">
-            <Outlet />
-          </Col>
-        </Row>
-      </Container>
+      <div>
+        <div className="d-md-block main__sidebar">
+          <Nav activeKey={location.pathname} className="flex-column pt-3">
+            <NavLink className="nav-link" to="/shared-infras"><FontAwesomeIcon icon="layer-group" /></NavLink>
+            <NavLink className="nav-link" to="/connection-interfaces"><FontAwesomeIcon icon="diagram-project" /></NavLink>
+            <NavLink className="nav-link" to="/providers-config"><FontAwesomeIcon icon="cloud" /></NavLink>
+          </Nav>
+        </div>
+        <div className="main__content">
+          <Outlet />
+        </div>
+      </div>
     </>
   )
 }

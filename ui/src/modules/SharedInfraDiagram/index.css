@@ -1,0 +1,52 @@
+.react-flow__node-executionNode {
+  font-size: 12px;
+  background: #fff;
+  border-radius: 5px;
+  text-align: center;
+  width: 160px;
+  height: 70px;
+}
+
+.react-flow__node-defaultNode {
+  font-size: 12px;
+  background: #fff;
+  border-radius: 5px;
+  text-align: center;
+  width: 160px;
+  height: 70px;
+}
+
+.shared-infra-view__content {
+  height: 100vh;
+  width: calc(100vw - 100px);
+}
+
+.shared-infra-diagram__node-panel {
+  position: fixed !important;
+  top: 80px;
+  right: 20px;
+  bottom: 20px;
+  width: 350px;
+  background-color: #202029;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 15px;
+  border-radius: 20px;
+}
+
+.shared-infra-diagram__add-panel {
+  position: fixed !important;
+  top: 50%;
+  right: 40px;
+  width: 80px;
+  height: 230px !important;
+  margin-top: -115px;
+  background-color: #202029;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 15px;
+  border-radius: 20px !important;
+}
+
+.shared-infra-diagram__add-panel .nav-item {
+  padding: 10px 0 10px 0;
+  font-size: 22px;
+}

@@ -18,7 +18,7 @@ const getBadgeVariants = (status: string) => {
   return 'danger'
 }
 
-const SharedInfraView = () => {
+const SharedInfraCreate = () => {
   const { name } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
   const [selectedExecution, setSelectedExecution] = useState<any>()
@@ -53,6 +53,7 @@ const SharedInfraView = () => {
   return (
     <div className="shared-infra-view__content">
       <SharedInfraDiagram
+        action="CREATE"
         nodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins, "defaultNode") : []}
         edges={sharedInfra?.plugins ? toEdges(sharedInfra.plugins) : []}
       />
@@ -62,4 +63,4 @@ const SharedInfraView = () => {
 
 const replaceBreakLines = (text: string) => text.replace(/(?:\\n|\\\\n)/g, '<br/>')
 
-export default SharedInfraView
+export default SharedInfraCreate

@@ -5,8 +5,32 @@ body {
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #15161b;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.card {
+  background-color: #202029;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.list-group-item {
+  border: 0;
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  padding-left: 0;
+  padding-right: 0;
+  border-bottom: 1px solid #000;
+}
+
+.list-group-item:last-child {
+  border-bottom: 0;
+}
+
+.btn-primary {
+  background-color: #7a00ff;
+  border: 0;
 }
