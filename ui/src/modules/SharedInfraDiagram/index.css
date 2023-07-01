@@ -8,6 +8,7 @@
 .shared-infra-diagram .reactflow-wrapper {
   flex-grow: 1;
   height: 100%;
+
 }
 
 .react-flow__node {
@@ -54,6 +55,7 @@
   color: rgba(255, 255, 255, 0.7);
   padding: 15px;
   border-radius: 20px;
+  overflow-y: auto;
 }
 
 .shared-infra-diagram__add-panel {

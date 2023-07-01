@@ -11,6 +11,8 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/go-containerregistry v0.15.1
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/go-version v1.6.0
+	github.com/hashicorp/hc-install v0.5.1
 	github.com/hashicorp/terraform-exec v0.18.1
 	github.com/joho/godotenv v1.5.1
 	github.com/spf13/cobra v1.7.0
@@ -47,7 +49,6 @@ require (
 	github.com/docker/docker v23.0.5+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
-	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -66,8 +67,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
-	github.com/hashicorp/hc-install v0.5.1 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/terraform-json v0.15.0 // indirect
 	github.com/iancoleman/strcase v0.2.0 // indirect

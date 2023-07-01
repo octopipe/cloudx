@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './index.css'
-import { Card, Form, ListGroup } from 'react-bootstrap'
+import { Alert, Card, Form, ListGroup } from 'react-bootstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ReactAce from 'react-ace/lib/ace'
 
@@ -93,6 +93,7 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
 
           {(action !== "EDIT" && action !== "CREATE" ) && (
             <>
+              {selectedNode?.data?.error && <Alert variant='danger'>{selectedNode?.data?.error}</Alert>}
               <Card.Title>{selectedNode?.data?.name}</Card.Title>
               <div><strong>Ref: </strong>{selectedNode?.data?.ref}</div>
               <div><strong>Type: </strong>{selectedNode?.data?.type}</div>

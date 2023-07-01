@@ -54,7 +54,7 @@ const nodeTypes = {
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
-const SharedInfraDiagram = ({ nodes: initialNodes, edges: initialEdges, action }: any) => {
+const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEdges, action }: any) => {
   const reactFlowWrapper = useRef<any>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);

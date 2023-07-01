@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import "./index.css"
 import SharedInfraDiagram from "../SharedInfraDiagram";
 import { toEdges, toNodes } from "../SharedInfraDiagram/utils";
+import DefaultPanel from "./DefaultPanel";
 
 const getBadgeVariants = (status: string) => {
   if (status === "RUNNING") {
@@ -19,42 +20,60 @@ const getBadgeVariants = (status: string) => {
 }
 
 const SharedInfraView = () => {
+  let interval: any
   const { name } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
   const [selectedExecution, setSelectedExecution] = useState<any>()
+  const [nodes, setNodes] = useState<any>([])
+  const [edges, setEdges] = useState<any>([])
+
 
   const getSharedInfra = useCallback(async (name: string) => {
     const res = await fetch(`http://localhost:8080/shared-infras/${name}`)
     const item = await res.json()
 
     setSharedInfra(item)
+    setNodes(toNodes(item.plugins, "defaultNode"))
+    setEdges(toEdges(item.plugins))
   }, [])
 
 
-  const getExecution = useCallback(async (name: string) => {
-    const res = await fetch(`http://localhost:8080/executions/${name}`)
+  const getExecution = useCallback(async (name: string, namespace: string) => {
+    const res = await fetch(`http://localhost:8080/executions/${name}?namespace=${namespace}`)
     const item = await res.json()
 
-    setSelectedExecution(item)
+    setNodes(toNodes(item?.status?.plugins || [], "executionNode"))
+    setEdges(toEdges(item?.status?.plugins || []))
   }, [])
 
   useEffect(() => {
     if (!name)
       return
+    
+    if (!!selectedExecution) {
+      clearInterval(interval)
+      interval = setInterval(() => {
+        getExecution(selectedExecution?.name, selectedExecution?.namespace)
+      }, 3000)
+      getExecution(selectedExecution?.name, selectedExecution?.namespace)
+      return
+    }
 
-    const interval = setInterval(() => {
+    interval = setInterval(() => {
       getSharedInfra(name)
     }, 3000)
-
     getSharedInfra(name)
+
     return () => clearInterval(interval)
-  }, [])
+  }, [selectedExecution])
   
   return (
     <div className="shared-infra-view__content">
+      <DefaultPanel sharedInfra={sharedInfra} onSelectExecution={(e: any) => setSelectedExecution(e)} />
       <SharedInfraDiagram
-        nodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins, "defaultNode") : []}
-        edges={sharedInfra?.plugins ? toEdges(sharedInfra.plugins) : []}
+        sharedInfra={sharedInfra}
+        nodes={nodes}
+        edges={edges}
       />
     </div>
   )

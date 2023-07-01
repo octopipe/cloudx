@@ -15,6 +15,9 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/hc-install/product"
+	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/plugin"
@@ -39,25 +42,25 @@ func NewTerraformProvider(logger *zap.Logger, terraformVersion string) (Terrafor
 		return nil, err
 	}
 
-	// currentTerraformVersion := "1.5.0"
-	// if terraformVersion != "" {
-	// 	currentTerraformVersion = terraformVersion
-	// }
+	currentTerraformVersion := "1.5.0"
+	if terraformVersion != "" {
+		currentTerraformVersion = terraformVersion
+	}
 
-	// installer := &releases.ExactVersion{
-	// 	Product:    product.Terraform,
-	// 	Version:    version.Must(version.NewVersion(currentTerraformVersion)),
-	// 	InstallDir: installDirPath,
-	// }
+	installer := &releases.ExactVersion{
+		Product:    product.Terraform,
+		Version:    version.Must(version.NewVersion(currentTerraformVersion)),
+		InstallDir: installDirPath,
+	}
 
-	// execPath, err := installer.Install(context.Background())
-	// if err != nil {
-	// 	return nil, err
-	// }
+	execPath, err := installer.Install(context.Background())
+	if err != nil {
+		return nil, err
+	}
 
 	return terraformProvider{
 		logger:   logger,
-		execPath: "/usr/bin/terraform",
+		execPath: execPath,
 	}, nil
 }
 
