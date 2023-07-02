@@ -24,3 +24,27 @@
   padding: 15px;
   z-index: 1;
 }
+
+.shared-infra-diagram__default-panel__execution {
+  font-size: 14px;
+  padding: 10px;
+  background-color: #455a64 !important;
+}
+
+.shared-infra-diagram__default-panel__execution--error {
+  font-size: 14px;
+  padding: 10px;
+  background-color: #b71c1c !important;
+}
+
+.shared-infra-diagram__default-panel__execution--success {
+  font-size: 14px;
+  padding: 10px;
+  background-color: #1b5e20 !important;
+}
+
+.shared-infra-diagram__default-panel__execution--running {
+  font-size: 14px;
+  padding: 10px;
+  background-color: #01579b !important;
+}

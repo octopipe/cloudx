@@ -24,6 +24,7 @@ const SharedInfraView = () => {
   const { name } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
   const [selectedExecution, setSelectedExecution] = useState<any>()
+  const [currentExecution, setCurrentExecution] = useState<any>()
   const [nodes, setNodes] = useState<any>([])
   const [edges, setEdges] = useState<any>([])
 
@@ -41,7 +42,7 @@ const SharedInfraView = () => {
   const getExecution = useCallback(async (name: string, namespace: string) => {
     const res = await fetch(`http://localhost:8080/executions/${name}?namespace=${namespace}`)
     const item = await res.json()
-
+    setCurrentExecution(item)
     setNodes(toNodes(item?.status?.plugins || [], "executionNode"))
     setEdges(toEdges(item?.status?.plugins || []))
   }, [])
@@ -70,6 +71,12 @@ const SharedInfraView = () => {
   return (
     <div className="shared-infra-view__content">
       <DefaultPanel sharedInfra={sharedInfra} onSelectExecution={(e: any) => setSelectedExecution(e)} />
+      {currentExecution && currentExecution?.status?.error && (
+        <Alert
+          style={{position: 'fixed', top: '80px', right: '10px', left: '410px'}}
+          variant="danger"
+        >{currentExecution?.status?.error}</Alert>
+      )}
       <SharedInfraDiagram
         sharedInfra={sharedInfra}
         nodes={nodes}

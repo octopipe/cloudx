@@ -68,48 +68,66 @@ func main() {
 	}
 
 	doneChann := make(chan bool)
-	go newRunnerContext.setExecutionStatusLive(executionRef, currentExecutionStatusChann, doneChann)
+	// go newRunnerContext.setExecutionStatusLive(executionRef, currentExecutionStatusChann, doneChann)
 
-	currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
-	if action == "APPLY" {
-		_ = currentExecution.Apply(lastExecution, currentSharedInfra, currentExecutionStatusChann)
-		logger.Info("Finish pipeline apply")
-		// currentExecutionStatusChann <- currentExecutionStatus
-	} else {
-		currentExecution.Destroy(lastExecution, currentSharedInfra, currentExecutionStatusChann)
-	}
+	go func() {
+		currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
+		if action == "APPLY" {
+			currentExecution.Apply(lastExecution, currentSharedInfra, currentExecutionStatusChann)
+		} else {
+			currentExecution.Destroy(lastExecution, currentSharedInfra, currentExecutionStatusChann)
+		}
 
-	close(doneChann)
+		doneChann <- true
+		// close(currentExecutionStatusChann)
+		// close(doneChann)
+	}()
 
-	// var reply int
-	// err = rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
-	// if err != nil {
-	// 	logger.Fatal("Error to call controller", zap.Error(err))
-	// }
-
-	// logger.Info("Finish runner execution")
-}
-
-func (c runnerContext) setExecutionStatusLive(executionRef types.NamespacedName, currenExecutionChann <-chan commonv1alpha1.ExecutionStatus, done <-chan bool) error {
 	for {
 		select {
-		case executionStatus := <-currenExecutionChann:
-			c.logger.Info("New status received calling controller")
+		case executionStatus := <-currentExecutionStatusChann:
+			logger.Info("New status received calling controller...")
 			rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
 				Ref:             executionRef,
 				ExecutionStatus: executionStatus,
 			}
 
-			err := c.rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, nil)
+			var reply int
+			err := rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
 			if err != nil {
-				c.logger.Fatal("Failed to listen execution status", zap.Error(err))
-				return err
+				logger.Fatal("Failed to call rpc execution status", zap.Error(err))
 			}
-		case <-done:
-			return nil
+		case done := <-doneChann:
+			if done {
+				logger.Info("Finish engine execution")
+				return
+			}
+
 		}
 	}
 }
+
+// func (c runnerContext) setExecutionStatusLive(executionRef types.NamespacedName, currenExecutionChann chan commonv1alpha1.ExecutionStatus, done chan bool) {
+// 	for {
+// 		select {
+// 		case executionStatus := <-currenExecutionChann:
+// 			c.logger.Info("New status received calling controller...")
+// 			rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
+// 				Ref:             executionRef,
+// 				ExecutionStatus: executionStatus,
+// 			}
+
+// 			var reply int
+// 			err := c.rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
+// 			if err != nil {
+// 				c.logger.Fatal("Failed to call rpc execution status", zap.Error(err))
+// 			}
+// 		case <-done:
+// 			c.logger.Info("Finish engine execution")
+// 			return
+// 		}
+// 	}
+// }
 
 func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, types.NamespacedName, string, error) {
 	commandArgs := os.Args[1:]

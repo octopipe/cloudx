@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -42,13 +41,14 @@ func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvid
 	}
 }
 
-func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan<- commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	status := commonv1alpha1.ExecutionStatus{
 		Status:  ExecutionSuccessStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
 
-	eg, _ := errgroup.WithContext(context.Background())
+	// eg, _ := errgroup.WithContext(context.Background())
+	eg := new(errgroup.Group)
 	inDegrees := make(map[string]int)
 
 	for node, deps := range graph {
@@ -56,9 +56,6 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 	}
 
 	for {
-		if len(p.executionContext) == len(graph) {
-			return status
-		}
 
 		for node, deps := range inDegrees {
 			if _, ok := p.executionContext[node]; !ok && deps == 0 {
@@ -94,12 +91,9 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 						if pluginExecutionStatus.Status == ExecutionApplyErrorStatus || pluginExecutionStatus.Status == ExecutionDestroyErrorStatus {
 							status.Status = ExecutionErrorStatus
 							status.Error = pluginExecutionStatus.Error
-							currentExecutionStatusChann <- status
 							p.logger.Info("plugin execution failed", zap.String("plugin-name", pluginExecutionStatus.Name), zap.Error(errors.New(pluginExecutionStatus.Error)))
 							return errors.New(pluginExecutionStatus.Error)
 						}
-
-						currentExecutionStatusChann <- status
 
 						p.executionContext[node] = pluginOutput
 
@@ -111,6 +105,7 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 							}
 						}
 
+						p.logger.Info("finish plugin execution...", zap.String("name", node), zap.Any("action", action))
 						return nil
 					}
 				}(node))
@@ -118,11 +113,19 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 			}
 		}
 
-		if err := eg.Wait(); err != nil {
+		err := eg.Wait()
+		currentExecutionStatusChann <- status
+		if err != nil {
+			p.logger.Info("find errors in parallel execution...")
+			break
+		}
+
+		if len(p.executionContext) == len(graph) {
 			break
 		}
 	}
 
+	p.logger.Info("finished pipeline execution")
 	return status
 }
 

@@ -50,18 +50,24 @@ type RPCSetExecutionStatusArgs struct {
 }
 
 func (s *RPCServer) SetExecutionStatus(args *RPCSetExecutionStatusArgs, reply *int) error {
-	s.logger.Info("Received rpc call", zap.String("sharedinfra", args.Ref.String()))
+	s.logger.Info("received call", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("sharedinfra", args.Ref.String()))
 	currentExecution := &commonv1alpha1.Execution{}
 	err := s.Get(context.Background(), args.Ref, currentExecution)
 	if err != nil {
+		s.logger.Error("Failed to get current execution", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("sharedinfra", args.Ref.String()), zap.Error(err))
 		return err
 	}
 
-	s.logger.Info("rpc execution", zap.String("status", args.ExecutionStatus.Status))
-
 	currentExecution.Status = args.ExecutionStatus
 
-	return utils.UpdateExecutionStatus(s.Client, *currentExecution)
+	s.logger.Info("updating current execution status", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("status", args.ExecutionStatus.Status))
+	err = utils.UpdateExecutionStatus(s.Client, *currentExecution)
+	if err != nil {
+		s.logger.Error("Failed to update current execution status", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("sharedinfra", args.Ref.String()), zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 type RPCSetRunnerTimeoutArgs struct {

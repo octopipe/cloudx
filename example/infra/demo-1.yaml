@@ -11,33 +11,46 @@ spec:
     name: aws-config
     namespace: default
   plugins:
-  - name: demo-1-sns
+  - name: demo-0-sns
     ref: mayconjrpacheco/plugin:sns-1
     depends: []
     type: terraform
     outputs: []
     inputs:
     - key: name
-      value: my-topic-1
+      value: my-topic-0
     - key: region
       value: us-east-1
 
-  - name: demo-1-lambda-role
-    ref: mayconjrpacheco/plugin:lambda-role-1
-    depends: []
+  - name: demo-1-1-sns
+    ref: mayconjrpacheco/plugin:sns-1
+    depends:
+    - demo-0-sns
     type: terraform
     outputs: []
     inputs:
-    - key: lambda_name
-      value: demo-1-function
+    - key: name
+      value: my-topic-1-2
+    - key: region
+      value: us-east-1
+
+  - name: demo-1-2-sns
+    ref: mayconjrpacheco/plugin:sns-1
+    depends:
+    - demo-0-sns
+    type: terraform
+    outputs: []
+    inputs:
+    - key: name
+      value: my-topic-1-1
     - key: region
       value: us-east-1
 
   - name: demo-2-sns
     ref: mayconjrpacheco/plugin:sns-1
     depends:
-    - demo-1-sns
-    - demo-1-lambda-role
+    - demo-1-1-sns
+    - demo-1-2-sns
     type: terraform
     outputs: []
     inputs:

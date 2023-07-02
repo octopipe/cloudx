@@ -117,7 +117,7 @@ func (p *engine) validateInputInterpolations(sharedInfra commonv1alpha1.SharedIn
 	return nil
 }
 
-func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan<- commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	status := commonv1alpha1.ExecutionStatus{
 		Status:  ExecutionSuccessStatus,
 		Plugins: lastExecution.Status.Plugins,
@@ -126,12 +126,14 @@ func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra common
 	if err := e.validateDependencies(sharedInfra); err != nil {
 		status.Status = ExecutionErrorStatus
 		status.Error = err.Error()
+		currentExecutionStatusChann <- status
 		return status
 	}
 
 	if err := e.validateInputInterpolations(sharedInfra); err != nil {
 		status.Status = ExecutionErrorStatus
 		status.Error = err.Error()
+		currentExecutionStatusChann <- status
 		return status
 	}
 
@@ -182,7 +184,7 @@ func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra common
 	return pipelineForApply.Execute(ApplyAction, dependencyGraphForApply, lastExecution, sharedInfra, currentExecutionStatusChann)
 }
 
-func (e engine) Destroy(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan<- commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (e engine) Destroy(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	pipeline := NewPipeline(e.logger, e.rpcClient, e.terraformProvider)
 	dependencyGraphForDestroy := DependencyGraph{}
 
