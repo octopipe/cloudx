@@ -36,20 +36,32 @@ type terraformProvider struct {
 }
 
 func NewTerraformProvider(logger *zap.Logger, terraformVersion string) (TerraformProvider, error) {
-	installDirPath := "/tmp/terraform-ins"
+	installDirPath := "/tmp/cloudx/terraform-versions"
 	err := os.MkdirAll(installDirPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
 
-	currentTerraformVersion := "1.5.0"
 	if terraformVersion != "" {
-		currentTerraformVersion = terraformVersion
+		installer := &releases.ExactVersion{
+			Product:    product.Terraform,
+			Version:    version.Must(version.NewVersion(terraformVersion)),
+			InstallDir: installDirPath,
+		}
+		execPath, err := installer.Install(context.Background())
+		if err != nil {
+			return nil, err
+		}
+
+		return terraformProvider{
+			logger:   logger,
+			execPath: execPath,
+		}, nil
+
 	}
 
-	installer := &releases.ExactVersion{
+	installer := &releases.LatestVersion{
 		Product:    product.Terraform,
-		Version:    version.Must(version.NewVersion(currentTerraformVersion)),
 		InstallDir: installDirPath,
 	}
 

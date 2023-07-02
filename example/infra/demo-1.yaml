@@ -18,7 +18,7 @@ spec:
     outputs: []
     inputs:
     - key: name
-      value: demo-1-sns
+      value: my-topic-1
     - key: region
       value: us-east-1
 
@@ -33,36 +33,19 @@ spec:
     - key: region
       value: us-east-1
 
-  - name: demo-2-lambda
-    ref: mayconjrpacheco/plugin:lambda-1
+  - name: demo-2-sns
+    ref: mayconjrpacheco/plugin:sns-1
     depends:
+    - demo-1-sns
     - demo-1-lambda-role
     type: terraform
     outputs: []
     inputs:
     - key: name
-      value: demo-2-function
+      value: my-topic-2
     - key: region
       value: us-east-1
-    - key: role_arn
-      value: "{{ this.demo-1-lambda-role.arn }}"
-    - key: image_uri
-      value: "{{ connection-interface.ecr-conn.repository_url }}:latest"
 
-  - name: demo-1-lambda-sns-trigger
-    ref: mayconjrpacheco/plugin:sns-lambda-trigger-1
-    depends:
-    - demo-2-lambda
-    - demo-1-sns
-    type: terraform
-    outputs: []
-    inputs:
-    - key: lambda_name
-      value: demo-2-function
-    - key: sns_arn
-      value: "{{ this.demo-1-sns.arn }}"
-    - key: region
-      value: us-east-1
 
 
 

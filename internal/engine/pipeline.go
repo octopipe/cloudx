@@ -94,8 +94,12 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 						if pluginExecutionStatus.Status == ExecutionApplyErrorStatus || pluginExecutionStatus.Status == ExecutionDestroyErrorStatus {
 							status.Status = ExecutionErrorStatus
 							status.Error = pluginExecutionStatus.Error
+							currentExecutionStatusChann <- status
+							p.logger.Info("plugin execution failed", zap.String("plugin-name", pluginExecutionStatus.Name), zap.Error(errors.New(pluginExecutionStatus.Error)))
 							return errors.New(pluginExecutionStatus.Error)
 						}
+
+						currentExecutionStatusChann <- status
 
 						p.executionContext[node] = pluginOutput
 

@@ -21,7 +21,6 @@ The runtime-engine manage your infrastructure in any cloud based in [IDP princip
 - When possible parallel execution is performed
 
 ### TODO: 
-- Delete plugins using dependencies tree
 - Add author per execution
 - Add execution sensitives data in secrets
 - Create recycle logic for executions and give option to external save
