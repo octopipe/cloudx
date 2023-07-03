@@ -4,8 +4,7 @@
   bottom: 0;
   left: 0;
   z-index: 100; /* Behind the navbar */
-  padding: 48px 0 0; /* Height of navbar */
-  background-color: #1f2029;
+  background-color: #1c1c1e;
   width: 80px;
   text-align: center;
   font-size: 18px;
@@ -14,7 +13,6 @@
 .main__sidebar .nav-link {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.7);
-  padding: 15px 0 15px 0;
 }
 
 .main__sidebar .nav-link:hover {
@@ -24,7 +22,7 @@
 
 .main__sidebar .nav-link.active {
   color: #fff;
-  background-color: #7a00ff;
+  background-color: #5c37cc;
   box-shadow: 0 0 10px 3px rgba(122, 0, 255, 0.35);
 }
 

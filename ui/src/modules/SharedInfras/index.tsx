@@ -19,34 +19,37 @@ const SharedInfras = () => {
   }, [])
   
   return (
-    <Card style={{margin: "40px"}}>
-      <Card.Body>
-        <Button
-          onClick={() => navigate('/shared-infras/create')}
-          style={{ position: 'absolute', right: '20px', borderRadius: '50%'}}>
-          <FontAwesomeIcon icon="add" />
-        </Button>
-        <Card.Title>Shared infras</Card.Title>
-        <ListGroup as="ul">
-          {list?.items?.map((item: any, idx: any) => (
-          <ListGroup.Item
-            as="li"
-            className="d-flex justify-content-between align-items-start"
-          >
-            <div className="">
-              <div className="fw-bold">
-                <Link to={item?.name}>{item?.name}</Link>
+    <div  style={{margin: "80px"}}>
+      <div className="d-flex justify-content-between my-4">
+        <h1 className="h2">Shared infras</h1>
+        <Button onClick={() => navigate('/shared-infras/create')}>
+          <FontAwesomeIcon icon="add" /> Create
+        </Button>  
+      </div>
+      <Card>
+        <Card.Body>
+          <ListGroup as="ul">
+            {list?.items?.map((item: any, idx: any) => (
+            <ListGroup.Item
+              as="li"
+              className="d-flex justify-content-between align-items-start"
+            >
+              <div className="">
+                <div className="fw-bold">
+                  <Link to={item?.name}>{item?.name}</Link>
+                </div>
+                {item?.description}
               </div>
-              {item?.description}
-            </div>
-            <Badge bg="primary" pill>
-              {item?.spec?.plugins?.length}
-            </Badge>
-          </ListGroup.Item>
-          ))}
-        </ListGroup>
-      </Card.Body>
-    </Card>
+              <Badge bg="primary" pill>
+                {item?.spec?.plugins?.length}
+              </Badge>
+            </ListGroup.Item>
+            ))}
+          </ListGroup>
+        </Card.Body>
+      </Card>
+    </div>
+    
   )
 }
 

@@ -3,8 +3,8 @@ import { Button } from 'react-bootstrap';
 import { Handle, Position } from 'reactflow';
 
 const colorByStatus: any = {
-  'SUCCESS': 'green',
-  'APPLIED': 'green',
+  'SUCCESS': '#13aa80',
+  'APPLIED': '#13aa80',
   'RUNNING': 'gray',
   'FAILED': 'red',
   'ERROR': 'red',

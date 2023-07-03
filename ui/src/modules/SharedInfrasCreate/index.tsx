@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import { Accordion, Alert, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "./index.css"
 import SharedInfraDiagram from "../SharedInfraDiagram";
 import { toEdges, toNodes } from "../SharedInfraDiagram/utils";
+import DefaultPanel from "./DefaultPanel";
 
 const getBadgeVariants = (status: string) => {
   if (status === "RUNNING") {
@@ -18,49 +19,56 @@ const getBadgeVariants = (status: string) => {
   return 'danger'
 }
 
-const SharedInfraCreate = () => {
-  const { name } = useParams()
-  const [sharedInfra, setSharedInfra] = useState<any>()
-  const [selectedExecution, setSelectedExecution] = useState<any>()
+const SharedInfraCreate = memo(() => {
+  const navigate = useNavigate()
+  const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
+  const [plugins, setPlugins] = useState<any>([])
 
-  const getSharedInfra = useCallback(async (name: string) => {
-    const res = await fetch(`http://localhost:8080/shared-infras/${name}`)
-    const item = await res.json()
+  const createSharedInfra = useCallback(async (sharedInfra: any) => {
+    const res = await fetch(`http://localhost:8080/shared-infras`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...sharedInfra,
+        plugins,
+      })
+    })
+    const created = await res.json()
+    navigate(`/shared-infras/${sharedInfra?.name}`)
+  }, [plugins])
 
-    setSharedInfra(item)
-  }, [])
+  const handleDiagramChanges = useCallback((nodes: any, edges: any) => {
+    let dict: any = {}
+    for(let i = 0; i < nodes.length; i++) {
+      dict[nodes[i].id] = nodes[i]?.data?.name
+    }
 
+    const newPlugins = nodes?.map((node: any) => {
+      return {
+        name: node?.data?.name,
+        ref: node?.data?.ref,
+        type: node?.data?.type,
+        depends: edges.filter((e: any) => e.target === node.id).map((e: any) => dict[e.source]),
+        inputs: node?.data?.inputs,
+        outputs: [],
+      }
+    })
 
-  const getExecution = useCallback(async (name: string) => {
-    const res = await fetch(`http://localhost:8080/executions/${name}`)
-    const item = await res.json()
+    setPlugins(newPlugins)
+  }, [setPlugins])
 
-    setSelectedExecution(item)
-  }, [])
-
-  useEffect(() => {
-    if (!name)
-      return
-
-    const interval = setInterval(() => {
-      getSharedInfra(name)
-    }, 3000)
-
-    getSharedInfra(name)
-    return () => clearInterval(interval)
-  }, [])
   
   return (
-    <div className="shared-infra-view__content">
+    <div className="shared-infra-create__content">
+      <DefaultPanel onCreate={createSharedInfra} />
       <SharedInfraDiagram
         action="CREATE"
-        nodes={sharedInfra?.plugins ? toNodes(sharedInfra.plugins, "defaultNode") : []}
-        edges={sharedInfra?.plugins ? toEdges(sharedInfra.plugins) : []}
+        nodes={nodes}
+        edges={edges}
+        onChangeDiagram={handleDiagramChanges}
       />
     </div>
   )
-}
-
-const replaceBreakLines = (text: string) => text.replace(/(?:\\n|\\\\n)/g, '<br/>')
+})
 
 export default SharedInfraCreate

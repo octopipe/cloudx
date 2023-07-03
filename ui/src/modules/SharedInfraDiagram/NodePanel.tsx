@@ -44,6 +44,13 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
     })
   }, [name, type, ref, inputs])
 
+  useEffect(() => {
+    setName(selectedNode?.data?.name)
+    setType(selectedNode?.data?.type)
+    setRef(selectedNode?.data?.ref)
+    setInputs(JSON.stringify(selectedNode?.data?.inputs, null, 2))
+  }, [selectedNode])
+
   return (
     <div className='shared-infra-diagram__node-panel'>
       <Card.Body>
@@ -63,8 +70,8 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
               </Form.Group>
               <Form.Group className="mb-3">
                 <Form.Label>Type</Form.Label>
-                <Form.Select defaultValue={type} onChange={e => setName(e.target.value)}>
-                  <option value="" disabled>Select a type</option>
+                <Form.Select defaultValue={type} onChange={e => setType(e.target.value)}>
+                  <option value={type} disabled>Select a type</option>
                   {getTypesByCategory(selectedNode?.data?.category).map(i => (
                     <option value={i.value}>{i.value}</option>
                   ))}
@@ -99,13 +106,11 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
               <div><strong>Type: </strong>{selectedNode?.data?.type}</div>
               <div>
                 <strong>Plugins:</strong><br/>
-                <ListGroup className='mt-2'>
-                  {selectedNode?.data?.inputs?.map((i: any) => (
-                    <ListGroup.Item style={{border: '1px solid #ccc', padding: '5px'}}>
-                      <strong>{i?.key}: </strong>{i?.value}
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
+                {selectedNode?.data?.inputs?.map((i: any) => (
+                  <Card className='p-1 mt-2 d-flex flex-row '>
+                    <strong>{i?.key}: </strong>{i?.value}
+                  </Card>
+                ))}
               </div>
             </>
           )}

@@ -10,15 +10,11 @@ const AddPanel = ({ node, onClose }: any) => {
   };
 
   return (
-    <Card className='shared-infra-diagram__add-panel'>
-      <Card.Body>
-        <Nav>
-          <Nav.Item onDragStart={(event: any) => onDragStart(event, 'default')} draggable><FontAwesomeIcon icon="box" /></Nav.Item>
-          <Nav.Item onDragStart={(event: any) => onDragStart(event, 'aws')} draggable><FontAwesomeIcon icon={["fab", "aws"]} /></Nav.Item>
-          <Nav.Item  onDragStart={(event: any) => onDragStart(event, 'connection-interface')} draggable><FontAwesomeIcon icon="diagram-project"/></Nav.Item>
-        </Nav>
-      </Card.Body>
-    </Card>
+    <div className='shared-infra-diagram__add-panel'>
+        <div style={{cursor: "grab"}} onDragStart={(event: any) => onDragStart(event, 'default')} draggable><FontAwesomeIcon icon="box" /></div>
+        <div style={{cursor: "grab"}} onDragStart={(event: any) => onDragStart(event, 'aws')} draggable><FontAwesomeIcon icon={["fab", "aws"]} /></div>
+        <div style={{cursor: "grab"}} onDragStart={(event: any) => onDragStart(event, 'connection-interface')} draggable><FontAwesomeIcon icon="diagram-project"/></div>
+    </div>
   )
   
 }

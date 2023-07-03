@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType, Background, ReactFlowProvider } from 'reactflow';
+import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType, Background, ReactFlowProvider, useReactFlow } from 'reactflow';
 import DefaultNode from './DefaultNode'
 import ExecutionNode from './ExecutionNode';
 import dagre from 'dagre'
@@ -54,7 +54,7 @@ const nodeTypes = {
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
-const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEdges, action }: any) => {
+const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEdges, action, onChangeDiagram }: any) => {
   const reactFlowWrapper = useRef<any>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -83,10 +83,13 @@ const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEd
       initialEdges,
     );
 
-    setNodes([...layoutedNodes]);
-    setEdges([...layoutedEdges]);
-
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
   }, [initialNodes, initialEdges])
+
+  useEffect(() => {
+    onChangeDiagram && onChangeDiagram(nodes, edges)
+  }, [nodes, edges])
 
   const onDragOver = useCallback((event: any) => {
     event.preventDefault();
@@ -108,14 +111,17 @@ const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEd
         x: event.clientX - reactFlowBounds.left,
         y: event.clientY - reactFlowBounds.top,
       });
+      const id = getId()
       const newNode = {
-        id: getId(),
+        id: id,
         type,
         position,
         data: { 
-          label: `${type}`, 
-          name: `${type}`, 
+          label: id, 
+          name: id, 
           category: type,
+          ref: '',
+          type: '',
           inputs: [
             { key: 'example-key', value: 'example-value' }
           ]
@@ -155,4 +161,8 @@ const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEd
 
 }
 
-export default SharedInfraDiagram
+export default (props: any) => (
+  <ReactFlowProvider>
+    <SharedInfraDiagram {...props}/>
+  </ReactFlowProvider>
+)

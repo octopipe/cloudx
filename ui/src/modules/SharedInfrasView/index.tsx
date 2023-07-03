@@ -19,8 +19,10 @@ const getBadgeVariants = (status: string) => {
   return 'danger'
 }
 
+let interval: any
+
+
 const SharedInfraView = () => {
-  let interval: any
   const { name } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
   const [selectedExecution, setSelectedExecution] = useState<any>()
@@ -34,7 +36,7 @@ const SharedInfraView = () => {
     const item = await res.json()
 
     setSharedInfra(item)
-    setNodes(toNodes(item.plugins, "defaultNode"))
+    setNodes(toNodes(item.plugins, "default"))
     setEdges(toEdges(item.plugins))
   }, [])
 
@@ -60,6 +62,7 @@ const SharedInfraView = () => {
       return
     }
 
+    clearInterval(interval)
     interval = setInterval(() => {
       getSharedInfra(name)
     }, 3000)
@@ -73,15 +76,18 @@ const SharedInfraView = () => {
       <DefaultPanel sharedInfra={sharedInfra} onSelectExecution={(e: any) => setSelectedExecution(e)} />
       {currentExecution && currentExecution?.status?.error && (
         <Alert
-          style={{position: 'fixed', top: '80px', right: '10px', left: '410px'}}
+          style={{position: 'fixed', top: '10px', right: '10px', left: '390px'}}
           variant="danger"
         >{currentExecution?.status?.error}</Alert>
       )}
+      <div className="shared-infra-view__diagram">
       <SharedInfraDiagram
         sharedInfra={sharedInfra}
         nodes={nodes}
         edges={edges}
       />
+      </div>
+     
     </div>
   )
 }

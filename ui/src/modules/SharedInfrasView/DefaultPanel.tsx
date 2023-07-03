@@ -17,7 +17,7 @@ const getClassNameByExecution = (execution: any) => {
 
 const DefaultPanel = ({ sharedInfra, onSelectExecution, onClose }: any) => {
   return (
-    <Card className='shared-infra-diagram__default-panel'>
+    <div className='shared-infra-diagram__default-panel'>
       <div>
         <Card.Title>{sharedInfra?.name}</Card.Title>
         <p>{sharedInfra?.description}</p>
@@ -35,7 +35,7 @@ const DefaultPanel = ({ sharedInfra, onSelectExecution, onClose }: any) => {
           
         </div>
       </div>
-    </Card>
+    </div>
   )
   
 }
