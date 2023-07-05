@@ -6,7 +6,6 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/controller/utils"
 	"github.com/octopipe/cloudx/internal/engine"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,6 +51,10 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("execution-%s-%d", currentSharedInfra.GetName(), time.Now().UnixMilli()),
 			Namespace: currentSharedInfra.GetNamespace(),
+			Labels: map[string]string{
+				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
+				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
+			},
 		},
 		Spec: commonv1alpha1.ExecutionSpec{
 			Action: action,
@@ -59,6 +62,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				Name:      currentSharedInfra.GetName(),
 				Namespace: currentSharedInfra.GetNamespace(),
 			},
+			StartedAt: time.Now().Format(time.RFC3339),
 		},
 	}
 
@@ -78,15 +82,15 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	newExecution.Status = commonv1alpha1.ExecutionStatus{
-		StartedAt: time.Now().Format(time.RFC3339),
-		Status:    engine.ExecutionRunningStatus,
-	}
+	// newExecution.Status = commonv1alpha1.ExecutionStatus{
 
-	err = utils.UpdateExecutionStatus(c.Client, newExecution)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// 	Status: engine.ExecutionRunningStatus,
+	// }
+
+	// err = utils.UpdateExecutionStatus(c.Client, newExecution)
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
 
 	return ctrl.Result{}, nil
 }

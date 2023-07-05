@@ -43,6 +43,8 @@ spec:
         env:
         - name: RPC_SERVER_ADDRESS
           value: "controller.cloudx-system:9000"
+        - name: ENV
+          value: prod
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

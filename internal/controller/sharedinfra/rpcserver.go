@@ -98,7 +98,6 @@ func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) 
 	}
 
 	currentExecutionStatus := commonv1alpha1.ExecutionStatus{
-		StartedAt:  currentExecution.Status.StartedAt,
 		Status:     engine.ExecutionTimeout,
 		FinishedAt: args.FinishedAt,
 		Error:      "Runner time exceeded",

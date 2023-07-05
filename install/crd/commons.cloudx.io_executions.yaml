@@ -45,6 +45,8 @@ spec:
                   namespace:
                     type: string
                 type: object
+              startedAt:
+                type: string
             required:
             - action
             - sharedInfra
@@ -99,8 +101,6 @@ spec:
                   - type
                   type: object
                 type: array
-              startedAt:
-                type: string
               status:
                 type: string
             type: object

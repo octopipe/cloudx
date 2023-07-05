@@ -6,7 +6,6 @@ import (
 	"os"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/controller/utils"
 	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/runner"
 	"go.uber.org/zap"
@@ -43,7 +42,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if currentExecution.Status.Status != engine.ExecutionRunningStatus {
+	if currentExecution.Status.Status == engine.ExecutionSuccessStatus || currentExecution.Status.Status == engine.ExecutionErrorStatus {
 		return ctrl.Result{}, nil
 	}
 
@@ -56,7 +55,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	err = c.Get(ctx, sharedInfraRef, currentSharedInfra)
 	if err != nil {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	rawSharedInfra, err := json.Marshal(currentSharedInfra)
@@ -64,21 +63,21 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	for _, e := range currentSharedInfra.Status.Executions {
-		if e.Name == req.Name && e.Namespace == req.Namespace {
-			return ctrl.Result{}, nil
-		}
-	}
+	// for _, e := range currentSharedInfra.Status.Executions {
+	// 	if e.Name == req.Name && e.Namespace == req.Namespace {
+	// 		return ctrl.Result{}, nil
+	// 	}
+	// }
 
-	currentSharedInfra.Status.Executions = append(
-		[]commonv1alpha1.Ref{{Name: currentExecution.Name, Namespace: currentExecution.Namespace}},
-		currentSharedInfra.Status.Executions...,
-	)
+	// currentSharedInfra.Status.Executions = append(
+	// 	[]commonv1alpha1.Ref{{Name: currentExecution.Name, Namespace: currentExecution.Namespace}},
+	// 	currentSharedInfra.Status.Executions...,
+	// )
 
-	err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
+	// if err != nil {
+	// 	return ctrl.Result{}, err
+	// }
 
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
@@ -90,14 +89,16 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if os.Getenv("ENV") != "local" {
-		c.logger.Info("creating runner")
+		c.logger.Info("creating runner...")
 		newRunner, err := runner.NewRunner(*currentExecution, *currentSharedInfra, string(rawSharedInfra), providerConfig)
 		if err != nil {
+			c.logger.Error("Failed to create runner", zap.Error(err))
 			return ctrl.Result{}, err
 		}
 
 		err = c.Create(ctx, newRunner.Pod)
 		if err != nil {
+			c.logger.Error("Failed to apply runner", zap.Error(err))
 			return ctrl.Result{}, err
 		}
 	}

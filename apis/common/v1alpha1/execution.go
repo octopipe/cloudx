@@ -8,6 +8,7 @@ type ExecutionSpec struct {
 	Author      string `json:"author,omitempty" default:"anonymous"`
 	Action      string `json:"action"`
 	SharedInfra Ref    `json:"sharedInfra"`
+	StartedAt   string `json:"startedAt,omitempty"`
 }
 
 type PluginExecutionStatus struct {
@@ -26,7 +27,6 @@ type PluginExecutionStatus struct {
 
 type ExecutionStatus struct {
 	Plugins    []PluginExecutionStatus `json:"plugins,omitempty"`
-	StartedAt  string                  `json:"startedAt,omitempty"`
 	FinishedAt string                  `json:"finishedAt,omitempty"`
 	Status     string                  `json:"status,omitempty"`
 	Error      string                  `json:"error,omitempty"`
