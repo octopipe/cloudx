@@ -41,8 +41,18 @@ code {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.form-control:disabled {
+  background-color: transparent !important;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .form-select {
   background-color: #202029;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.form-select:disabled {
+  background-color: transparent !important;
   color: rgba(255, 255, 255, 0.7);
 }
 

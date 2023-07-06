@@ -6,6 +6,7 @@ import SharedInfraView from './modules/SharedInfrasView'
 import ConnectionInterfaces from './modules/ConnectionInterfaces'
 import './core/components/icon'
 import SharedInfraEditor from './modules/SharedInfrasEditor'
+import ProviderConfigView from './modules/ProviderConfigView'
 
 const App = () => {
   return (
@@ -19,6 +20,7 @@ const App = () => {
           <Route path='/shared-infras/:name' element={<SharedInfraView />}/>
           <Route path='/connection-interfaces' element={<ConnectionInterfaces />}/>
           <Route path='/providers-config' element={<ProvidersConfig />}/>
+          <Route path='/providers-config/:name' element={<ProviderConfigView />}/>
         </Route>
         <Route path="login" element={<div>Login</div>} />
         <Route path="*" element={<div>Not Found</div>} />
