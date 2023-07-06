@@ -19,6 +19,7 @@ func NewHTTPHandler(e *gin.Engine, sharedInfraUseCase UseCase) *gin.Engine {
 	e.POST("/shared-infras", h.Create)
 	e.GET("/shared-infras/:shared-infra-name", h.Get)
 	e.PUT("/shared-infras/:shared-infra-name", h.Update)
+	e.PATCH("/shared-infras/:shared-infra-name/reconcile", h.Reconcile)
 	e.DELETE("/shared-infras/:shared-infra-name", h.Delete)
 
 	return e
@@ -78,6 +79,25 @@ func (h httpHandler) Get(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, item)
+}
+
+func (h httpHandler) Reconcile(c *gin.Context) {
+	namespace := "default"
+
+	if c.Query("namespace") != "" {
+		namespace = c.Query("namespace")
+	}
+	name := c.Param("shared-infra-name")
+
+	err := h.sharedInfraUseCase.Reconcile(c.Request.Context(), name, namespace)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
 }
 
 func (h httpHandler) Create(c *gin.Context) {

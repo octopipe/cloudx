@@ -3,6 +3,7 @@ package sharedinfra
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/octopipe/cloudx/apis/common/v1alpha1"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/pagination"
@@ -49,6 +50,23 @@ func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (
 	var sharedInfra v1alpha1.SharedInfra
 	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &sharedInfra)
 	return sharedInfra, err
+}
+
+func (r k8sRepository) Reconcile(ctx context.Context, name string, namespace string) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current := commonv1alpha1.SharedInfra{}
+		err := r.client.Get(ctx, types.NamespacedName{
+			Name:      name,
+			Namespace: namespace,
+		}, &current)
+		if err != nil {
+			return err
+		}
+
+		current.Spec.Generation = uuid.NewString()
+
+		return r.client.Update(ctx, &current)
+	})
 }
 
 // Delete implements Repository.

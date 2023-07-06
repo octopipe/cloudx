@@ -123,28 +123,27 @@ func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commo
 		return err
 	}
 
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
 	sharedInfraRef := types.NamespacedName{
 		Name:      currentExecution.Spec.SharedInfra.Name,
 		Namespace: currentExecution.Spec.SharedInfra.Namespace,
 	}
-	err = s.Get(context.Background(), sharedInfraRef, currentSharedInfra)
+
+	executions := commonv1alpha1.ExecutionList{}
+	parsedSelector, err := labels.Parse(fmt.Sprintf("commons.cloudx.io/sharedinfra-name=%s,commons.cloudx.io/sharedinfra-namespace=%s", sharedInfraRef.Name, sharedInfraRef.Namespace))
 	if err != nil {
-		s.logger.Error("failed to get shared infra", zap.Error(err))
+		return err
+	}
+	err = s.List(context.Background(), &executions, &client.ListOptions{LabelSelector: parsedSelector})
+	if err != nil {
+		s.logger.Error("failed to get list execution", zap.Error(err))
 		return err
 	}
 
-	for _, e := range currentSharedInfra.Status.Executions {
-		executionApi := &commonv1alpha1.Execution{}
-		err = s.Get(context.Background(), types.NamespacedName{Name: e.Name, Namespace: e.Namespace}, executionApi)
-		if err != nil {
-			s.logger.Error("failed to get execution from shared infra", zap.Error(err))
-			return err
-		}
-
-		if executionApi.Status.Status != engine.ExecutionRunningStatus {
-			*reply = *executionApi
-			return nil
+	for i := len(executions.Items) - 1; i >= 0; i-- {
+		item := executions.Items[i]
+		if item.Status.Status != "" && item.Status.Status != "RUNNING" {
+			*reply = item
+			break
 		}
 	}
 

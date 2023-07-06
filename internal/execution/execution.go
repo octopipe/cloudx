@@ -13,6 +13,7 @@ type Execution struct {
 	Status    commonv1alpha1.ExecutionStatus `json:"status"`
 	Author    string                         `json:"author,omitempty" default:"anonymous"`
 	Action    string                         `json:"action"`
+	StartedAt string                         `json:"startedAt"`
 }
 
 type UseCase interface {

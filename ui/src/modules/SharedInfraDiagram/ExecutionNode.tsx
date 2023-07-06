@@ -43,7 +43,7 @@ export default memo(({ data, isConnectable }: any) => {
           {data.label}
         </div>
         { data?.startedAt && data?.finishedAt && (
-          <div style={{padding: '10px'}}>
+          <div style={{padding: '10px', color: "#000"}}>
 
             {getDuration(data?.startedAt, data?.finishedAt)}
             {/* {(data?.status === "ERROR" || data?.status === "FAILED") && (

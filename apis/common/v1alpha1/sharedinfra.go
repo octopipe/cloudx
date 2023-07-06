@@ -42,6 +42,7 @@ type Ref struct {
 type SharedInfraSpec struct {
 	Author            string                  `json:"author,omitempty" default:"anonymous"`
 	Description       string                  `json:"description,omitempty"`
+	Generation        string                  `json:"generation,omitempty"`
 	ProviderConfigRef Ref                     `json:"providerConfigRef,omitempty"`
 	RunnerConfig      SharedInfraRunnerConfig `json:"runnerConfig,omitempty"`
 	Plugins           []SharedInfraPlugin     `json:"plugins"`

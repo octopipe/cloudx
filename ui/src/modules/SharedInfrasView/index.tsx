@@ -36,14 +36,15 @@ const SharedInfraView = () => {
     const sharedInfraRes = await fetch(`http://localhost:8080/shared-infras/${name}`)
     const sharedInfra = await sharedInfraRes.json()
 
-
-    const executionsRes = await fetch(`http://localhost:8080/shared-infras/${name}/executions`)
-    const executions = await executionsRes.json()
-
     setSharedInfra(sharedInfra)
-    setExecutions(executions?.items)
     setNodes(toNodes(sharedInfra.plugins, "default"))
     setEdges(toEdges(sharedInfra.plugins, false))
+  }, [])
+
+  const getExecutions = useCallback(async () => {
+    const res = await fetch(`http://localhost:8080/shared-infras/${sharedInfraName}/executions`)
+    const item = await res.json()
+    setExecutions(item?.items)
   }, [])
 
 
@@ -54,10 +55,20 @@ const SharedInfraView = () => {
     setNodes(toNodes(item?.status?.plugins || [], "executionNode"))
     setEdges(toEdges(item?.status?.plugins || [], true))
   }, [])
+  
+  const handleReconcile = useCallback(async () => {
+    const res = await fetch(`http://localhost:8080/shared-infras/${sharedInfraName}/reconcile`, {method: 'PATCH', body: JSON.stringify({})})
+    const item = await res.json()
+  }, [])
 
   useEffect(() => {
     if (!sharedInfraName)
       return
+    
+    getExecutions()
+    const executionsInterval = setInterval(() => {
+      getExecutions()
+    }, 3000)
     
     if (!!selectedExecution) {
       clearInterval(interval)
@@ -74,7 +85,10 @@ const SharedInfraView = () => {
     }, 3000)
     getSharedInfra(sharedInfraName)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      clearInterval(executionsInterval)
+    }
   }, [selectedExecution])
   
   return (
@@ -84,6 +98,7 @@ const SharedInfraView = () => {
         executions={executions}
         onViewClick={() => setSelectedExecution(null)}
         onEditClick={() => navigate(`/shared-infras/${sharedInfraName}/edit`)}
+        onReconcileClick={() => handleReconcile()}
         onSelectExecution={(e: any) => setSelectedExecution(e)}
       />
       {currentExecution && currentExecution?.status?.error && (

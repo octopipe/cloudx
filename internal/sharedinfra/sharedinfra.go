@@ -19,6 +19,7 @@ type UseCase interface {
 	Create(ctx context.Context, sharedInfra SharedInfra) (SharedInfra, error)
 	Update(ctx context.Context, sharedInfra SharedInfra) (SharedInfra, error)
 	Get(ctx context.Context, name string, namespace string) (SharedInfra, error)
+	Reconcile(ctx context.Context, name string, namespace string) error
 	Delete(ctx context.Context, name string, namespace string) error
 }
 
@@ -26,5 +27,6 @@ type Repository interface {
 	List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (commonv1alpha1.SharedInfraList, error)
 	Apply(ctx context.Context, s commonv1alpha1.SharedInfra) (commonv1alpha1.SharedInfra, error)
 	Get(ctx context.Context, name string, namespace string) (commonv1alpha1.SharedInfra, error)
+	Reconcile(ctx context.Context, name string, namespace string) error
 	Delete(ctx context.Context, name string, namespace string) error
 }

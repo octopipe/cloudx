@@ -60,6 +60,7 @@ const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEd
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<any>()
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const { fitView } = useReactFlow()
 
   const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), []);
 
@@ -85,6 +86,7 @@ const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEd
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
+    fitView({ nodes: layoutedNodes })
   }, [initialNodes, initialEdges])
 
   useEffect(() => {

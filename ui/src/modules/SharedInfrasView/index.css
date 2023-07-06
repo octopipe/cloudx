@@ -40,7 +40,7 @@
 .shared-infra-diagram__default-panel__execution--error {
   font-size: 14px;
   padding: 10px;
-  background-color: #b71c1c !important;
+  background-color: #de4439 !important;
 }
 
 .shared-infra-diagram__default-panel__execution--success {
@@ -52,5 +52,5 @@
 .shared-infra-diagram__default-panel__execution--running {
   font-size: 14px;
   padding: 10px;
-  background-color: #01579b !important;
+  background-color: #0e7afe !important;
 }

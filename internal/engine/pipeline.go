@@ -46,6 +46,7 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 		Status:  ExecutionRunningStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
+	currentExecutionStatusChann <- status
 
 	// eg, _ := errgroup.WithContext(context.Background())
 	eg := new(errgroup.Group)

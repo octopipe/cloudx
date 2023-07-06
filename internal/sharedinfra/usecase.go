@@ -57,6 +57,10 @@ func (u useCase) Get(ctx context.Context, name string, namespace string) (Shared
 	}, nil
 }
 
+func (u useCase) Reconcile(ctx context.Context, name string, namespace string) error {
+	return u.repository.Reconcile(ctx, name, namespace)
+}
+
 // List implements UseCase.
 func (u useCase) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (pagination.ChunkingPaginationResponse[SharedInfra], error) {
 	l, err := u.repository.List(ctx, namespace, chunkPagination)

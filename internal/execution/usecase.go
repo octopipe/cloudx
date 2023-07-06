@@ -90,6 +90,7 @@ func (u useCase) List(ctx context.Context, sharedInfraName string, namespace str
 			Author:    i.Spec.Author,
 			Action:    i.Spec.Action,
 			Status:    i.Status,
+			StartedAt: i.Spec.StartedAt,
 		})
 	}
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import './index.css'
-import { Alert, Card, ListGroup, ListGroupItem, Nav } from 'react-bootstrap'
+import { Alert, Card, ListGroup, ListGroupItem, Nav, Spinner } from 'react-bootstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 const getClassNameByExecution = (execution: any) => {
@@ -12,10 +12,14 @@ const getClassNameByExecution = (execution: any) => {
     return 'shared-infra-diagram__default-panel__execution--running'
   }
 
-  return 'shared-infra-diagram__default-panel__execution'
+  if (execution?.status?.status === "ERROR") {
+    return 'shared-infra-diagram__default-panel__execution--error'
+  }
+
+  return 'shared-infra-diagram__default-panel__execution--running'
 }
 
-const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onSelectExecution, onClose }: any) => {
+const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onReconcileClick, onSelectExecution, onClose }: any) => {
   return (
     <div className='shared-infra-diagram__default-panel'>
       <div>
@@ -24,10 +28,22 @@ const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onSel
           <div>
             <FontAwesomeIcon style={{cursor: 'pointer'}} icon="diagram-project" onClick={onViewClick} />
             <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="edit" onClick={onEditClick} />
-            <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="rotate" />
+            <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="rotate" onClick={onReconcileClick} />
           </div>
         </div>
         <p>{sharedInfra?.description}</p>
+        <div className='mb-3'>
+          <strong>Provider Config</strong><br/>
+          {sharedInfra?.providerConfigRef?.name}
+        </div>
+        <div className='mb-3'>
+          <strong>Plugins</strong><br/>
+          {sharedInfra?.plugins?.map((p: any) => (
+            <Card className='p-2 mt-2'>
+              {p?.name}
+            </Card>
+          ))}
+        </div>
         <div>
           <strong>Executions</strong>
           {executions?.map((i: any) => (
@@ -36,7 +52,11 @@ const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onSel
               style={{cursor: 'pointer'}} 
               onClick={() => onSelectExecution(i)}
             >
+              <div className='d-flex'>
+              {i?.status?.status === "RUNNING" && <Spinner size='sm' className='me-1' />}
               {i.name}
+              </div>
+              
             </Card>
           ))}
           
