@@ -36,8 +36,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./apis/..."
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=install/crd
+manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=install/crds
+	$(KUSTOMIZE) build install/crds > install/install-crds.yaml
+	$(KUSTOMIZE) build install/base > install/install-base.yaml
+	$(KUSTOMIZE) build install/ui > install/install-ui.yaml
+
 
 build-job:
 	docker build -t mayconjrpacheco/cloudx-runner:latest -f Dockerfile.runner .
@@ -46,6 +50,14 @@ build-job:
 build-controller:
 	docker build -t mayconjrpacheco/cloudx-controller:latest -f Dockerfile.controller .
 	docker push mayconjrpacheco/cloudx-controller:latest
+
+build:
+	docker build -t mayconjrpacheco/cloudx:latest -f Dockerfile .
+	docker push mayconjrpacheco/cloudx:latest
+
+build-ui:
+	docker build -t mayconjrpacheco/cloudx-ui:latest -f Dockerfile.ui .
+	docker push mayconjrpacheco/cloudx-ui:latest
 
 install-manifests:
 	kubectl apply -f install/crd

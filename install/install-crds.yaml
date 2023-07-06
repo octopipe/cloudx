@@ -1,0 +1,483 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: connectioninterfaces.commons.cloudx.io
+spec:
+  group: commons.cloudx.io
+  names:
+    kind: ConnectionInterface
+    listKind: ConnectionInterfaceList
+    plural: connectioninterfaces
+    singular: connectioninterface
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Circle is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              outputs:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    sensitive:
+                      type: boolean
+                    value:
+                      type: string
+                  type: object
+                type: array
+              secret:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+              sharedInfra:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+            type: object
+          status:
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: environments.commons.cloudx.io
+spec:
+  group: commons.cloudx.io
+  names:
+    kind: Environment
+    listKind: EnvironmentList
+    plural: environments
+    singular: environment
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Circle is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              Inputs:
+                items:
+                  properties:
+                    key:
+                      type: string
+                    sensitive:
+                      type: boolean
+                    value:
+                      type: string
+                  type: object
+                type: array
+              Secret:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+            type: object
+          status:
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: executions.commons.cloudx.io
+spec:
+  group: commons.cloudx.io
+  names:
+    kind: Execution
+    listKind: ExecutionList
+    plural: executions
+    singular: execution
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Circle is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              action:
+                type: string
+              author:
+                type: string
+              sharedInfra:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+              startedAt:
+                type: string
+            required:
+            - action
+            - sharedInfra
+            type: object
+          status:
+            properties:
+              error:
+                type: string
+              finishedAt:
+                type: string
+              plugins:
+                items:
+                  properties:
+                    dependencyLock:
+                      type: string
+                    depends:
+                      items:
+                        type: string
+                      type: array
+                    error:
+                      type: string
+                    finishedAt:
+                      type: string
+                    inputs:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                    ref:
+                      type: string
+                    startedAt:
+                      type: string
+                    state:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - inputs
+                  - name
+                  - ref
+                  - type
+                  type: object
+                type: array
+              status:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: providerconfigs.commons.cloudx.io
+spec:
+  group: commons.cloudx.io
+  names:
+    kind: ProviderConfig
+    listKind: ProviderConfigList
+    plural: providerconfigs
+    singular: providerconfig
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ProviderConfig is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              awsConfig:
+                properties:
+                  region:
+                    type: string
+                  role:
+                    type: string
+                required:
+                - region
+                type: object
+              secretRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+              source:
+                type: string
+              type:
+                type: string
+            type: object
+          status:
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: secretsmanagers.aws.cloudx.io
+spec:
+  group: aws.cloudx.io
+  names:
+    kind: SecretsManager
+    listKind: SecretsManagerList
+    plural: secretsmanagers
+    singular: secretsmanager
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Circle is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              author:
+                type: string
+              description:
+                type: string
+              kmsKeyId:
+                type: string
+              name:
+                type: string
+              secretString:
+                type: string
+            required:
+            - kmsKeyId
+            type: object
+          status:
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: sharedinfras.commons.cloudx.io
+spec:
+  group: commons.cloudx.io
+  names:
+    kind: SharedInfra
+    listKind: SharedInfraList
+    plural: sharedinfras
+    singular: sharedinfra
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Circle is the Schema for the circles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              author:
+                type: string
+              description:
+                type: string
+              generation:
+                type: string
+              plugins:
+                items:
+                  properties:
+                    depends:
+                      items:
+                        type: string
+                      type: array
+                    inputs:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - key
+                        - value
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                    outputs:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          sensitive:
+                            type: boolean
+                        required:
+                        - key
+                        - sensitive
+                        type: object
+                      type: array
+                    ref:
+                      type: string
+                    terraformVersion:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - inputs
+                  - name
+                  - ref
+                  - type
+                  type: object
+                type: array
+              providerConfigRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+              runnerConfig:
+                properties:
+                  nodeSelector:
+                    type: string
+                  serviceAccount:
+                    type: string
+                type: object
+            required:
+            - plugins
+            type: object
+          status:
+            properties:
+              executions:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

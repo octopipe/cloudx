@@ -7,5 +7,12 @@ hide_next: true
 
 ## Install
 ```
-kubectl apply -f https://raw.githubusercontent.com/octopipe/cloudx/main/install/install.yaml
+kubectl create ns cloudx-system
+kubectl apply -n cloudx-system -f https://raw.githubusercontent.com/octopipe/cloudx/main/install/install-crds.yaml
+kubectl apply -n cloudx-system -f https://raw.githubusercontent.com/octopipe/cloudx/main/install/install-base.yaml
+```
+
+## Install UI
+```
+kubectl apply -n cloudx-system -f https://raw.githubusercontent.com/octopipe/cloudx/main/install/install-ui.yaml
 ```

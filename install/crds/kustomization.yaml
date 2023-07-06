@@ -2,4 +2,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- *.yaml
+- aws.cloudx.io_secretsmanagers.yaml
+- commons.cloudx.io_connectioninterfaces.yaml
+- commons.cloudx.io_environments.yaml
+- commons.cloudx.io_executions.yaml
+- commons.cloudx.io_providerconfigs.yaml
+- commons.cloudx.io_sharedinfras.yaml
+
