@@ -1,10 +1,10 @@
-# runtime-engine
+# Cloudx
 
-The runtime-engine helps you to orchestrate applications and infrastructure no matter where they run.
+The Cloudx helps you to orchestrate applications and infrastructure no matter where they run.
 
-## What is runtime-engine?
+## What is Cloudx?
 
-The runtime-engine manage your infrastructure in any cloud based in [IDP principles](https://internaldeveloperplatform.org/).
+The Cloudx manage your infrastructure in any cloud based in [IDP principles](https://internaldeveloperplatform.org/).
 
 
 ### FEATURES:
