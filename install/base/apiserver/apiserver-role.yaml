@@ -1,0 +1,61 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: cloudx-apiserver
+    app.kubernetes.io/part-of: cloudx
+    app.kubernetes.io/component: apiserver
+  name: cloudx-apiserver
+rules:
+- apiGroups:
+  - commons.cloudx.io
+  resources:
+  - sharedinfras
+  - executions
+  - connectioninterfaces
+  - providerconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - commons.cloudx.io
+  resources:
+  - sharedinfras/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - commons.cloudx.io
+  resources:
+  - sharedinfras/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - commons.cloudx.io
+  resources:
+  - executions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

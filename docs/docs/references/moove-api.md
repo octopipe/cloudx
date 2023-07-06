@@ -1,1 +1,0 @@
-!!swagger moove.yaml!!

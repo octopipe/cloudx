@@ -8,14 +8,13 @@ extra_css:
 
 theme:
   name: material
-  logo: assets/logo.png
   favicon: assets/favicon-32x32.png
   custom_dir: overrides
-  features:
-    - navigation.tabs
-    - navigation.tracking
-    - navigation.tabs.sticky
-    - navigation.top
+  # features:
+  #   - navigation.tabs
+  #   - navigation.tracking
+  #   - navigation.tabs.sticky
+  #   - navigation.top
 
 plugins:
   - render_swagger
@@ -45,16 +44,6 @@ markdown_extensions:
   - toc:
       permalink: true
   - def_list
-
-nav:
-  - Home: index.md
-  - About:
-    - Overview: about/README.md
-    - Concepts: about/concepts.md
-  - Install:
-      - Overview: install/README.md
-  - References: 
-    - API server: references/api-server.md
 
 watch:
   - overrides

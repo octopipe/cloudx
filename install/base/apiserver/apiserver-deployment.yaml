@@ -1,50 +1,30 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: controller
-  namespace: cloudx-system
-spec:
-  selector:
-    control-plane: cloudx-controller
-  ports:
-    - protocol: TCP
-      port: 9000
-      targetPort: 9000
-  type: LoadBalancer
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller
-  namespace: cloudx-system
+  name: cloudx-apiserver
   labels:
-    control-plane: cloudx-controller
+    app.kubernetes.io/name: cloudx-apiserver
+    app.kubernetes.io/part-of: cloudx
+    app.kubernetes.io/component: apiserver
 spec:
   selector:
     matchLabels:
-      control-plane: cloudx-controller
+      app.kubernetes.io/name: cloudx-apiserver
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: cloudx-controller
+        app.kubernetes.io/name: cloudx-apiserver
     spec:
       securityContext:
         runAsNonRoot: true
       containers:
       - command:
-        - /controller
-        args:
-        - --leader-elect
-        image: mayconjrpacheco/cloudx-controller:latest
-        name: controller
+        - /apiserver
+        image: mayconjrpacheco/cloudx:latest
+        name: apiserver
         ports:
-        - containerPort: 9000
-        env:
-        - name: RPC_SERVER_ADDRESS
-          value: "controller.cloudx-system:9000"
-        - name: ENV
-          value: prod
+        - containerPort: 8000
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
@@ -66,5 +46,5 @@ spec:
           requests:
             cpu: 100m
             memory: 200Mi
-      serviceAccountName: controller-sa
+      serviceAccountName: apiserver-sa
       terminationGracePeriodSeconds: 10

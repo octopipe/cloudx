@@ -3,8 +3,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: cloudx-role
+  labels:
+    app.kubernetes.io/name: cloudx-controller
+    app.kubernetes.io/part-of: cloudx
+    app.kubernetes.io/component: controller
+  name: cloudx-controller
 rules:
 - apiGroups:
   - commons.cloudx.io
