@@ -15,11 +15,11 @@ type httpHandler struct {
 func NewHTTPHandler(e *gin.Engine, executionUseCase UseCase) *gin.Engine {
 	h := httpHandler{executionUseCase: executionUseCase}
 
-	e.GET("/executions", h.List)
-	e.POST("/executions", h.Create)
-	e.GET("/executions/:name", h.Get)
-	e.PUT("/executions/:name", h.Update)
-	e.DELETE("/executions/:name", h.Delete)
+	e.GET("/shared-infras/:shared-infra-name/executions", h.List)
+	e.POST("/shared-infras/:shared-infra-name/executions", h.Create)
+	e.GET("/shared-infras/:shared-infra-name/executions/:name", h.Get)
+	e.PUT("/shared-infras/:shared-infra-name/executions/:name", h.Update)
+	e.DELETE("/shared-infras/:shared-infra-name/executions/:name", h.Delete)
 
 	return e
 }
@@ -47,7 +47,9 @@ func (h httpHandler) List(c *gin.Context) {
 		chunk = c.Query("chunk")
 	}
 
-	list, err := h.executionUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
+	sharedInfraName := c.Param("shared-infra-name")
+
+	list, err := h.executionUseCase.List(c.Request.Context(), sharedInfraName, namespace, pagination.ChunkingPaginationRequest{
 		Limit: int64(limit),
 		Chunk: chunk,
 	})
@@ -68,8 +70,9 @@ func (h httpHandler) Get(c *gin.Context) {
 		namespace = c.Query("namespace")
 	}
 	name := c.Param("name")
+	sharedInfraName := c.Param("shared-infra-name")
 
-	item, err := h.executionUseCase.Get(c.Request.Context(), name, namespace)
+	item, err := h.executionUseCase.Get(c.Request.Context(), sharedInfraName, name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -81,12 +84,11 @@ func (h httpHandler) Get(c *gin.Context) {
 }
 
 func (h httpHandler) Create(c *gin.Context) {
-	// namespace := "default"
+	namespace := "default"
 
-	// if c.Query("namespace") != "" {
-	// 	namespace = c.Query("namespace")
-	// }
-	// name := c.Param("name")
+	if c.Query("namespace") != "" {
+		namespace = c.Query("namespace")
+	}
 
 	execution := Execution{}
 	if err := c.BindJSON(&execution); err != nil {
@@ -96,7 +98,8 @@ func (h httpHandler) Create(c *gin.Context) {
 		return
 	}
 
-	item, err := h.executionUseCase.Create(c.Request.Context(), execution)
+	sharedInfraName := c.Param("shared-infra-name")
+	item, err := h.executionUseCase.Create(c.Request.Context(), sharedInfraName, namespace, execution)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -108,12 +111,11 @@ func (h httpHandler) Create(c *gin.Context) {
 }
 
 func (h httpHandler) Update(c *gin.Context) {
-	// namespace := "default"
+	namespace := "default"
 
-	// if c.Query("namespace") != "" {
-	// 	namespace = c.Query("namespace")
-	// }
-	// name := c.Param("name")
+	if c.Query("namespace") != "" {
+		namespace = c.Query("namespace")
+	}
 
 	execution := Execution{}
 	if err := c.BindJSON(&execution); err != nil {
@@ -123,7 +125,8 @@ func (h httpHandler) Update(c *gin.Context) {
 		return
 	}
 
-	item, err := h.executionUseCase.Update(c.Request.Context(), execution)
+	sharedInfraName := c.Param("shared-infra-name")
+	item, err := h.executionUseCase.Update(c.Request.Context(), sharedInfraName, namespace, execution)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -141,8 +144,8 @@ func (h httpHandler) Delete(c *gin.Context) {
 		namespace = c.Query("namespace")
 	}
 	name := c.Param("name")
-
-	err := h.executionUseCase.Delete(c.Request.Context(), name, namespace)
+	sharedInfraName := c.Param("shared-infra-name")
+	err := h.executionUseCase.Delete(c.Request.Context(), sharedInfraName, name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),

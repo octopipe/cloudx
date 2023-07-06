@@ -34,13 +34,24 @@ spec:
             type: object
           spec:
             properties:
-              config:
+              awsConfig:
                 properties:
-                  source:
+                  region:
+                    type: string
+                  role:
                     type: string
                 required:
-                - source
+                - region
                 type: object
+              secretRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+              source:
+                type: string
               type:
                 type: string
             type: object

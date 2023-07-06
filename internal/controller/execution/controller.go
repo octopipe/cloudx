@@ -1,4 +1,4 @@
-package sharedinfra
+package execution
 
 import (
 	"context"
@@ -7,12 +7,13 @@ import (
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/engine"
-	"github.com/octopipe/cloudx/internal/runner"
+	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 type Controller interface {
@@ -22,20 +23,21 @@ type Controller interface {
 
 type controller struct {
 	client.Client
-	logger *zap.Logger
-	scheme *runtime.Scheme
+	logger   *zap.Logger
+	scheme   *runtime.Scheme
+	provider provider.Provider
 }
 
-func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme) Controller {
+func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, provider provider.Provider) Controller {
 	return &controller{
-		Client: client,
-		logger: logger,
-		scheme: scheme,
+		Client:   client,
+		logger:   logger,
+		scheme:   scheme,
+		provider: provider,
 	}
 }
 
 func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
 	currentExecution := &commonv1alpha1.Execution{}
 	err := c.Get(ctx, req.NamespacedName, currentExecution)
 	if err != nil {
@@ -55,29 +57,21 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	err = c.Get(ctx, sharedInfraRef, currentSharedInfra)
 	if err != nil {
+		c.logger.Error("Failed to get execution shared-infra", zap.Error(err))
 		return ctrl.Result{}, err
 	}
 
 	rawSharedInfra, err := json.Marshal(currentSharedInfra)
 	if err != nil {
+		c.logger.Error("Failed to parse shared-infra", zap.Error(err))
 		return ctrl.Result{}, err
 	}
 
-	// for _, e := range currentSharedInfra.Status.Executions {
-	// 	if e.Name == req.Name && e.Namespace == req.Namespace {
-	// 		return ctrl.Result{}, nil
-	// 	}
-	// }
-
-	// currentSharedInfra.Status.Executions = append(
-	// 	[]commonv1alpha1.Ref{{Name: currentExecution.Name, Namespace: currentExecution.Namespace}},
-	// 	currentSharedInfra.Status.Executions...,
-	// )
-
-	// err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
+	escapedSharedInfra, err := json.Marshal(rawSharedInfra)
+	if err != nil {
+		c.logger.Error("Failed to parse shared-infra", zap.Error(err))
+		return ctrl.Result{}, err
+	}
 
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
@@ -85,13 +79,15 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		Namespace: currentSharedInfra.Spec.ProviderConfigRef.Namespace,
 	}, &providerConfig)
 	if err != nil {
+		c.logger.Error("Failed to get provider config by shared infra", zap.Error(err))
 		return ctrl.Result{}, err
 	}
 
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner...")
-		newRunner, err := runner.NewRunner(*currentExecution, *currentSharedInfra, string(rawSharedInfra), providerConfig)
+		newRunner, err := c.NewRunner(*currentExecution, *currentSharedInfra, string(escapedSharedInfra), providerConfig)
 		if err != nil {
+
 			c.logger.Error("Failed to create runner", zap.Error(err))
 			return ctrl.Result{}, err
 		}
@@ -109,6 +105,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&commonv1alpha1.Execution{}).
-		// WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Complete(c)
 }

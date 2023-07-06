@@ -11,6 +11,7 @@ import (
 	executionController "github.com/octopipe/cloudx/internal/controller/execution"
 	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
+	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -53,10 +54,12 @@ func main() {
 		mgr.GetScheme(),
 	)
 
+	provider := provider.NewProvider(mgr.GetClient())
 	executionController := executionController.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
+		provider,
 	)
 
 	runnerController := runner.NewController(

@@ -15,15 +15,22 @@ const getClassNameByExecution = (execution: any) => {
   return 'shared-infra-diagram__default-panel__execution'
 }
 
-const DefaultPanel = ({ sharedInfra, onSelectExecution, onClose }: any) => {
+const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onSelectExecution, onClose }: any) => {
   return (
     <div className='shared-infra-diagram__default-panel'>
       <div>
-        <Card.Title>{sharedInfra?.name}</Card.Title>
+        <div className='d-flex justify-content-between'>
+          <Card.Title>{sharedInfra?.name}</Card.Title>
+          <div>
+            <FontAwesomeIcon style={{cursor: 'pointer'}} icon="diagram-project" onClick={onViewClick} />
+            <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="edit" onClick={onEditClick} />
+            <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="rotate" />
+          </div>
+        </div>
         <p>{sharedInfra?.description}</p>
         <div>
           <strong>Executions</strong>
-          {sharedInfra?.status?.executions?.map((i: any) => (
+          {executions?.map((i: any) => (
             <Card 
               className={`${getClassNameByExecution(i)} mt-1`}
               style={{cursor: 'pointer'}} 

@@ -17,9 +17,9 @@ func NewHTTPHandler(e *gin.Engine, sharedInfraUseCase UseCase) *gin.Engine {
 
 	e.GET("/shared-infras", h.List)
 	e.POST("/shared-infras", h.Create)
-	e.GET("/shared-infras/:name", h.Get)
-	e.PUT("/shared-infras/:name", h.Update)
-	e.DELETE("/shared-infras/:name", h.Delete)
+	e.GET("/shared-infras/:shared-infra-name", h.Get)
+	e.PUT("/shared-infras/:shared-infra-name", h.Update)
+	e.DELETE("/shared-infras/:shared-infra-name", h.Delete)
 
 	return e
 }
@@ -67,7 +67,7 @@ func (h httpHandler) Get(c *gin.Context) {
 	if c.Query("namespace") != "" {
 		namespace = c.Query("namespace")
 	}
-	name := c.Param("name")
+	name := c.Param("shared-infra-name")
 
 	item, err := h.sharedInfraUseCase.Get(c.Request.Context(), name, namespace)
 	if err != nil {
@@ -86,7 +86,7 @@ func (h httpHandler) Create(c *gin.Context) {
 	// if c.Query("namespace") != "" {
 	// 	namespace = c.Query("namespace")
 	// }
-	// name := c.Param("name")
+	// name := c.Param("shared-infra-name")
 
 	sharedInfra := SharedInfra{}
 	if err := c.BindJSON(&sharedInfra); err != nil {
@@ -113,7 +113,7 @@ func (h httpHandler) Update(c *gin.Context) {
 	// if c.Query("namespace") != "" {
 	// 	namespace = c.Query("namespace")
 	// }
-	// name := c.Param("name")
+	// name := c.Param("shared-infra-name")
 
 	sharedInfra := SharedInfra{}
 	if err := c.BindJSON(&sharedInfra); err != nil {
@@ -140,7 +140,7 @@ func (h httpHandler) Delete(c *gin.Context) {
 	if c.Query("namespace") != "" {
 		namespace = c.Query("namespace")
 	}
-	name := c.Param("name")
+	name := c.Param("shared-infra-name")
 
 	err := h.sharedInfraUseCase.Delete(c.Request.Context(), name, namespace)
 	if err != nil {

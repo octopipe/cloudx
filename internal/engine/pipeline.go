@@ -43,7 +43,7 @@ func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvid
 
 func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	status := commonv1alpha1.ExecutionStatus{
-		Status:  ExecutionSuccessStatus,
+		Status:  ExecutionRunningStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
 
@@ -124,7 +124,7 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 			break
 		}
 	}
-
+	status.Status = ExecutionSuccessStatus
 	p.logger.Info("finished pipeline execution")
 	return status
 }

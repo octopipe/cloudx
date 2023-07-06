@@ -19,11 +19,29 @@ const getBadgeVariants = (status: string) => {
   return 'danger'
 }
 
-const SharedInfraCreate = memo(() => {
+const SharedInfraEditor = memo(() => {
   const navigate = useNavigate()
+  const { name } = useParams()
+  const [sharedInfra, setSharedInfra] = useState()
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [plugins, setPlugins] = useState<any>([])
+
+  const getSharedInfra = useCallback(async (name: string) => {
+    const sharedInfraRes = await fetch(`http://localhost:8080/shared-infras/${name}`)
+    const sharedInfra = await sharedInfraRes.json()
+
+    setSharedInfra(sharedInfra)
+    setNodes(toNodes(sharedInfra.plugins, "default"))
+    setEdges(toEdges(sharedInfra.plugins, false))
+  }, [])
+
+  useEffect(() => {
+    if (!name)
+      return
+
+    getSharedInfra(name)
+  }, [name])
 
   const createSharedInfra = useCallback(async (sharedInfra: any) => {
     const res = await fetch(`http://localhost:8080/shared-infras`, {
@@ -57,18 +75,32 @@ const SharedInfraCreate = memo(() => {
     setPlugins(newPlugins)
   }, [setPlugins])
 
+  useEffect(() => {
+    handleDiagramChanges(nodes, edges)
+  }, [nodes, edges])
+
+  useEffect(() => {
+    console.log(plugins)
+  }, [plugins])
+
   
   return (
     <div className="shared-infra-create__content">
-      <DefaultPanel onCreate={createSharedInfra} />
+      <DefaultPanel
+        sharedInfra={sharedInfra}
+        onSave={createSharedInfra}
+        goToView={() => navigate(`/shared-infras/${name}`)}
+      />
+      <div className="shared-infra-view__diagram">
       <SharedInfraDiagram
         action="CREATE"
         nodes={nodes}
         edges={edges}
         onChangeDiagram={handleDiagramChanges}
       />
+      </div>
     </div>
   )
 })
 
-export default SharedInfraCreate
+export default SharedInfraEditor

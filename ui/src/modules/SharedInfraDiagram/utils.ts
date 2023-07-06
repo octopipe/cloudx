@@ -20,7 +20,7 @@ export const toNodes = (plugins: any, type="executionNode") => {
 
 }
 
-export const toEdges = (plugins: any) => {
+export const toEdges = (plugins: any, animated: boolean) => {
   let edges: any = []
   for (let i = 0; i < plugins.length; i++) {
     for (let j = 0; j < plugins[i]?.depends?.length; j++) {
@@ -29,7 +29,7 @@ export const toEdges = (plugins: any) => {
         source: plugins[i].depends[j],
         target: plugins[i].name,
         type: edgeType,
-        animated: true
+        animated,
       }]
     }
   }

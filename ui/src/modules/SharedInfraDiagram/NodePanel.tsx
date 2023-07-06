@@ -31,6 +31,13 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
   const [inputs, setInputs] = useState(JSON.stringify(selectedNode?.data?.inputs, null, 2))
 
   useEffect(() => {
+    let inputsValue = {}
+    try {
+      inputsValue = JSON.parse(inputs)
+    } catch {
+      console.log("invalid inputs")
+    }
+
     onChange({
       ...selectedNode,
       data: {
@@ -39,7 +46,7 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
         name,
         type,
         ref,
-        inputs: JSON.parse(inputs),
+        inputs: inputsValue,
       }
     })
   }, [name, type, ref, inputs])

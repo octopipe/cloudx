@@ -2,23 +2,39 @@ package execution
 
 import (
 	"context"
+	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/pagination"
+	"github.com/octopipe/cloudx/internal/sharedinfra"
 )
 
 type useCase struct {
-	repository Repository
+	repository         Repository
+	sharedInfraUseCase sharedinfra.UseCase
 }
 
-func NewUseCase(repository Repository) UseCase {
-	return useCase{repository: repository}
+func NewUseCase(repository Repository, sharedInfraUseCase sharedinfra.UseCase) UseCase {
+	return useCase{repository: repository, sharedInfraUseCase: sharedInfraUseCase}
 }
 
 // Create implements UseCase.
-func (u useCase) Create(ctx context.Context, execution Execution) (Execution, error) {
+func (u useCase) Create(ctx context.Context, sharedInfraName string, namespace string, execution Execution) (Execution, error) {
+	sharedInfra, err := u.sharedInfraUseCase.Get(ctx, sharedInfraName, namespace)
+	if err != nil {
+		return Execution{}, err
+	}
+
 	newExecution := commonv1alpha1.Execution{
-		Spec: execution.ExecutionSpec,
+		Spec: commonv1alpha1.ExecutionSpec{
+			Author:    execution.Author,
+			Action:    execution.Action,
+			StartedAt: time.Now().Format(time.RFC3339),
+			SharedInfra: commonv1alpha1.Ref{
+				Name:      sharedInfra.Name,
+				Namespace: sharedInfra.Namespace,
+			},
+		},
 	}
 
 	newExecution.SetName(execution.Name)
@@ -30,36 +46,38 @@ func (u useCase) Create(ctx context.Context, execution Execution) (Execution, er
 	}
 
 	return Execution{
-		Name:          s.GetName(),
-		Namespace:     s.GetNamespace(),
-		ExecutionSpec: s.Spec,
-		Status:        s.Status,
+		Name:      s.GetName(),
+		Namespace: s.GetNamespace(),
+		Author:    s.Spec.Author,
+		Action:    s.Spec.Action,
+		Status:    s.Status,
 	}, nil
 }
 
 // Delete implements UseCase.
-func (u useCase) Delete(ctx context.Context, name string, namespace string) error {
+func (u useCase) Delete(ctx context.Context, sharedInfraName string, name string, namespace string) error {
 	return u.repository.Delete(ctx, name, namespace)
 }
 
 // Get implements UseCase.
-func (u useCase) Get(ctx context.Context, name string, namespace string) (Execution, error) {
+func (u useCase) Get(ctx context.Context, sharedInfraName string, name string, namespace string) (Execution, error) {
 	s, err := u.repository.Get(ctx, name, namespace)
 	if err != nil {
 		return Execution{}, err
 	}
 
 	return Execution{
-		Name:          s.GetName(),
-		Namespace:     s.GetNamespace(),
-		ExecutionSpec: s.Spec,
-		Status:        s.Status,
+		Name:      s.GetName(),
+		Namespace: s.GetNamespace(),
+		Author:    s.Spec.Author,
+		Action:    s.Spec.Action,
+		Status:    s.Status,
 	}, nil
 }
 
 // List implements UseCase.
-func (u useCase) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (pagination.ChunkingPaginationResponse[Execution], error) {
-	l, err := u.repository.List(ctx, namespace, chunkPagination)
+func (u useCase) List(ctx context.Context, sharedInfraName string, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (pagination.ChunkingPaginationResponse[Execution], error) {
+	l, err := u.repository.List(ctx, sharedInfraName, namespace, chunkPagination)
 	if err != nil {
 		return pagination.ChunkingPaginationResponse[Execution]{}, err
 	}
@@ -67,10 +85,11 @@ func (u useCase) List(ctx context.Context, namespace string, chunkPagination pag
 	executions := []Execution{}
 	for _, i := range l.Items {
 		executions = append(executions, Execution{
-			Name:          i.GetName(),
-			Namespace:     i.GetNamespace(),
-			ExecutionSpec: i.Spec,
-			Status:        i.Status,
+			Name:      i.GetName(),
+			Namespace: i.GetNamespace(),
+			Author:    i.Spec.Author,
+			Action:    i.Spec.Action,
+			Status:    i.Status,
 		})
 	}
 
@@ -81,9 +100,22 @@ func (u useCase) List(ctx context.Context, namespace string, chunkPagination pag
 }
 
 // Update implements UseCase.
-func (u useCase) Update(ctx context.Context, execution Execution) (Execution, error) {
+func (u useCase) Update(ctx context.Context, sharedInfraName string, namespace string, execution Execution) (Execution, error) {
+	sharedInfra, err := u.sharedInfraUseCase.Get(ctx, sharedInfraName, namespace)
+	if err != nil {
+		return Execution{}, err
+	}
+
 	newExecution := commonv1alpha1.Execution{
-		Spec: execution.ExecutionSpec,
+		Spec: commonv1alpha1.ExecutionSpec{
+			Author:    execution.Author,
+			Action:    execution.Action,
+			StartedAt: time.Now().Format(time.RFC3339),
+			SharedInfra: commonv1alpha1.Ref{
+				Name:      sharedInfra.Name,
+				Namespace: sharedInfra.Namespace,
+			},
+		},
 	}
 
 	newExecution.SetName(execution.Name)
@@ -95,9 +127,10 @@ func (u useCase) Update(ctx context.Context, execution Execution) (Execution, er
 	}
 
 	return Execution{
-		Name:          s.GetName(),
-		Namespace:     s.GetNamespace(),
-		ExecutionSpec: s.Spec,
-		Status:        s.Status,
+		Name:      s.GetName(),
+		Namespace: s.GetNamespace(),
+		Author:    s.Spec.Author,
+		Action:    s.Spec.Action,
+		Status:    s.Status,
 	}, nil
 }

@@ -1,4 +1,4 @@
-package runner
+package execution
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/provider"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,7 +18,7 @@ type Runner struct {
 	Service *v1.Service
 }
 
-func NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
+func (c *controller) NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
 	vFalse := false
 	vTrue := true
 	vUser := int64(65532)
@@ -67,7 +66,7 @@ func NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.Sh
 		serviceAccount = sharedInfra.Spec.RunnerConfig.ServiceAccount
 	}
 
-	varsCreds, err := getCreds(providerConfig)
+	varsCreds, err := c.getCreds(providerConfig)
 	if err != nil {
 		return Runner{}, err
 	}
@@ -90,25 +89,25 @@ func NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.Sh
 		Namespace: execution.Namespace,
 	}
 
+	args := []string{execution.Spec.Action, executionRef.String(), rawSharedInfra}
+
 	newRunnerObject := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-runner-%d", sharedInfra.GetName(), time.Now().Unix()),
-			Namespace: "cloudx-system",
+			Namespace: "default",
 			Labels: map[string]string{
 				"commons.cloudx.io/sharedinfra-name":      sharedInfra.GetName(),
 				"commons.cloudx.io/sharedinfra-namespace": sharedInfra.GetNamespace(),
-				"commons.cloudx.io/execution":             executionRef.String(),
 				"app.kubernetes.io/managed-by":            "cloudx",
 			},
 		},
 		Spec: v1.PodSpec{
-			ServiceAccountName: serviceAccount,
-			RestartPolicy:      v1.RestartPolicyNever,
+			RestartPolicy: v1.RestartPolicyNever,
 			Containers: []v1.Container{
 				{
 					Name:            "runner",
 					Image:           "mayconjrpacheco/cloudx-runner:latest",
-					Args:            []string{execution.Spec.Action, executionRef.String(), rawSharedInfra},
+					Args:            args,
 					ImagePullPolicy: v1.PullAlways,
 					SecurityContext: securityContext,
 					Env:             defaultVars,
@@ -119,14 +118,19 @@ func NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.Sh
 		},
 	}
 
+	if os.Getenv("ENV") != "local" {
+		newRunnerObject.Namespace = "cloudx-system"
+		newRunnerObject.Spec.ServiceAccountName = serviceAccount
+	}
+
 	return Runner{
 		Pod: newRunnerObject,
 	}, nil
 }
 
-func getCreds(providerConfig commonv1alpha1.ProviderConfig) ([]v1.EnvVar, error) {
+func (c controller) getCreds(providerConfig commonv1alpha1.ProviderConfig) ([]v1.EnvVar, error) {
 	if providerConfig.Spec.Type == "AWS" {
-		creds, err := provider.GetCreds(context.Background(), providerConfig.Spec.Config)
+		creds, err := c.provider.GetCreds(context.Background(), providerConfig)
 		if err != nil {
 			return nil, err
 		}

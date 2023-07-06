@@ -5,12 +5,15 @@ import (
 )
 
 type AWSProviderConfig struct {
-	Source string `json:"source"`
+	Role   string `json:"role,omitempty"`
+	Region string `json:"region"`
 }
 
 type ProviderConfigSpec struct {
-	Type   string            `json:"type,omitempty"`
-	Config AWSProviderConfig `json:"config,omitempty"`
+	Type      string            `json:"type,omitempty"`
+	Source    string            `json:"source,omitempty"`
+	AWSConfig AWSProviderConfig `json:"awsConfig,omitempty"`
+	SecretRef Ref               `json:"secretRef,omitempty"`
 }
 
 type ProviderConfigStatus struct {

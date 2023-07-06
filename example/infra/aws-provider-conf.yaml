@@ -4,5 +4,9 @@ metadata:
   name: aws-config
 spec:
   type: AWS
-  config:
-    source: CurrentAccount
+  source: ENV
+  secretRef:
+    name: aws-creds
+    namespace: default
+  awsConfig:
+    region: 'us-east-1'

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -73,7 +75,7 @@ func main() {
 	go func() {
 		currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
 		if action == "APPLY" {
-			currentExecution.Apply(lastExecution, currentSharedInfra, currentExecutionStatusChann)
+			currentExecutionStatusChann <- currentExecution.Apply(lastExecution, currentSharedInfra, currentExecutionStatusChann)
 		} else {
 			currentExecution.Destroy(lastExecution, currentSharedInfra, currentExecutionStatusChann)
 		}
@@ -107,41 +109,22 @@ func main() {
 	}
 }
 
-// func (c runnerContext) setExecutionStatusLive(executionRef types.NamespacedName, currenExecutionChann chan commonv1alpha1.ExecutionStatus, done chan bool) {
-// 	for {
-// 		select {
-// 		case executionStatus := <-currenExecutionChann:
-// 			c.logger.Info("New status received calling controller...")
-// 			rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
-// 				Ref:             executionRef,
-// 				ExecutionStatus: executionStatus,
-// 			}
-
-// 			var reply int
-// 			err := c.rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
-// 			if err != nil {
-// 				c.logger.Fatal("Failed to call rpc execution status", zap.Error(err))
-// 			}
-// 		case <-done:
-// 			c.logger.Info("Finish engine execution")
-// 			return
-// 		}
-// 	}
-// }
-
 func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, types.NamespacedName, string, error) {
 	commandArgs := os.Args[1:]
 	rawExecutionRef := commandArgs[1]
 	action := commandArgs[0]
+	encodedRawSharedInfra := commandArgs[2]
 
-	var rawSharedInfra string
-	err := json.Unmarshal([]byte(commandArgs[2]), &rawSharedInfra)
+	fmt.Println("ARGS", commandArgs)
+	fmt.Println("RAW", commandArgs[2])
+
+	rawDecodedSharedInfra, err := base64.StdEncoding.DecodeString(strings.Trim(encodedRawSharedInfra, "\""))
 	if err != nil {
-		return commonv1alpha1.SharedInfra{}, types.NamespacedName{}, "", err
+		panic(err)
 	}
 
 	var sharedInfra commonv1alpha1.SharedInfra
-	err = json.Unmarshal([]byte(rawSharedInfra), &sharedInfra)
+	err = json.Unmarshal(rawDecodedSharedInfra, &sharedInfra)
 	if err != nil {
 		return commonv1alpha1.SharedInfra{}, types.NamespacedName{}, "", err
 	}

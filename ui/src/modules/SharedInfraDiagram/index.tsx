@@ -141,13 +141,13 @@ const SharedInfraDiagram = ({ sharedInfra, nodes: initialNodes, edges: initialEd
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onNodesChange={(e) => (action == "CREATE" || action == "UPDATE" ) ? onNodesChange(e) : null}
+            onEdgesChange={(e) => (action == "CREATE" || action == "UPDATE" ) ? onEdgesChange(e) : null}
             onNodeClick={onNodeClick}
             onInit={setReactFlowInstance}
             onDrop={onDrop}
             onDragOver={onDragOver}
-            onConnect={onConnect}
+            onConnect={(e) => (action == "CREATE" || action == "UPDATE" ) ? onConnect(e) : null}
             fitView
           >
             <Background />

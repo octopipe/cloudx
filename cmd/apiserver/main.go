@@ -38,11 +38,11 @@ func main() {
 
 	r := gin.Default()
 	r.Use(CORSMiddleware())
-	executionRepository := execution.NewK8sRepository(k8sClient)
-	executionUseCase := execution.NewUseCase(executionRepository)
-
 	sharedInfraRepository := sharedinfra.NewK8sRepository(k8sClient)
 	sharedInfraUseCase := sharedinfra.NewUseCase(sharedInfraRepository)
+
+	executionRepository := execution.NewK8sRepository(k8sClient)
+	executionUseCase := execution.NewUseCase(executionRepository, sharedInfraUseCase)
 
 	connectionInterfaceRepository := connectioninterface.NewK8sRepository(k8sClient)
 	connectionInterfaceUseCase := connectioninterface.NewUseCase(connectionInterfaceRepository)

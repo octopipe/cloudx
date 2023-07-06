@@ -2,11 +2,13 @@ package execution
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/octopipe/cloudx/apis/common/v1alpha1"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/pagination"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,8 +65,18 @@ func (r k8sRepository) Delete(ctx context.Context, name string, namespace string
 }
 
 // List implements Repository.
-func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ExecutionList, error) {
+func (r k8sRepository) List(ctx context.Context, sharedInfraName string, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ExecutionList, error) {
 	var executionList v1alpha1.ExecutionList
-	err := r.client.List(ctx, &executionList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
+	parsedSelector, err := labels.Parse(fmt.Sprintf("commons.cloudx.io/sharedinfra-name=%s,commons.cloudx.io/sharedinfra-namespace=%s", sharedInfraName, namespace))
+	if err != nil {
+		return v1alpha1.ExecutionList{}, err
+	}
+
+	err = r.client.List(ctx, &executionList, &client.ListOptions{
+		Limit:         chunkPagination.Limit,
+		Continue:      chunkPagination.Chunk,
+		Namespace:     namespace,
+		LabelSelector: parsedSelector,
+	})
 	return executionList, err
 }

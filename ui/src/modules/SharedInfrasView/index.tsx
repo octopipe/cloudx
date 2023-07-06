@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Accordion, Alert, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "./index.css"
 import SharedInfraDiagram from "../SharedInfraDiagram";
 import { toEdges, toNodes } from "../SharedInfraDiagram/utils";
@@ -21,10 +21,11 @@ const getBadgeVariants = (status: string) => {
 
 let interval: any
 
-
 const SharedInfraView = () => {
-  const { name } = useParams()
+  const navigate = useNavigate()
+  const { name: sharedInfraName } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
+  const [executions, setExecutions] = useState<any>([])
   const [selectedExecution, setSelectedExecution] = useState<any>()
   const [currentExecution, setCurrentExecution] = useState<any>()
   const [nodes, setNodes] = useState<any>([])
@@ -32,25 +33,30 @@ const SharedInfraView = () => {
 
 
   const getSharedInfra = useCallback(async (name: string) => {
-    const res = await fetch(`http://localhost:8080/shared-infras/${name}`)
-    const item = await res.json()
+    const sharedInfraRes = await fetch(`http://localhost:8080/shared-infras/${name}`)
+    const sharedInfra = await sharedInfraRes.json()
 
-    setSharedInfra(item)
-    setNodes(toNodes(item.plugins, "default"))
-    setEdges(toEdges(item.plugins))
+
+    const executionsRes = await fetch(`http://localhost:8080/shared-infras/${name}/executions`)
+    const executions = await executionsRes.json()
+
+    setSharedInfra(sharedInfra)
+    setExecutions(executions?.items)
+    setNodes(toNodes(sharedInfra.plugins, "default"))
+    setEdges(toEdges(sharedInfra.plugins, false))
   }, [])
 
 
   const getExecution = useCallback(async (name: string, namespace: string) => {
-    const res = await fetch(`http://localhost:8080/executions/${name}?namespace=${namespace}`)
+    const res = await fetch(`http://localhost:8080/shared-infras/${sharedInfraName}/executions/${name}?namespace=${namespace}`)
     const item = await res.json()
     setCurrentExecution(item)
     setNodes(toNodes(item?.status?.plugins || [], "executionNode"))
-    setEdges(toEdges(item?.status?.plugins || []))
+    setEdges(toEdges(item?.status?.plugins || [], true))
   }, [])
 
   useEffect(() => {
-    if (!name)
+    if (!sharedInfraName)
       return
     
     if (!!selectedExecution) {
@@ -64,16 +70,22 @@ const SharedInfraView = () => {
 
     clearInterval(interval)
     interval = setInterval(() => {
-      getSharedInfra(name)
+      getSharedInfra(sharedInfraName)
     }, 3000)
-    getSharedInfra(name)
+    getSharedInfra(sharedInfraName)
 
     return () => clearInterval(interval)
   }, [selectedExecution])
   
   return (
     <div className="shared-infra-view__content">
-      <DefaultPanel sharedInfra={sharedInfra} onSelectExecution={(e: any) => setSelectedExecution(e)} />
+      <DefaultPanel
+        sharedInfra={sharedInfra}
+        executions={executions}
+        onViewClick={() => setSelectedExecution(null)}
+        onEditClick={() => navigate(`/shared-infras/${sharedInfraName}/edit`)}
+        onSelectExecution={(e: any) => setSelectedExecution(e)}
+      />
       {currentExecution && currentExecution?.status?.error && (
         <Alert
           style={{position: 'fixed', top: '10px', right: '10px', left: '390px'}}
