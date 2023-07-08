@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
@@ -54,6 +56,12 @@ func main() {
 	r = sharedinfra.NewHTTPHandler(r, sharedInfraUseCase)
 	r = connectioninterface.NewHTTPHandler(r, connectionInterfaceUseCase)
 	r = providerconfig.NewHTTPHandler(r, providerConfigUseCase)
+
+	r.GET("/healthz", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, map[string]string{
+			"message": ":)",
+		})
+	})
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }

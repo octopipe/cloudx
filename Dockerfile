@@ -16,10 +16,11 @@ FROM alpine AS build-release-stage
 
 WORKDIR /
 
-COPY --from=build-stage /apiserver /apiserver
-COPY --from=build-stage /controller /controller
-COPY --from=build-stage /runner /runner
+RUN apk add --no-cache tini
 
-USER 65532:65532
+COPY --from=build-stage /apiserver /usr/local/bin/apiserver
+COPY --from=build-stage /controller /usr/local/bin/controller
+COPY --from=build-stage /runner /usr/local/bin/runner
 
-ENTRYPOINT ["/job-bin"]
+USER 999
+ENTRYPOINT ["/sbin/tini", "--"]

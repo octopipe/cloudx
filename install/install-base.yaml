@@ -147,10 +147,11 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cloudx-role
+  name: cloudx-apiserver
 subjects:
 - kind: ServiceAccount
   name: cloudx-apiserver
+  namespace: cloudx-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -163,10 +164,11 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cloudx-role
+  name: cloudx-controller
 subjects:
 - kind: ServiceAccount
   name: cloudx-controller
+  namespace: cloudx-system
 ---
 apiVersion: v1
 kind: Service
@@ -200,13 +202,9 @@ metadata:
 spec:
   ports:
   - name: http
-    port: 80
+    port: 9000
     protocol: TCP
-    targetPort: 8080
-  - name: https
-    port: 443
-    protocol: TCP
-    targetPort: 8080
+    targetPort: 9000
   selector:
     app.kubernetes.io/name: cloudx-controller
 ---
@@ -229,24 +227,16 @@ spec:
         app.kubernetes.io/name: cloudx-apiserver
     spec:
       containers:
-      - command:
-        - /apiserver
+      - args:
+        - /usr/local/bin/apiserver
         image: mayconjrpacheco/cloudx:latest
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8001
+            port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
         name: apiserver
-        ports:
-        - containerPort: 8000
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8001
-          initialDelaySeconds: 5
-          periodSeconds: 10
         resources:
           limits:
             cpu: 100m
@@ -258,7 +248,7 @@ spec:
           allowPrivilegeEscalation: false
       securityContext:
         runAsNonRoot: true
-      serviceAccountName: apiserver-sa
+      serviceAccountName: cloudx-apiserver
       terminationGracePeriodSeconds: 10
 ---
 apiVersion: apps/v1
@@ -283,13 +273,13 @@ spec:
       - args:
         - --leader-elect
         command:
-        - /controller
+        - /usr/local/bin/controller
         env:
         - name: RPC_SERVER_ADDRESS
-          value: controller.cloudx-system:9000
+          value: cloudx-controller.cloudx-system:9000
         - name: ENV
           value: prod
-        image: mayconjrpacheco/cloudx-controller:latest
+        image: mayconjrpacheco/cloudx:latest
         livenessProbe:
           httpGet:
             path: /healthz
@@ -316,5 +306,5 @@ spec:
           allowPrivilegeEscalation: false
       securityContext:
         runAsNonRoot: true
-      serviceAccountName: controller-sa
+      serviceAccountName: cloudx-controller
       terminationGracePeriodSeconds: 10

@@ -44,7 +44,7 @@ manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRol
 
 
 build-job:
-	docker build -t mayconjrpacheco/cloudx-runner:latest -f Dockerfile.runner .
+	docker build -t mayconjrpacheco/cloudx-runner:latest --platform=linux/amd64 -f Dockerfile.runner .
 	docker push mayconjrpacheco/cloudx-runner:latest
 
 build-controller:

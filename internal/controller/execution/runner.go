@@ -60,7 +60,7 @@ func (c *controller) NewRunner(execution commonv1alpha1.Execution, sharedInfra c
 			MountPath: "/home/runner",
 		},
 	}
-	serviceAccount := "controller-sa"
+	serviceAccount := "cloudx-controller"
 
 	if sharedInfra.Spec.RunnerConfig.ServiceAccount != "" {
 		serviceAccount = sharedInfra.Spec.RunnerConfig.ServiceAccount
@@ -89,7 +89,7 @@ func (c *controller) NewRunner(execution commonv1alpha1.Execution, sharedInfra c
 		Namespace: execution.Namespace,
 	}
 
-	args := []string{execution.Spec.Action, executionRef.String(), rawSharedInfra}
+	args := []string{"/usr/local/bin/runner", execution.Spec.Action, executionRef.String(), rawSharedInfra}
 
 	newRunnerObject := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -106,7 +106,7 @@ func (c *controller) NewRunner(execution commonv1alpha1.Execution, sharedInfra c
 			Containers: []v1.Container{
 				{
 					Name:            "runner",
-					Image:           "mayconjrpacheco/cloudx-runner:latest",
+					Image:           "mayconjrpacheco/cloudx:latest",
 					Args:            args,
 					ImagePullPolicy: v1.PullAlways,
 					SecurityContext: securityContext,

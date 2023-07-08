@@ -19,26 +19,18 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - command:
-        - /apiserver
+      - args:
+        - /usr/local/bin/apiserver
         image: mayconjrpacheco/cloudx:latest
         name: apiserver
-        ports:
-        - containerPort: 8000
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8001
+            port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8001
-          initialDelaySeconds: 5
-          periodSeconds: 10
         resources:
           limits:
             cpu: 100m
@@ -46,5 +38,5 @@ spec:
           requests:
             cpu: 100m
             memory: 200Mi
-      serviceAccountName: apiserver-sa
+      serviceAccountName: cloudx-apiserver
       terminationGracePeriodSeconds: 10

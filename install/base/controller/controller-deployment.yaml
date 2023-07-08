@@ -12,12 +12,8 @@ spec:
   ports:
   - name: http
     protocol: TCP
-    port: 80
-    targetPort: 8080
-  - name: https
-    protocol: TCP
-    port: 443
-    targetPort: 8080
+    port: 9000
+    targetPort: 9000
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,16 +37,16 @@ spec:
         runAsNonRoot: true
       containers:
       - command:
-        - /controller
+        - /usr/local/bin/controller
         args:
         - --leader-elect
-        image: mayconjrpacheco/cloudx-controller:latest
+        image: mayconjrpacheco/cloudx:latest
         name: controller
         ports:
         - containerPort: 9000
         env:
         - name: RPC_SERVER_ADDRESS
-          value: "controller.cloudx-system:9000"
+          value: "cloudx-controller.cloudx-system:9000"
         - name: ENV
           value: prod
         securityContext:
@@ -74,5 +70,5 @@ spec:
           requests:
             cpu: 100m
             memory: 200Mi
-      serviceAccountName: controller-sa
+      serviceAccountName: cloudx-controller
       terminationGracePeriodSeconds: 10
