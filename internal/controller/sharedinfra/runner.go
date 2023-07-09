@@ -1,4 +1,4 @@
-package execution
+package sharedinfra
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 type Runner struct {
@@ -18,7 +17,7 @@ type Runner struct {
 	Service *v1.Service
 }
 
-func (c *controller) NewRunner(execution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
+func (c *controller) NewRunner(action string, sharedInfra commonv1alpha1.SharedInfra, rawSharedInfra string, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
 	vFalse := false
 	vTrue := true
 	vUser := int64(65532)
@@ -84,12 +83,7 @@ func (c *controller) NewRunner(execution commonv1alpha1.Execution, sharedInfra c
 
 	defaultVars = append(defaultVars, varsCreds...)
 
-	executionRef := types.NamespacedName{
-		Name:      execution.Name,
-		Namespace: execution.Namespace,
-	}
-
-	args := []string{"/usr/local/bin/runner", execution.Spec.Action, executionRef.String(), rawSharedInfra}
+	args := []string{"/usr/local/bin/runner", action, rawSharedInfra}
 
 	newRunnerObject := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{

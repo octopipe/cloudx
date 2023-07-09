@@ -41,14 +41,14 @@ func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvid
 	}
 }
 
-func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+	lastExecution := sharedInfra.Status.LastExecution
 	status := commonv1alpha1.ExecutionStatus{
 		Status:  ExecutionRunningStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
 	currentExecutionStatusChann <- status
 
-	// eg, _ := errgroup.WithContext(context.Background())
 	eg := new(errgroup.Group)
 	inDegrees := make(map[string]int)
 
@@ -67,7 +67,7 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 						pluginExecutionStatus, pluginOutput := commonv1alpha1.PluginExecutionStatus{}, map[string]any{}
 						if action == DestroyAction {
 							lastPluginExecution := commonv1alpha1.PluginExecutionStatus{}
-							for _, statusPlugin := range lastExecution.Status.Plugins {
+							for _, statusPlugin := range lastExecution.Plugins {
 								if statusPlugin.Name == node {
 									lastPluginExecution = statusPlugin
 									break
@@ -130,7 +130,7 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, la
 	return status
 }
 
-func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.Execution, lastExecutionPlugin commonv1alpha1.PluginExecutionStatus) commonv1alpha1.PluginExecutionStatus {
+func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.ExecutionStatus, lastExecutionPlugin commonv1alpha1.PluginExecutionStatus) commonv1alpha1.PluginExecutionStatus {
 	status := commonv1alpha1.PluginExecutionStatus{
 		Name:       lastExecutionPlugin.Name,
 		Ref:        lastExecutionPlugin.Ref,
@@ -159,10 +159,10 @@ func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.Execution, lastExe
 	return status
 }
 
-func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.Execution, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]any) {
+func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]any) {
 	lastPluginExecutionStatus := commonv1alpha1.PluginExecutionStatus{}
 
-	for _, e := range lastExecution.Status.Plugins {
+	for _, e := range lastExecution.Plugins {
 		if e.Name == currentPlugin.Name {
 			lastPluginExecutionStatus = e
 		}

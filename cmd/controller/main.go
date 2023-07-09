@@ -8,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/connectioninterface"
-	executionController "github.com/octopipe/cloudx/internal/controller/execution"
 	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/provider"
@@ -48,14 +47,8 @@ func main() {
 
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 
-	sharedInfraController := sharedinfra.NewController(
-		logger,
-		mgr.GetClient(),
-		mgr.GetScheme(),
-	)
-
 	provider := provider.NewProvider(mgr.GetClient())
-	executionController := executionController.NewController(
+	sharedInfraController := sharedinfra.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
@@ -70,10 +63,6 @@ func main() {
 	)
 
 	if err := sharedInfraController.SetupWithManager(mgr); err != nil {
-		panic(err)
-	}
-
-	if err := executionController.SetupWithManager(mgr); err != nil {
 		panic(err)
 	}
 

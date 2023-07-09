@@ -63,7 +63,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	logsStr := buf.String()
 
-	// fmt.Println(currentJob.Status.Conditions)
 	c.logger.Info("runner logss", zap.String("name", currentRunner.GetName()), zap.String("logs", logsStr))
 
 	return ctrl.Result{}, nil

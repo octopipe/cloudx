@@ -102,6 +102,20 @@ func (_m *UseCase) List(ctx context.Context, namespace string, chunkPagination p
 	return r0, r1
 }
 
+// Reconcile provides a mock function with given fields: ctx, name, namespace
+func (_m *UseCase) Reconcile(ctx context.Context, name string, namespace string) error {
+	ret := _m.Called(ctx, name, namespace)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, name, namespace)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Update provides a mock function with given fields: ctx, sharedInfra
 func (_m *UseCase) Update(ctx context.Context, sharedInfra sharedinfra.SharedInfra) (sharedinfra.SharedInfra, error) {
 	ret := _m.Called(ctx, sharedInfra)

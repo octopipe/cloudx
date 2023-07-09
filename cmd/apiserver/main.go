@@ -7,7 +7,6 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/connectioninterface"
-	"github.com/octopipe/cloudx/internal/execution"
 	"github.com/octopipe/cloudx/internal/providerconfig"
 	"github.com/octopipe/cloudx/internal/sharedinfra"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,16 +42,12 @@ func main() {
 	sharedInfraRepository := sharedinfra.NewK8sRepository(k8sClient)
 	sharedInfraUseCase := sharedinfra.NewUseCase(sharedInfraRepository)
 
-	executionRepository := execution.NewK8sRepository(k8sClient)
-	executionUseCase := execution.NewUseCase(executionRepository, sharedInfraUseCase)
-
 	connectionInterfaceRepository := connectioninterface.NewK8sRepository(k8sClient)
 	connectionInterfaceUseCase := connectioninterface.NewUseCase(connectionInterfaceRepository)
 
 	providerConfigRepository := providerconfig.NewK8sRepository(k8sClient)
 	providerConfigUseCase := providerconfig.NewUseCase(providerConfigRepository)
 
-	r = execution.NewHTTPHandler(r, executionUseCase)
 	r = sharedinfra.NewHTTPHandler(r, sharedInfraUseCase)
 	r = connectioninterface.NewHTTPHandler(r, connectionInterfaceUseCase)
 	r = providerconfig.NewHTTPHandler(r, providerConfigUseCase)

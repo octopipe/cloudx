@@ -15,9 +15,20 @@ type Client interface {
 }
 
 func NewRPCClient(address string) (Client, error) {
-	rpcClient, err := rpc.DialHTTP("tcp", address)
+	var rpcClient *rpc.Client
+	operation := func() error {
+		r, err := rpc.DialHTTP("tcp", address)
+		if err != nil {
+			return err
+		}
+
+		rpcClient = r
+		return nil
+	}
+
+	err := backoff.Retry(operation, backoff.NewExponentialBackOff())
 	if err != nil {
-		return client{}, err
+		return nil, err
 	}
 
 	return client{rpcClient: rpcClient}, nil

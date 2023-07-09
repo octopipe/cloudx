@@ -466,15 +466,61 @@ spec:
             type: object
           status:
             properties:
-              executions:
-                items:
-                  properties:
-                    name:
-                      type: string
-                    namespace:
-                      type: string
-                  type: object
-                type: array
+              lastExecution:
+                properties:
+                  error:
+                    type: string
+                  finishedAt:
+                    type: string
+                  plugins:
+                    items:
+                      properties:
+                        dependencyLock:
+                          type: string
+                        depends:
+                          items:
+                            type: string
+                          type: array
+                        error:
+                          type: string
+                        finishedAt:
+                          type: string
+                        inputs:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              value:
+                                type: string
+                            required:
+                            - key
+                            - value
+                            type: object
+                          type: array
+                        name:
+                          type: string
+                        ref:
+                          type: string
+                        startedAt:
+                          type: string
+                        state:
+                          type: string
+                        status:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - inputs
+                      - name
+                      - ref
+                      - type
+                      type: object
+                    type: array
+                  startedAt:
+                    type: string
+                  status:
+                    type: string
+                type: object
             type: object
         type: object
     served: true

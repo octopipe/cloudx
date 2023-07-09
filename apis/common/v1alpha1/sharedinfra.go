@@ -48,8 +48,30 @@ type SharedInfraSpec struct {
 	Plugins           []SharedInfraPlugin     `json:"plugins"`
 }
 
+type PluginExecutionStatus struct {
+	Name           string                   `json:"name"`
+	Ref            string                   `json:"ref"`
+	Depends        []string                 `json:"depends,omitempty"`
+	PluginType     string                   `json:"type"`
+	Inputs         []SharedInfraPluginInput `json:"inputs"`
+	State          string                   `json:"state,omitempty"`
+	DependencyLock string                   `json:"dependencyLock,omitempty"`
+	StartedAt      string                   `json:"startedAt,omitempty"`
+	FinishedAt     string                   `json:"finishedAt,omitempty"`
+	Status         string                   `json:"status,omitempty"`
+	Error          string                   `json:"error,omitempty"`
+}
+
+type ExecutionStatus struct {
+	Plugins    []PluginExecutionStatus `json:"plugins,omitempty"`
+	StartedAt  string                  `json:"startedAt,omitempty"`
+	FinishedAt string                  `json:"finishedAt,omitempty"`
+	Status     string                  `json:"status,omitempty"`
+	Error      string                  `json:"error,omitempty"`
+}
+
 type SharedInfraStatus struct {
-	Executions []Ref `json:"executions,omitempty"`
+	LastExecution ExecutionStatus `json:"lastExecution,omitempty"`
 }
 
 //+kubebuilder:object:root=true

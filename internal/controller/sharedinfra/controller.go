@@ -2,14 +2,17 @@ package sharedinfra
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"os"
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/controller/utils"
 	"github.com/octopipe/cloudx/internal/engine"
+	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -23,15 +26,17 @@ type Controller interface {
 
 type controller struct {
 	client.Client
-	logger *zap.Logger
-	scheme *runtime.Scheme
+	logger   *zap.Logger
+	scheme   *runtime.Scheme
+	provider provider.Provider
 }
 
-func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme) Controller {
+func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, provider provider.Provider) Controller {
 	return &controller{
-		Client: client,
-		logger: logger,
-		scheme: scheme,
+		Client:   client,
+		logger:   logger,
+		scheme:   scheme,
+		provider: provider,
 	}
 }
 
@@ -42,74 +47,64 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	if currentSharedInfra.Status.LastExecution.Status == engine.ExecutionRunningStatus {
+		c.logger.Info("This sharedinfra has runner in execution, enqueue this request")
+		return ctrl.Result{
+			RequeueAfter: time.Second * 2,
+		}, nil
+	}
+
 	action := "APPLY"
 	if len(currentSharedInfra.Finalizers) > 0 {
 		action = "DESTROY"
 	}
 
-	newExecution := commonv1alpha1.Execution{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("execution-%s-%d", currentSharedInfra.GetName(), time.Now().UnixMilli()),
-			Namespace: currentSharedInfra.GetNamespace(),
-			Labels: map[string]string{
-				"commons.cloudx.io/sharedinfra-name":      currentSharedInfra.GetName(),
-				"commons.cloudx.io/sharedinfra-namespace": currentSharedInfra.GetNamespace(),
-			},
-		},
-		Spec: commonv1alpha1.ExecutionSpec{
-			Action: action,
-			SharedInfra: commonv1alpha1.Ref{
-				Name:      currentSharedInfra.GetName(),
-				Namespace: currentSharedInfra.GetNamespace(),
-			},
-			StartedAt: time.Now().Format(time.RFC3339),
-		},
-	}
-
-	hasExecutionRunning, err := c.hasExecutionRunning(ctx, req)
+	rawSharedInfra, err := json.Marshal(currentSharedInfra)
 	if err != nil {
-		return ctrl.Result{}, err
+		c.logger.Error("Failed to parse shared-infra", zap.Error(err))
+		return ctrl.Result{Requeue: false}, err
 	}
 
-	if hasExecutionRunning {
-		c.logger.Info("the shared infra has a execution in status running", zap.String("shared-infra", currentSharedInfra.Name))
-		return ctrl.Result{}, nil
-	}
-
-	c.logger.Info("creating new execution", zap.String("shared-infra", currentSharedInfra.Name))
-	err = c.Create(ctx, &newExecution)
+	escapedSharedInfra, err := json.Marshal(rawSharedInfra)
 	if err != nil {
-		return ctrl.Result{}, err
+		c.logger.Error("Failed to parse shared-infra", zap.Error(err))
+		return ctrl.Result{Requeue: false}, err
 	}
 
-	// newExecution.Status = commonv1alpha1.ExecutionStatus{
-
-	// 	Status: engine.ExecutionRunningStatus,
-	// }
-
-	// err = utils.UpdateExecutionStatus(c.Client, newExecution)
-	// if err != nil {
-	// 	return ctrl.Result{}, err
-	// }
-
-	return ctrl.Result{}, nil
-}
-
-func (c *controller) hasExecutionRunning(ctx context.Context, sharedInfraRef ctrl.Request) (bool, error) {
-	executionList := commonv1alpha1.ExecutionList{}
-
-	err := c.List(ctx, &executionList)
+	providerConfig := commonv1alpha1.ProviderConfig{}
+	err = c.Get(ctx, types.NamespacedName{
+		Name:      currentSharedInfra.Spec.ProviderConfigRef.Name,
+		Namespace: currentSharedInfra.Spec.ProviderConfigRef.Namespace,
+	}, &providerConfig)
 	if err != nil {
-		return false, err
+		c.logger.Error("Failed to get provider config by shared infra", zap.Error(err))
+		return ctrl.Result{
+			RequeueAfter: time.Second * 2,
+		}, err
 	}
 
-	for _, i := range executionList.Items {
-		if i.Spec.SharedInfra.Name == sharedInfraRef.Name && i.Spec.SharedInfra.Namespace == sharedInfraRef.Namespace && i.Status.Status == engine.ExecutionRunningStatus {
-			return true, nil
+	if os.Getenv("ENV") != "local" {
+		c.logger.Info("creating runner...")
+		newRunner, err := c.NewRunner(action, *currentSharedInfra, string(escapedSharedInfra), providerConfig)
+		if err != nil {
+			c.logger.Error("Failed to create runner", zap.Error(err))
+			return ctrl.Result{Requeue: false}, err
+		}
+
+		err = c.Create(ctx, newRunner.Pod)
+		if err != nil {
+			c.logger.Error("Failed to apply runner", zap.Error(err))
+			return ctrl.Result{Requeue: false}, err
+		}
+
+		err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
+		if err != nil {
+			c.logger.Error("Failed to update sharedinfra status", zap.Error(err))
+			return ctrl.Result{Requeue: false}, err
 		}
 	}
 
-	return false, nil
+	return ctrl.Result{Requeue: false}, nil
 }
 
 func ignoreDeletionPredicate() predicate.Predicate {

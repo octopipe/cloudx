@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -51,17 +49,24 @@ func main() {
 		logger:    logger,
 	}
 
-	currentSharedInfra, executionRef, action, err := newRunnerContext.getDataFromCommandArgs()
+	sharedInfraRef, action := newRunnerContext.getDataFromCommandArgs()
 	if err != nil {
 		panic(err)
 	}
 
 	logger.Info("getting last execution")
 
-	lastExecution := newRunnerContext.getLastExecution(executionRef)
+	currentSharedInfra := &commonv1alpha1.SharedInfra{}
+	err = newRunnerContext.rpcClient.Call("RPCServer.GetSharedInfra", sharedinfra.RPCGetSharedInfraArgs{
+		Ref: sharedInfraRef,
+	}, currentSharedInfra)
+	if err != nil {
+		panic(err)
+	}
+
 	currentExecutionStatusChann := make(chan commonv1alpha1.ExecutionStatus)
 
-	go newRunnerContext.startTimeout(executionRef, lastExecution, currentExecutionStatusChann)
+	go newRunnerContext.startTimeout(sharedInfraRef, currentExecutionStatusChann)
 
 	logger.Info("installing terraform provider")
 	terraformProvider, err := terraform.NewTerraformProvider(logger, "")
@@ -70,19 +75,16 @@ func main() {
 	}
 
 	doneChann := make(chan bool)
-	// go newRunnerContext.setExecutionStatusLive(executionRef, currentExecutionStatusChann, doneChann)
 
 	go func() {
 		currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
 		if action == "APPLY" {
-			currentExecutionStatusChann <- currentExecution.Apply(lastExecution, currentSharedInfra, currentExecutionStatusChann)
+			currentExecutionStatusChann <- currentExecution.Apply(*currentSharedInfra, currentExecutionStatusChann)
 		} else {
-			currentExecution.Destroy(lastExecution, currentSharedInfra, currentExecutionStatusChann)
+			currentExecution.Destroy(*currentSharedInfra, currentExecutionStatusChann)
 		}
 
 		doneChann <- true
-		// close(currentExecutionStatusChann)
-		// close(doneChann)
 	}()
 
 	for {
@@ -90,7 +92,7 @@ func main() {
 		case executionStatus := <-currentExecutionStatusChann:
 			logger.Info("New status received calling controller...")
 			rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
-				Ref:             executionRef,
+				Ref:             sharedInfraRef,
 				ExecutionStatus: executionStatus,
 			}
 
@@ -109,47 +111,33 @@ func main() {
 	}
 }
 
-func (c runnerContext) getDataFromCommandArgs() (commonv1alpha1.SharedInfra, types.NamespacedName, string, error) {
+func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string) {
 	commandArgs := os.Args[1:]
-	rawExecutionRef := commandArgs[1]
 	action := commandArgs[0]
-	encodedRawSharedInfra := commandArgs[2]
+	rawSharedInfraRef := commandArgs[1]
 
 	fmt.Println("ARGS", commandArgs)
 	fmt.Println("RAW", commandArgs[2])
 
-	rawDecodedSharedInfra, err := base64.StdEncoding.DecodeString(strings.Trim(encodedRawSharedInfra, "\""))
-	if err != nil {
-		panic(err)
-	}
+	sharedInfraRef := types.NamespacedName{}
 
-	var sharedInfra commonv1alpha1.SharedInfra
-	err = json.Unmarshal(rawDecodedSharedInfra, &sharedInfra)
-	if err != nil {
-		return commonv1alpha1.SharedInfra{}, types.NamespacedName{}, "", err
-	}
-
-	executionRef := types.NamespacedName{}
-
-	s := strings.Split(rawExecutionRef, "/")
+	s := strings.Split(rawSharedInfraRef, "/")
 	if len(s) > 1 {
-		executionRef.Namespace = s[0]
-		executionRef.Name = s[1]
+		sharedInfraRef.Namespace = s[0]
+		sharedInfraRef.Name = s[1]
 	} else {
-		executionRef.Name = s[0]
-		executionRef.Namespace = "default"
+		sharedInfraRef.Name = s[0]
+		sharedInfraRef.Namespace = "default"
 	}
 
-	return sharedInfra, executionRef, action, nil
+	return sharedInfraRef, action
 }
 
-func (c runnerContext) startTimeout(executionRef types.NamespacedName, lastExecution commonv1alpha1.Execution, currentExecutionStatusChann <-chan commonv1alpha1.ExecutionStatus) {
+func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, currentExecutionStatusChann <-chan commonv1alpha1.ExecutionStatus) {
 	time.Sleep(5 * time.Minute)
 
-	lastExecution.Status.Status = engine.ExecutionTimeout
-	lastExecution.Status.Error = "Time exceeded"
 	rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
-		Ref:             executionRef,
+		Ref:             sharedInfraRef,
 		ExecutionStatus: <-currentExecutionStatusChann,
 	}
 
@@ -160,18 +148,4 @@ func (c runnerContext) startTimeout(executionRef types.NamespacedName, lastExecu
 	}
 
 	c.logger.Fatal("Runner timeout")
-}
-
-func (c runnerContext) getLastExecution(executionRef types.NamespacedName) commonv1alpha1.Execution {
-	var reply commonv1alpha1.Execution
-	args := &sharedinfra.RPCGetLastExecutionArgs{
-		Ref: executionRef,
-	}
-
-	err := c.rpcClient.Call("RPCServer.GetLastExecution", args, &reply)
-	if err != nil {
-		c.logger.Fatal("call rpc get last execution error")
-	}
-
-	return reply
 }

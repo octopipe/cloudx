@@ -46,9 +46,9 @@ func NewEngine(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvider
 	}
 }
 
-func (e engine) getPluginsForDeletion(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra) map[string]commonv1alpha1.PluginExecutionStatus {
+func (e engine) getPluginsForDeletion(lastExecution commonv1alpha1.ExecutionStatus, sharedInfra commonv1alpha1.SharedInfra) map[string]commonv1alpha1.PluginExecutionStatus {
 	forDeletion := map[string]commonv1alpha1.PluginExecutionStatus{}
-	for _, lastPluginExecution := range lastExecution.Status.Plugins {
+	for _, lastPluginExecution := range lastExecution.Plugins {
 		foundPlugin := false
 		for _, currentPlugin := range sharedInfra.Spec.Plugins {
 			if lastPluginExecution.Name == currentPlugin.Name {
@@ -117,10 +117,11 @@ func (p *engine) validateInputInterpolations(sharedInfra commonv1alpha1.SharedIn
 	return nil
 }
 
-func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (e engine) Apply(sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+	lastExecution := sharedInfra.Status.LastExecution
 	status := commonv1alpha1.ExecutionStatus{
 		Status:  ExecutionSuccessStatus,
-		Plugins: lastExecution.Status.Plugins,
+		Plugins: lastExecution.Plugins,
 	}
 
 	if err := e.validateDependencies(sharedInfra); err != nil {
@@ -156,7 +157,7 @@ func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra common
 			}
 		}
 
-		deletionStatus := pipelineForDeletion.Execute(DestroyAction, dependencyGraphForDeletion, lastExecution, sharedInfra, currentExecutionStatusChann)
+		deletionStatus := pipelineForDeletion.Execute(DestroyAction, dependencyGraphForDeletion, sharedInfra, currentExecutionStatusChann)
 		if deletionStatus.Status != ExecutionSuccessStatus {
 			status.Status = ExecutionErrorStatus
 			status.Error = "Failed to delete diff plugins"
@@ -165,14 +166,14 @@ func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra common
 
 		// Updating lastexecution after success on destroying plugins
 		updatedLastExecutionPlugins := []commonv1alpha1.PluginExecutionStatus{}
-		for _, p := range lastExecution.Status.Plugins {
+		for _, p := range lastExecution.Plugins {
 			if _, ok := pluginsForDeletion[p.Name]; !ok {
 				updatedLastExecutionPlugins = append(updatedLastExecutionPlugins, p)
 			}
 
 		}
 
-		lastExecution.Status.Plugins = updatedLastExecutionPlugins
+		lastExecution.Plugins = updatedLastExecutionPlugins
 	}
 
 	dependencyGraphForApply := DependencyGraph{}
@@ -181,10 +182,10 @@ func (e engine) Apply(lastExecution commonv1alpha1.Execution, sharedInfra common
 	}
 
 	pipelineForApply := NewPipeline(e.logger, e.rpcClient, e.terraformProvider)
-	return pipelineForApply.Execute(ApplyAction, dependencyGraphForApply, lastExecution, sharedInfra, currentExecutionStatusChann)
+	return pipelineForApply.Execute(ApplyAction, dependencyGraphForApply, sharedInfra, currentExecutionStatusChann)
 }
 
-func (e engine) Destroy(lastExecution commonv1alpha1.Execution, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (e engine) Destroy(sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	pipeline := NewPipeline(e.logger, e.rpcClient, e.terraformProvider)
 	dependencyGraphForDestroy := DependencyGraph{}
 
@@ -198,5 +199,5 @@ func (e engine) Destroy(lastExecution commonv1alpha1.Execution, sharedInfra comm
 		}
 	}
 
-	return pipeline.Execute(DestroyAction, dependencyGraphForDestroy, lastExecution, sharedInfra, currentExecutionStatusChann)
+	return pipeline.Execute(DestroyAction, dependencyGraphForDestroy, sharedInfra, currentExecutionStatusChann)
 }

@@ -115,22 +115,22 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 
 	assert.NoError(suite.T(), err)
 
-	lastExecution := commonv1alpha1.Execution{
-		Status: commonv1alpha1.ExecutionStatus{
-			Plugins: []commonv1alpha1.PluginExecutionStatus{
-				{Name: "demo-1-sns", PluginType: "terraform", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
-				{Name: "demo-1-lambda-role", PluginType: "terraform"},
-				{Name: "demo-2-lambda", PluginType: "terraform"},
-				{Name: "demo-1-lambda-sns-trigger", PluginType: "terraform"},
-				{Name: "demo-1-after-1", PluginType: "terraform", Ref: "mayconjrpacheco/plugin:sns-1", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
-				{Name: "demo-1-after", Ref: "mayconjrpacheco/plugin:sns-1", Depends: []string{"demo-1-after-1"}, PluginType: "terraform", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
-			},
+	lastExecution := commonv1alpha1.ExecutionStatus{
+		Plugins: []commonv1alpha1.PluginExecutionStatus{
+			{Name: "demo-1-sns", PluginType: "terraform", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
+			{Name: "demo-1-lambda-role", PluginType: "terraform"},
+			{Name: "demo-2-lambda", PluginType: "terraform"},
+			{Name: "demo-1-lambda-sns-trigger", PluginType: "terraform"},
+			{Name: "demo-1-after-1", PluginType: "terraform", Ref: "mayconjrpacheco/plugin:sns-1", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
+			{Name: "demo-1-after", Ref: "mayconjrpacheco/plugin:sns-1", Depends: []string{"demo-1-after-1"}, PluginType: "terraform", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
 		},
 	}
 
 	chann := make(chan commonv1alpha1.ExecutionStatus)
 
-	status := newEngine.Apply(lastExecution, *currentSharedInfra, chann)
+	currentSharedInfra.Status.LastExecution = lastExecution
+
+	status := newEngine.Apply(*currentSharedInfra, chann)
 	assert.Empty(suite.T(), status.Error)
 	assert.Equal(suite.T(), engine.ExecutionSuccessStatus, status.Status)
 }

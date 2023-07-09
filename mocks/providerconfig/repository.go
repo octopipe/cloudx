@@ -5,9 +5,8 @@ package mocks
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
-
 	pagination "github.com/octopipe/cloudx/internal/pagination"
+	mock "github.com/stretchr/testify/mock"
 
 	v1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 )
@@ -18,21 +17,21 @@ type Repository struct {
 }
 
 // Apply provides a mock function with given fields: ctx, s
-func (_m *Repository) Apply(ctx context.Context, s v1alpha1.Execution) (v1alpha1.Execution, error) {
+func (_m *Repository) Apply(ctx context.Context, s v1alpha1.ProviderConfig) (v1alpha1.ProviderConfig, error) {
 	ret := _m.Called(ctx, s)
 
-	var r0 v1alpha1.Execution
+	var r0 v1alpha1.ProviderConfig
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, v1alpha1.Execution) (v1alpha1.Execution, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, v1alpha1.ProviderConfig) (v1alpha1.ProviderConfig, error)); ok {
 		return rf(ctx, s)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, v1alpha1.Execution) v1alpha1.Execution); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, v1alpha1.ProviderConfig) v1alpha1.ProviderConfig); ok {
 		r0 = rf(ctx, s)
 	} else {
-		r0 = ret.Get(0).(v1alpha1.Execution)
+		r0 = ret.Get(0).(v1alpha1.ProviderConfig)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, v1alpha1.Execution) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, v1alpha1.ProviderConfig) error); ok {
 		r1 = rf(ctx, s)
 	} else {
 		r1 = ret.Error(1)
@@ -56,18 +55,18 @@ func (_m *Repository) Delete(ctx context.Context, name string, namespace string)
 }
 
 // Get provides a mock function with given fields: ctx, name, namespace
-func (_m *Repository) Get(ctx context.Context, name string, namespace string) (v1alpha1.Execution, error) {
+func (_m *Repository) Get(ctx context.Context, name string, namespace string) (v1alpha1.ProviderConfig, error) {
 	ret := _m.Called(ctx, name, namespace)
 
-	var r0 v1alpha1.Execution
+	var r0 v1alpha1.ProviderConfig
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (v1alpha1.Execution, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (v1alpha1.ProviderConfig, error)); ok {
 		return rf(ctx, name, namespace)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) v1alpha1.Execution); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) v1alpha1.ProviderConfig); ok {
 		r0 = rf(ctx, name, namespace)
 	} else {
-		r0 = ret.Get(0).(v1alpha1.Execution)
+		r0 = ret.Get(0).(v1alpha1.ProviderConfig)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
@@ -80,18 +79,18 @@ func (_m *Repository) Get(ctx context.Context, name string, namespace string) (v
 }
 
 // List provides a mock function with given fields: ctx, namespace, chunkPagination
-func (_m *Repository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ExecutionList, error) {
+func (_m *Repository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ProviderConfigList, error) {
 	ret := _m.Called(ctx, namespace, chunkPagination)
 
-	var r0 v1alpha1.ExecutionList
+	var r0 v1alpha1.ProviderConfigList
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, pagination.ChunkingPaginationRequest) (v1alpha1.ExecutionList, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, pagination.ChunkingPaginationRequest) (v1alpha1.ProviderConfigList, error)); ok {
 		return rf(ctx, namespace, chunkPagination)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, pagination.ChunkingPaginationRequest) v1alpha1.ExecutionList); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, pagination.ChunkingPaginationRequest) v1alpha1.ProviderConfigList); ok {
 		r0 = rf(ctx, namespace, chunkPagination)
 	} else {
-		r0 = ret.Get(0).(v1alpha1.ExecutionList)
+		r0 = ret.Get(0).(v1alpha1.ProviderConfigList)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, pagination.ChunkingPaginationRequest) error); ok {
