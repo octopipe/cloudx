@@ -2,7 +2,6 @@ package sharedinfra
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"time"
 
@@ -59,18 +58,6 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		action = "DESTROY"
 	}
 
-	rawSharedInfra, err := json.Marshal(currentSharedInfra)
-	if err != nil {
-		c.logger.Error("Failed to parse shared-infra", zap.Error(err))
-		return ctrl.Result{Requeue: false}, err
-	}
-
-	escapedSharedInfra, err := json.Marshal(rawSharedInfra)
-	if err != nil {
-		c.logger.Error("Failed to parse shared-infra", zap.Error(err))
-		return ctrl.Result{Requeue: false}, err
-	}
-
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
 		Name:      currentSharedInfra.Spec.ProviderConfigRef.Name,
@@ -85,7 +72,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner...")
-		newRunner, err := c.NewRunner(action, *currentSharedInfra, string(escapedSharedInfra), providerConfig)
+		newRunner, err := c.NewRunner(action, *currentSharedInfra, providerConfig)
 		if err != nil {
 			c.logger.Error("Failed to create runner", zap.Error(err))
 			return ctrl.Result{Requeue: false}, err

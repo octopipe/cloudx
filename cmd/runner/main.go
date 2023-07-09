@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -115,9 +114,6 @@ func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string) {
 	commandArgs := os.Args[1:]
 	action := commandArgs[0]
 	rawSharedInfraRef := commandArgs[1]
-
-	fmt.Println("ARGS", commandArgs)
-	fmt.Println("RAW", commandArgs[2])
 
 	sharedInfraRef := types.NamespacedName{}
 
