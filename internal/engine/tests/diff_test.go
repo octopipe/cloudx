@@ -36,21 +36,21 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 	absPath, _ := filepath.Abs("./data/simple-infra.json")
 	simpleInfraJSON, _ := ioutil.ReadFile(absPath)
 
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err := json.Unmarshal(simpleInfraJSON, currentSharedInfra)
+	currentInfra := &commonv1alpha1.Infra{}
+	err := json.Unmarshal(simpleInfraJSON, currentInfra)
 
 	terraformProvider := new(terraformmocks.TerraformProvider)
 
 	terraformProvider.On("Destroy",
-		"mayconjrpacheco/plugin:sns-1",
-		[]commonv1alpha1.SharedInfraPluginInput{},
+		"mayconjrpacheco/task:sns-1",
+		[]commonv1alpha1.InfraTaskInput{},
 		"",
 		"",
 	).Return(nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:sns-1",
-		currentSharedInfra.Spec.Plugins[0].Inputs,
+		"mayconjrpacheco/task:sns-1",
+		currentInfra.Spec.Tasks[0].Inputs,
 		"",
 		"",
 	).Return(map[string]any{
@@ -58,8 +58,8 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 	}, "", "", nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:lambda-role-1",
-		currentSharedInfra.Spec.Plugins[1].Inputs,
+		"mayconjrpacheco/task:lambda-role-1",
+		currentInfra.Spec.Tasks[1].Inputs,
 		"",
 		"",
 	).Return(map[string]any{
@@ -67,10 +67,10 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 	}, "", "", nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:lambda-1",
-		[]commonv1alpha1.SharedInfraPluginInput{
-			currentSharedInfra.Spec.Plugins[2].Inputs[0],
-			currentSharedInfra.Spec.Plugins[2].Inputs[1],
+		"mayconjrpacheco/task:lambda-1",
+		[]commonv1alpha1.InfraTaskInput{
+			currentInfra.Spec.Tasks[2].Inputs[0],
+			currentInfra.Spec.Tasks[2].Inputs[1],
 			{Key: "role_arn", Value: "arn:aws:role-arn"},
 			{Key: "image_uri", Value: "repository.org:latest"},
 		},
@@ -81,11 +81,11 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 	}, "", "", nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:sns-lambda-trigger-1",
-		[]commonv1alpha1.SharedInfraPluginInput{
-			currentSharedInfra.Spec.Plugins[3].Inputs[0],
+		"mayconjrpacheco/task:sns-lambda-trigger-1",
+		[]commonv1alpha1.InfraTaskInput{
+			currentInfra.Spec.Tasks[3].Inputs[0],
 			{Key: "sns_arn", Value: "arn:aws:sns-arn"},
-			currentSharedInfra.Spec.Plugins[3].Inputs[2],
+			currentInfra.Spec.Tasks[3].Inputs[2],
 		},
 		"",
 		"",
@@ -116,21 +116,21 @@ func (suite *DiffTestSuite) TestSimpleCase() {
 	assert.NoError(suite.T(), err)
 
 	lastExecution := commonv1alpha1.ExecutionStatus{
-		Plugins: []commonv1alpha1.PluginExecutionStatus{
-			{Name: "demo-1-sns", PluginType: "terraform", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
-			{Name: "demo-1-lambda-role", PluginType: "terraform"},
-			{Name: "demo-2-lambda", PluginType: "terraform"},
-			{Name: "demo-1-lambda-sns-trigger", PluginType: "terraform"},
-			{Name: "demo-1-after-1", PluginType: "terraform", Ref: "mayconjrpacheco/plugin:sns-1", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
-			{Name: "demo-1-after", Ref: "mayconjrpacheco/plugin:sns-1", Depends: []string{"demo-1-after-1"}, PluginType: "terraform", Inputs: []commonv1alpha1.SharedInfraPluginInput{}},
+		Tasks: []commonv1alpha1.TaskExecutionStatus{
+			{Name: "demo-1-sns", TaskType: "terraform", Inputs: []commonv1alpha1.InfraTaskInput{}},
+			{Name: "demo-1-lambda-role", TaskType: "terraform"},
+			{Name: "demo-2-lambda", TaskType: "terraform"},
+			{Name: "demo-1-lambda-sns-trigger", TaskType: "terraform"},
+			{Name: "demo-1-after-1", TaskType: "terraform", Ref: "mayconjrpacheco/task:sns-1", Inputs: []commonv1alpha1.InfraTaskInput{}},
+			{Name: "demo-1-after", Ref: "mayconjrpacheco/task:sns-1", Depends: []string{"demo-1-after-1"}, TaskType: "terraform", Inputs: []commonv1alpha1.InfraTaskInput{}},
 		},
 	}
 
 	chann := make(chan commonv1alpha1.ExecutionStatus)
 
-	currentSharedInfra.Status.LastExecution = lastExecution
+	currentInfra.Status.LastExecution = lastExecution
 
-	status := newEngine.Apply(*currentSharedInfra, chann)
+	status := newEngine.Apply(*currentInfra, chann)
 	assert.Empty(suite.T(), status.Error)
 	assert.Equal(suite.T(), engine.ExecutionSuccessStatus, status.Status)
 }

@@ -1,18 +1,18 @@
 apiVersion: commons.cloudx.io/v1alpha1
-kind: SharedInfra
+kind: Infra
 metadata:
   name: demo-1
   labels:
     revision: 0.0.1
 spec:
   author: Maycon Pacheco
-  description: SharedInfra for example 2
+  description: Infra for example 2
   providerConfigRef:
     name: aws-config
     namespace: default
-  plugins:
+  tasks:
   - name: demo-0-sns
-    ref: mayconjrpacheco/plugin:sns-1
+    ref: mayconjrpacheco/task:sns-1
     depends: []
     type: terraform
     outputs: []
@@ -23,7 +23,7 @@ spec:
       value: us-east-1
 
   - name: demo-1-2-sns
-    ref: mayconjrpacheco/plugin:sns-1
+    ref: mayconjrpacheco/task:sns-1
     depends:
     - demo-0-sns
     type: terraform
@@ -35,7 +35,7 @@ spec:
       value: us-east-1
 
   - name: demo-2-sns
-    ref: mayconjrpacheco/plugin:sns-1
+    ref: mayconjrpacheco/task:sns-1
     depends:
     - demo-1-2-sns
     type: terraform

@@ -5,8 +5,9 @@ package mocks
 import (
 	context "context"
 
-	pagination "github.com/octopipe/cloudx/internal/pagination"
 	mock "github.com/stretchr/testify/mock"
+
+	pagination "github.com/octopipe/cloudx/internal/pagination"
 
 	v1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 )

@@ -12,7 +12,7 @@ rules:
 - apiGroups:
   - commons.cloudx.io
   resources:
-  - sharedinfras
+  - infras
   - executions
   - connectioninterfaces
   - providerconfigs
@@ -27,13 +27,13 @@ rules:
 - apiGroups:
   - commons.cloudx.io
   resources:
-  - sharedinfras/finalizers
+  - infras/finalizers
   verbs:
   - update
 - apiGroups:
   - commons.cloudx.io
   resources:
-  - sharedinfras/status
+  - infras/status
   verbs:
   - get
   - patch

@@ -2,8 +2,8 @@ const position = { x: 0, y: 0 };
 const edgeType = 'smoothstep';
 
 
-export const toNodes = (plugins: any, type="executionNode") => {
-  return plugins.map((p: any) => {
+export const toNodes = (tasks: any, type="executionNode") => {
+  return tasks.map((p: any) => {
     return {
       id: p.name,
       type: type,
@@ -20,14 +20,14 @@ export const toNodes = (plugins: any, type="executionNode") => {
 
 }
 
-export const toEdges = (plugins: any, animated: boolean) => {
+export const toEdges = (tasks: any, animated: boolean) => {
   let edges: any = []
-  for (let i = 0; i < plugins.length; i++) {
-    for (let j = 0; j < plugins[i]?.depends?.length; j++) {
+  for (let i = 0; i < tasks.length; i++) {
+    for (let j = 0; j < tasks[i]?.depends?.length; j++) {
       edges = [...edges,  {
-        id: `e-${plugins[i].name}-${plugins[i].depends[j]}`,
-        source: plugins[i].depends[j],
-        target: plugins[i].name,
+        id: `e-${tasks[i].name}-${tasks[i].depends[j]}`,
+        source: tasks[i].depends[j],
+        target: tasks[i].name,
         type: edgeType,
         animated,
       }]

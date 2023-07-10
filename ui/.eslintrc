@@ -5,8 +5,8 @@
     "sourceType": "module",
     "createDefaultProgram": true
   },
-  "plugins": [
-    "@typescript-eslint/eslint-plugin",
+  "tasks": [
+    "@typescript-eslint/eslint-task",
     "import",
     "prettier",
     "react-hooks",
@@ -14,11 +14,11 @@
   ],
   "extends": [
     "eslint:recommended",
-    "plugin:react-hooks/recommended",
-    "plugin:@typescript-eslint/recommended",
+    "task:react-hooks/recommended",
+    "task:@typescript-eslint/recommended",
     "prettier",
-    "plugin:prettier/recommended",
-    "plugin:react/recommended"
+    "task:prettier/recommended",
+    "task:react/recommended"
   ],
   "settings": {
     "react": {

@@ -20,14 +20,14 @@ import (
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/plugin"
+	"github.com/octopipe/cloudx/internal/task"
 	"go.uber.org/zap"
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type TerraformProvider interface {
-	Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error)
-	Destroy(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error
+	Apply(taskRef string, inputs []commonv1alpha1.InfraTaskInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error)
+	Destroy(taskRef string, inputs []commonv1alpha1.InfraTaskInput, previousState string, previousLockDeps string) error
 }
 
 type terraformProvider struct {
@@ -76,26 +76,26 @@ func NewTerraformProvider(logger *zap.Logger, terraformVersion string) (Terrafor
 	}, nil
 }
 
-func (p terraformProvider) prepareExecution(pluginRef string, input []commonv1alpha1.SharedInfraPluginInput) (string, plugin.Plugin, error) {
-	p.logger.Info("pulling plugin image", zap.String("image", pluginRef))
-	img, err := crane.Pull(pluginRef)
+func (p terraformProvider) prepareExecution(taskRef string, input []commonv1alpha1.InfraTaskInput) (string, task.Task, error) {
+	p.logger.Info("pulling task image", zap.String("image", taskRef))
+	img, err := crane.Pull(taskRef)
 	if err != nil {
-		return "", plugin.Plugin{}, err
+		return "", task.Task{}, err
 	}
 
 	var buf bytes.Buffer
 	err = crane.Export(img, &buf)
 	if err != nil {
-		return "", plugin.Plugin{}, err
+		return "", task.Task{}, err
 	}
 
 	tr := tar.NewReader(&buf)
 	content := map[string]string{}
-	rawPluginConfig := []byte{}
+	rawTaskConfig := []byte{}
 	workdir := fmt.Sprintf("/tmp/cloudx/executions/%s", uuid.New().String())
 	err = os.MkdirAll(workdir, os.ModePerm)
 	if err != nil {
-		return "", plugin.Plugin{}, err
+		return "", task.Task{}, err
 	}
 
 	for {
@@ -104,42 +104,42 @@ func (p terraformProvider) prepareExecution(pluginRef string, input []commonv1al
 			break
 		}
 		if err != nil {
-			return "", plugin.Plugin{}, err
+			return "", task.Task{}, err
 		}
 
 		b, err := io.ReadAll(tr)
 		if err != nil {
-			return "", plugin.Plugin{}, err
+			return "", task.Task{}, err
 		}
 
 		content[hdr.Name] = string(b)
 		f, err := os.Create(fmt.Sprintf("%s/%s", workdir, hdr.Name))
 		if err != nil {
-			return "", plugin.Plugin{}, err
+			return "", task.Task{}, err
 		}
 
 		_, err = f.Write(b)
 		if err != nil {
-			return "", plugin.Plugin{}, err
+			return "", task.Task{}, err
 		}
 
-		if hdr.Name == "plugin.yaml" {
-			rawPluginConfig = b
+		if hdr.Name == "task.yaml" {
+			rawTaskConfig = b
 		}
 	}
 
-	pluginConfig := plugin.Plugin{}
-	decoder := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(rawPluginConfig), 4096)
-	err = decoder.Decode(&pluginConfig)
+	taskConfig := task.Task{}
+	decoder := kubeyaml.NewYAMLOrJSONDecoder(bytes.NewReader(rawTaskConfig), 4096)
+	err = decoder.Decode(&taskConfig)
 	if err != nil {
-		return "", plugin.Plugin{}, err
+		return "", task.Task{}, err
 	}
 
-	return workdir, pluginConfig, nil
+	return workdir, taskConfig, nil
 }
 
-func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error) {
-	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, inputs)
+func (p terraformProvider) Apply(taskRef string, inputs []commonv1alpha1.InfraTaskInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error) {
+	workdirPath, taskConfig, err := p.prepareExecution(taskRef, inputs)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -151,9 +151,9 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 	}
 
 	p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
-	for _, i := range pluginConfig.Spec.Inputs {
+	for _, i := range taskConfig.Spec.Inputs {
 
-		var value commonv1alpha1.SharedInfraPluginInput
+		var value commonv1alpha1.InfraTaskInput
 		for _, s := range inputs {
 			if i.Name == s.Key {
 				value = s
@@ -270,8 +270,8 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 	return out, string(escapedState), string(escapedLockFile), nil
 }
 
-func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error {
-	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, inputs)
+func (p terraformProvider) Destroy(taskRef string, inputs []commonv1alpha1.InfraTaskInput, previousState string, previousLockDeps string) error {
+	workdirPath, taskConfig, err := p.prepareExecution(taskRef, inputs)
 	if err != nil {
 		return err
 	}
@@ -283,9 +283,9 @@ func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.Sha
 	}
 
 	p.logger.Info("creating terraform vars file", zap.String("workdir", workdirPath))
-	for _, i := range pluginConfig.Spec.Inputs {
+	for _, i := range taskConfig.Spec.Inputs {
 
-		var value commonv1alpha1.SharedInfraPluginInput
+		var value commonv1alpha1.InfraTaskInput
 		for _, s := range inputs {
 			if i.Name == s.Key {
 				value = s

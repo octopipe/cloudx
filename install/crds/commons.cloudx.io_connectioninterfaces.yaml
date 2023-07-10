@@ -34,6 +34,13 @@ spec:
             type: object
           spec:
             properties:
+              infra:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
               outputs:
                 items:
                   properties:
@@ -46,13 +53,6 @@ spec:
                   type: object
                 type: array
               secret:
-                properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                type: object
-              sharedInfra:
                 properties:
                   name:
                     type: string

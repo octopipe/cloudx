@@ -1,4 +1,4 @@
-package sharedinfra
+package infra
 
 import (
 	"context"
@@ -27,18 +27,18 @@ type RPCGetRunnerDataArgs struct {
 }
 
 type RPCGetRunnerDataReply struct {
-	SharedInfra commonv1alpha1.SharedInfra
+	Infra commonv1alpha1.Infra
 }
 
 func (s *RPCServer) GetRunnerData(args *RPCGetRunnerDataArgs, reply *RPCGetRunnerDataReply) error {
-	s.logger.Info("Received rpc call", zap.String("sharedinfra", args.Ref.String()))
-	currentSharedInfra := commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, &currentSharedInfra)
+	s.logger.Info("Received rpc call", zap.String("infra", args.Ref.String()))
+	currentInfra := commonv1alpha1.Infra{}
+	err := s.Get(context.Background(), args.Ref, &currentInfra)
 	if err != nil {
 		return err
 	}
 
-	reply.SharedInfra = currentSharedInfra
+	reply.Infra = currentInfra
 	return nil
 }
 
@@ -48,19 +48,19 @@ type RPCSetExecutionStatusArgs struct {
 }
 
 func (s *RPCServer) SetExecutionStatus(args *RPCSetExecutionStatusArgs, reply *int) error {
-	s.logger.Info("received call", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("sharedinfra", args.Ref.String()))
-	sharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, sharedInfra)
+	s.logger.Info("received call", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("infra", args.Ref.String()))
+	infra := &commonv1alpha1.Infra{}
+	err := s.Get(context.Background(), args.Ref, infra)
 	if err != nil {
-		s.logger.Error("Failed to get current execution", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("sharedinfra", args.Ref.String()), zap.Error(err))
+		s.logger.Error("Failed to get current execution", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("infra", args.Ref.String()), zap.Error(err))
 		return err
 	}
 
-	sharedInfra.Status.LastExecution = args.ExecutionStatus
+	infra.Status.LastExecution = args.ExecutionStatus
 	s.logger.Info("updating current execution status", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("status", args.ExecutionStatus.Status))
-	err = utils.UpdateSharedInfraStatus(s.Client, *sharedInfra)
+	err = utils.UpdateInfraStatus(s.Client, *infra)
 	if err != nil {
-		s.logger.Error("Failed to update current execution status", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("sharedinfra", args.Ref.String()), zap.Error(err))
+		s.logger.Error("Failed to update current execution status", zap.String("method", "RPCServer.SetExecutionStatus"), zap.String("infra", args.Ref.String()), zap.Error(err))
 		return err
 	}
 
@@ -68,23 +68,23 @@ func (s *RPCServer) SetExecutionStatus(args *RPCSetExecutionStatusArgs, reply *i
 }
 
 type RPCSetRunnerTimeoutArgs struct {
-	Plugins []commonv1alpha1.PluginExecutionStatus
-	Ref     types.NamespacedName
+	Tasks []commonv1alpha1.TaskExecutionStatus
+	Ref   types.NamespacedName
 }
 
 func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) error {
-	sharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, sharedInfra)
+	infra := &commonv1alpha1.Infra{}
+	err := s.Get(context.Background(), args.Ref, infra)
 	if err != nil {
 		return err
 	}
 
-	sharedInfra.Status.LastExecution.Status = engine.ExecutionTimeout
-	sharedInfra.Status.LastExecution.FinishedAt = time.Now().Format(time.RFC3339)
-	sharedInfra.Status.LastExecution.Error = "Runner time exceeded"
-	sharedInfra.Status.LastExecution.Plugins = args.Plugins
+	infra.Status.LastExecution.Status = engine.ExecutionTimeout
+	infra.Status.LastExecution.FinishedAt = time.Now().Format(time.RFC3339)
+	infra.Status.LastExecution.Error = "Runner time exceeded"
+	infra.Status.LastExecution.Tasks = args.Tasks
 
-	return utils.UpdateSharedInfraStatus(s.Client, *sharedInfra)
+	return utils.UpdateInfraStatus(s.Client, *infra)
 }
 
 type RPCGetLastExecutionArgs struct {
@@ -94,31 +94,31 @@ type RPCGetLastExecutionArgs struct {
 func (s *RPCServer) GetLastExecution(args *RPCGetLastExecutionArgs, reply *commonv1alpha1.ExecutionStatus) error {
 	s.logger.Info("get last execution rpc all", zap.String("name", args.Ref.String()))
 
-	sharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, sharedInfra)
+	infra := &commonv1alpha1.Infra{}
+	err := s.Get(context.Background(), args.Ref, infra)
 	if err != nil {
 		s.logger.Error("failed to get current execution", zap.Error(err))
 		return err
 	}
 
-	*reply = sharedInfra.Status.LastExecution
+	*reply = infra.Status.LastExecution
 	return nil
 }
 
-type RPCGetSharedInfraArgs struct {
+type RPCGetInfraArgs struct {
 	Ref types.NamespacedName
 }
 
-func (s *RPCServer) GetSharedInfra(args *RPCGetSharedInfraArgs, reply *commonv1alpha1.SharedInfra) error {
+func (s *RPCServer) GetInfra(args *RPCGetInfraArgs, reply *commonv1alpha1.Infra) error {
 	s.logger.Info("get shared infra rpc call", zap.String("name", args.Ref.String()))
 
-	sharedInfra := &commonv1alpha1.SharedInfra{}
-	err := s.Get(context.Background(), args.Ref, sharedInfra)
+	infra := &commonv1alpha1.Infra{}
+	err := s.Get(context.Background(), args.Ref, infra)
 	if err != nil {
 		s.logger.Error("failed to get shared infra", zap.Error(err))
 		return err
 	}
 
-	*reply = *sharedInfra
+	*reply = *infra
 	return nil
 }

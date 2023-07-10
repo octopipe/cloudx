@@ -46,35 +46,35 @@ func NewEngine(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvider
 	}
 }
 
-func (e engine) getPluginsForDeletion(lastExecution commonv1alpha1.ExecutionStatus, sharedInfra commonv1alpha1.SharedInfra) map[string]commonv1alpha1.PluginExecutionStatus {
-	forDeletion := map[string]commonv1alpha1.PluginExecutionStatus{}
-	for _, lastPluginExecution := range lastExecution.Plugins {
-		foundPlugin := false
-		for _, currentPlugin := range sharedInfra.Spec.Plugins {
-			if lastPluginExecution.Name == currentPlugin.Name {
-				foundPlugin = true
+func (e engine) getTasksForDeletion(lastExecution commonv1alpha1.ExecutionStatus, infra commonv1alpha1.Infra) map[string]commonv1alpha1.TaskExecutionStatus {
+	forDeletion := map[string]commonv1alpha1.TaskExecutionStatus{}
+	for _, lastTaskExecution := range lastExecution.Tasks {
+		foundTask := false
+		for _, currentTask := range infra.Spec.Tasks {
+			if lastTaskExecution.Name == currentTask.Name {
+				foundTask = true
 				break
 			}
 		}
 
-		if !foundPlugin {
-			forDeletion[lastPluginExecution.Name] = lastPluginExecution
+		if !foundTask {
+			forDeletion[lastTaskExecution.Name] = lastTaskExecution
 		}
 	}
 
 	return forDeletion
 }
 
-func (p *engine) validateDependencies(sharedInfra commonv1alpha1.SharedInfra) error {
+func (p *engine) validateDependencies(infra commonv1alpha1.Infra) error {
 	graph := map[string][]string{}
-	for _, plugin := range sharedInfra.Spec.Plugins {
-		graph[plugin.Name] = plugin.Depends
+	for _, task := range infra.Spec.Tasks {
+		graph[task.Name] = task.Depends
 	}
 
-	for _, p := range sharedInfra.Spec.Plugins {
+	for _, p := range infra.Spec.Tasks {
 		for _, dep := range p.Depends {
 			if _, ok := graph[dep]; !ok {
-				return fmt.Errorf("not found the dependency %s specified in plugin %s", dep, p.Name)
+				return fmt.Errorf("not found the dependency %s specified in task %s", dep, p.Name)
 			}
 		}
 	}
@@ -82,13 +82,13 @@ func (p *engine) validateDependencies(sharedInfra commonv1alpha1.SharedInfra) er
 	return nil
 }
 
-func (p *engine) validateInputInterpolations(sharedInfra commonv1alpha1.SharedInfra) error {
+func (p *engine) validateInputInterpolations(infra commonv1alpha1.Infra) error {
 	graph := map[string][]string{}
-	for _, plugin := range sharedInfra.Spec.Plugins {
-		graph[plugin.Name] = plugin.Depends
+	for _, task := range infra.Spec.Tasks {
+		graph[task.Name] = task.Depends
 	}
 
-	for _, p := range sharedInfra.Spec.Plugins {
+	for _, p := range infra.Spec.Tasks {
 		for _, i := range p.Inputs {
 			tokens := Lex(i.Value)
 
@@ -117,86 +117,86 @@ func (p *engine) validateInputInterpolations(sharedInfra commonv1alpha1.SharedIn
 	return nil
 }
 
-func (e engine) Apply(sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
-	lastExecution := sharedInfra.Status.LastExecution
+func (e engine) Apply(infra commonv1alpha1.Infra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+	lastExecution := infra.Status.LastExecution
 	status := commonv1alpha1.ExecutionStatus{
-		Status:  ExecutionSuccessStatus,
-		Plugins: lastExecution.Plugins,
+		Status: ExecutionSuccessStatus,
+		Tasks:  lastExecution.Tasks,
 	}
 
-	if err := e.validateDependencies(sharedInfra); err != nil {
+	if err := e.validateDependencies(infra); err != nil {
 		status.Status = ExecutionErrorStatus
 		status.Error = err.Error()
 		currentExecutionStatusChann <- status
 		return status
 	}
 
-	if err := e.validateInputInterpolations(sharedInfra); err != nil {
+	if err := e.validateInputInterpolations(infra); err != nil {
 		status.Status = ExecutionErrorStatus
 		status.Error = err.Error()
 		currentExecutionStatusChann <- status
 		return status
 	}
 
-	pluginsForDeletion := e.getPluginsForDeletion(lastExecution, sharedInfra)
-	if len(pluginsForDeletion) > 0 {
+	tasksForDeletion := e.getTasksForDeletion(lastExecution, infra)
+	if len(tasksForDeletion) > 0 {
 
 		pipelineForDeletion := NewPipeline(e.logger, e.rpcClient, e.terraformProvider)
 		dependencyGraphForDeletion := DependencyGraph{}
-		for plugin := range pluginsForDeletion {
-			dependencyGraphForDeletion[plugin] = []string{}
+		for task := range tasksForDeletion {
+			dependencyGraphForDeletion[task] = []string{}
 		}
 
-		e.logger.Info(fmt.Sprintf("%d plugins for deletion", len(pluginsForDeletion)))
-		for plugin, execution := range pluginsForDeletion {
+		e.logger.Info(fmt.Sprintf("%d tasks for deletion", len(tasksForDeletion)))
+		for task, execution := range tasksForDeletion {
 			for _, dep := range execution.Depends {
-				if _, ok := pluginsForDeletion[dep]; ok {
-					dependencyGraphForDeletion[dep] = append(dependencyGraphForDeletion[dep], plugin)
+				if _, ok := tasksForDeletion[dep]; ok {
+					dependencyGraphForDeletion[dep] = append(dependencyGraphForDeletion[dep], task)
 				}
 			}
 		}
 
-		deletionStatus := pipelineForDeletion.Execute(DestroyAction, dependencyGraphForDeletion, sharedInfra, currentExecutionStatusChann)
+		deletionStatus := pipelineForDeletion.Execute(DestroyAction, dependencyGraphForDeletion, infra, currentExecutionStatusChann)
 		if deletionStatus.Status != ExecutionSuccessStatus {
 			status.Status = ExecutionErrorStatus
-			status.Error = "Failed to delete on diff plugins"
+			status.Error = "Failed to delete on diff tasks"
 			return status
 		}
 
-		// // Updating lastexecution after success on destroying plugins
-		// updatedLastExecutionPlugins := []commonv1alpha1.PluginExecutionStatus{}
-		// for _, p := range lastExecution.Plugins {
-		// 	if _, ok := pluginsForDeletion[p.Name]; !ok {
-		// 		updatedLastExecutionPlugins = append(updatedLastExecutionPlugins, p)
+		// // Updating lastexecution after success on destroying tasks
+		// updatedLastExecutionTasks := []commonv1alpha1.TaskExecutionStatus{}
+		// for _, p := range lastExecution.Tasks {
+		// 	if _, ok := tasksForDeletion[p.Name]; !ok {
+		// 		updatedLastExecutionTasks = append(updatedLastExecutionTasks, p)
 		// 	}
 
 		// }
 
-		// lastExecution.Plugins = updatedLastExecutionPlugins
+		// lastExecution.Tasks = updatedLastExecutionTasks
 	}
 
 	dependencyGraphForApply := DependencyGraph{}
-	for _, plugin := range sharedInfra.Spec.Plugins {
-		dependencyGraphForApply[plugin.Name] = plugin.Depends
+	for _, task := range infra.Spec.Tasks {
+		dependencyGraphForApply[task.Name] = task.Depends
 	}
 
 	pipelineForApply := NewPipeline(e.logger, e.rpcClient, e.terraformProvider)
-	return pipelineForApply.Execute(ApplyAction, dependencyGraphForApply, sharedInfra, currentExecutionStatusChann)
+	return pipelineForApply.Execute(ApplyAction, dependencyGraphForApply, infra, currentExecutionStatusChann)
 }
 
-func (e engine) Destroy(sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+func (e engine) Destroy(infra commonv1alpha1.Infra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
 	pipeline := NewPipeline(e.logger, e.rpcClient, e.terraformProvider)
 	dependencyGraphForDestroy := DependencyGraph{}
 
-	for _, plugin := range sharedInfra.Spec.Plugins {
-		dependencyGraphForDestroy[plugin.Name] = []string{}
+	for _, task := range infra.Spec.Tasks {
+		dependencyGraphForDestroy[task.Name] = []string{}
 	}
 
-	for _, plugin := range sharedInfra.Spec.Plugins {
-		for _, dep := range plugin.Depends {
-			dependencyGraphForDestroy[dep] = append(dependencyGraphForDestroy[dep], plugin.Name)
+	for _, task := range infra.Spec.Tasks {
+		for _, dep := range task.Depends {
+			dependencyGraphForDestroy[dep] = append(dependencyGraphForDestroy[dep], task.Name)
 		}
 	}
 
-	return pipeline.Execute(DestroyAction, dependencyGraphForDestroy, sharedInfra, currentExecutionStatusChann)
+	return pipeline.Execute(DestroyAction, dependencyGraphForDestroy, infra, currentExecutionStatusChann)
 }

@@ -8,16 +8,16 @@ The Cloudx manage your infrastructure in any cloud based in [IDP principles](htt
 
 
 ### FEATURES:
-- Multiple plugin dependencies
+- Multiple task dependencies
 - Destroy infrastructure
-- Plugins diff
+- Tasks diff
 - Terraform execution per version
 - No needed of terraform code customization
 - Each execution with only credentials of target
 - Can watch progress of partial executions
 - Historical execution data
-- Can re-run with new plugins versions
-- Fix the problem of plugin having the files with same names
+- Can re-run with new tasks versions
+- Fix the problem of task having the files with same names
 - When possible parallel execution is performed
 
 ### TODO: 
@@ -26,22 +26,22 @@ The Cloudx manage your infrastructure in any cloud based in [IDP principles](htt
 - Create recycle logic for executions and give option to external save
 - Search ways to encrypt sensitive data in execution
 - create terraform cache version and verify
-- get log stream by plugins in a job
+- get log stream by tasks in a job
 
 ## How to run?
 
 Apply a shared infra manifest in the cluster, example:
 ```yaml
 apiVersion: commons.cloudx.io/v1alpha1
-kind: SharedInfra
+kind: Infra
 metadata:
   name: shared-infra-1
 spec:
   author: Author
-  description: SharedInfra for example 1
-  plugins:
+  description: Infra for example 1
+  tasks:
   - name: test-1
-    ref: registry/plugin:test-1
+    ref: registry/task:test-1
     depends: []
     type: terraform
     outputs: []
@@ -49,7 +49,7 @@ spec:
     - key: name
       value: test-1
   - name: test-2
-    ref: registry/plugin:test-1
+    ref: registry/task:test-1
     type: aws/secrets-manager
     depends: 
     - test-1

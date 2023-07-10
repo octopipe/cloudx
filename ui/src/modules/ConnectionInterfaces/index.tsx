@@ -22,7 +22,7 @@ const ConnectionInterfaces = () => {
     <div  style={{margin: "80px"}}>
       <div className="d-flex justify-content-between my-4">
         <h1 className="h2">Connections Interfaces</h1>
-        <Button onClick={() => navigate('/shared-infras/create')}>
+        <Button onClick={() => navigate('/infra/create')}>
           <FontAwesomeIcon icon="add" /> Create
         </Button>  
       </div>
@@ -41,7 +41,7 @@ const ConnectionInterfaces = () => {
                 {item?.description}
               </div>
               <Badge bg="primary" pill>
-                {item?.spec?.plugins?.length}
+                {item?.spec?.tasks?.length}
               </Badge>
             </ListGroup.Item>
             ))}

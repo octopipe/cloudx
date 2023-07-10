@@ -8,8 +8,8 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/connectioninterface"
+	"github.com/octopipe/cloudx/internal/controller/infra"
 	"github.com/octopipe/cloudx/internal/controller/runner"
-	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
 	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,7 +48,7 @@ func main() {
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 
 	provider := provider.NewProvider(mgr.GetClient())
-	sharedInfraController := sharedinfra.NewController(
+	infraController := infra.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
@@ -62,7 +62,7 @@ func main() {
 		k8sClient,
 	)
 
-	if err := sharedInfraController.SetupWithManager(mgr); err != nil {
+	if err := infraController.SetupWithManager(mgr); err != nil {
 		panic(err)
 	}
 
@@ -79,9 +79,9 @@ func main() {
 
 	connectionInterfaceRepository := connectioninterface.NewK8sRepository(mgr.GetClient())
 
-	sharedInfraRPCServer := sharedinfra.NewRPCServer(mgr.GetClient(), logger)
+	infraRPCServer := infra.NewRPCServer(mgr.GetClient(), logger)
 	connectionInterfaceRPCServer := connectioninterface.NewConnectionInterfaceRPCHandler(connectionInterfaceRepository)
-	rpc.Register(sharedInfraRPCServer)
+	rpc.Register(infraRPCServer)
 	rpc.Register(connectionInterfaceRPCServer)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":9000")

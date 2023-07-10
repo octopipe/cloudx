@@ -7,5 +7,5 @@ resources:
 - commons.cloudx.io_environments.yaml
 - commons.cloudx.io_executions.yaml
 - commons.cloudx.io_providerconfigs.yaml
-- commons.cloudx.io_sharedinfras.yaml
+- commons.cloudx.io_infras.yaml
 

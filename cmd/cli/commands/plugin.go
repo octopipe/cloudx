@@ -6,29 +6,29 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/octopipe/cloudx/internal/pluginmanager"
+	"github.com/octopipe/cloudx/internal/taskmanager"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"github.com/spf13/cobra"
 )
 
-type pluginCmd struct {
-	pluginManager     pluginmanager.Manager
+type taskCmd struct {
+	taskManager       taskmanager.Manager
 	terraformProvider terraform.TerraformProvider
 }
 
-func (p pluginCmd) NewPluginCmd() *cobra.Command {
+func (p taskCmd) NewTaskCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "plugin",
-		Short: "Manage plugins",
+		Use:   "task",
+		Short: "Manage tasks",
 		Run: func(cmd *cobra.Command, args []string) {
 		},
 	}
 }
 
-func (p pluginCmd) NewPublishPluginCmd() *cobra.Command {
+func (p taskCmd) NewPublishTaskCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "publish",
-		Short: "publish a plugin",
+		Short: "publish a task",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			contents := map[string][]byte{}
@@ -47,7 +47,7 @@ func (p pluginCmd) NewPublishPluginCmd() *cobra.Command {
 				return nil
 			})
 
-			err := p.pluginManager.Publish(args[0], contents)
+			err := p.taskManager.Publish(args[0], contents)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -56,10 +56,10 @@ func (p pluginCmd) NewPublishPluginCmd() *cobra.Command {
 	}
 }
 
-func (p pluginCmd) NewExecutPluginCmd() *cobra.Command {
+func (p taskCmd) NewExecutTaskCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "execute",
-		Short: "execute plugin",
+		Short: "execute task",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			// name := args[0]
@@ -85,15 +85,15 @@ func (p pluginCmd) NewExecutPluginCmd() *cobra.Command {
 	}
 }
 
-func NewPluginRoot(pluginManager pluginmanager.Manager, terraformProvider terraform.TerraformProvider) *cobra.Command {
-	pluginRoot := pluginCmd{
-		pluginManager:     pluginManager,
+func NewTaskRoot(taskManager taskmanager.Manager, terraformProvider terraform.TerraformProvider) *cobra.Command {
+	taskRoot := taskCmd{
+		taskManager:       taskManager,
 		terraformProvider: terraformProvider,
 	}
 
-	pluginCmd := pluginRoot.NewPluginCmd()
-	pluginCmd.AddCommand(pluginRoot.NewPublishPluginCmd())
-	pluginCmd.AddCommand(pluginRoot.NewExecutPluginCmd())
+	taskCmd := taskRoot.NewTaskCmd()
+	taskCmd.AddCommand(taskRoot.NewPublishTaskCmd())
+	taskCmd.AddCommand(taskRoot.NewExecutTaskCmd())
 
-	return pluginCmd
+	return taskCmd
 }

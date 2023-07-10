@@ -24,7 +24,7 @@ const Main = () => {
             }} className="py-4">
               Cx
             </div>
-            <NavLink className="nav-link" to="/shared-infras"><FontAwesomeIcon icon="layer-group" /></NavLink>
+            <NavLink className="nav-link" to="/infra"><FontAwesomeIcon icon="layer-group" /></NavLink>
             <NavLink className="nav-link" to="/connection-interfaces"><FontAwesomeIcon icon="diagram-project" /></NavLink>
             <NavLink className="nav-link" to="/providers-config"><FontAwesomeIcon icon="cloud" /></NavLink>
           </Nav>

@@ -38,7 +38,7 @@ spec:
                 type: string
               author:
                 type: string
-              sharedInfra:
+              infra:
                 properties:
                   name:
                     type: string
@@ -49,7 +49,7 @@ spec:
                 type: string
             required:
             - action
-            - sharedInfra
+            - infra
             type: object
           status:
             properties:
@@ -57,7 +57,7 @@ spec:
                 type: string
               finishedAt:
                 type: string
-              plugins:
+              tasks:
                 items:
                   properties:
                     dependencyLock:

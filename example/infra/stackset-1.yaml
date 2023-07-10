@@ -1,18 +1,18 @@
 apiVersion: commons.cloudx.io/v1alpha1
-kind: SharedInfra
+kind: Infra
 metadata:
   name: stackset-1
   labels:
     revision: 0.0.3
 spec:
   author: Maycon Pacheco
-  description: SharedInfra for example 1
+  description: Infra for example 1
   providerConfigRef:
     name: aws-config
     namespace: default
-  plugins:
+  tasks:
   - name: test-1
-    ref: mayconjrpacheco/plugin:test-1
+    ref: mayconjrpacheco/task:test-1
     depends: []
     type: terraform
     outputs: []

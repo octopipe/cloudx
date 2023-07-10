@@ -1,4 +1,4 @@
-kind: Plugin
+kind: Task
 metadata:
   name: sns
 spec:

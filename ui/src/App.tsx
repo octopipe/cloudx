@@ -1,11 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Main from './modules/Main'
-import SharedInfras from './modules/SharedInfras'
+import Infras from './modules/Infras'
 import ProvidersConfig from './modules/ProviderConfig'
-import SharedInfraView from './modules/SharedInfrasView'
+import InfraView from './modules/InfrasView'
 import ConnectionInterfaces from './modules/ConnectionInterfaces'
 import './core/components/icon'
-import SharedInfraEditor from './modules/SharedInfrasEditor'
+import InfraEditor from './modules/InfrasEditor'
 import ProviderConfigView from './modules/ProviderConfigView'
 
 const App = () => {
@@ -13,11 +13,11 @@ const App = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Main />}>
-          <Route path='' element={<Navigate to="/shared-infras" replace />} />
-          <Route path='/shared-infras' element={<SharedInfras />} />
-          <Route path='/shared-infras/create' element={<SharedInfraEditor />}/>
-          <Route path='/shared-infras/:name/edit' element={<SharedInfraEditor />}/>
-          <Route path='/shared-infras/:name' element={<SharedInfraView />}/>
+          <Route path='' element={<Navigate to="/infra" replace />} />
+          <Route path='/infra' element={<Infras />} />
+          <Route path='/infra/create' element={<InfraEditor />}/>
+          <Route path='/infra/:name/edit' element={<InfraEditor />}/>
+          <Route path='/infra/:name' element={<InfraView />}/>
           <Route path='/connection-interfaces' element={<ConnectionInterfaces />}/>
           <Route path='/providers-config' element={<ProvidersConfig />}/>
           <Route path='/providers-config/:name' element={<ProviderConfigView />}/>

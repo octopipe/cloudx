@@ -3,12 +3,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, Col, Container, ListGroup, Row } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 
-const SharedInfras = () => {
+const Infras = () => {
   const navigate = useNavigate()
   const [list, setList] = useState<any>()
 
   const getList = useCallback(async () => {
-    const res = await fetch("http://localhost:8080/shared-infras")
+    const res = await fetch("http://localhost:8080/infra")
     const list = await res.json()
 
     setList(list)
@@ -22,7 +22,7 @@ const SharedInfras = () => {
     <div  style={{margin: "80px"}}>
       <div className="d-flex justify-content-between my-4">
         <h1 className="h2">Shared infras</h1>
-        <Button onClick={() => navigate('/shared-infras/create')}>
+        <Button onClick={() => navigate('/infra/create')}>
           <FontAwesomeIcon icon="add" /> Create
         </Button>  
       </div>
@@ -41,7 +41,7 @@ const SharedInfras = () => {
                 {item?.description}
               </div>
               <Badge bg="primary" pill>
-                {item?.spec?.plugins?.length}
+                {item?.spec?.tasks?.length}
               </Badge>
             </ListGroup.Item>
             ))}
@@ -53,4 +53,4 @@ const SharedInfras = () => {
   )
 }
 
-export default SharedInfras
+export default Infras

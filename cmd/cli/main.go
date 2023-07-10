@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/octopipe/cloudx/cmd/cli/commands"
-	"github.com/octopipe/cloudx/internal/pluginmanager"
+	"github.com/octopipe/cloudx/internal/taskmanager"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 )
@@ -16,12 +16,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pluginManager := pluginmanager.NewPluginManager(logger, terraformProvider)
-	pluginCmd := commands.NewPluginRoot(pluginManager, terraformProvider)
-	sharedInfraCmd := commands.NewSharedInfraRoot(pluginManager)
+	taskManager := taskmanager.NewTaskManager(logger, terraformProvider)
+	taskCmd := commands.NewTaskRoot(taskManager, terraformProvider)
+	infraCmd := commands.NewInfraRoot(taskManager)
 
-	commands.RootCmd.AddCommand(pluginCmd)
-	commands.RootCmd.AddCommand(sharedInfraCmd)
+	commands.RootCmd.AddCommand(taskCmd)
+	commands.RootCmd.AddCommand(infraCmd)
 
 	if err := commands.RootCmd.Execute(); err != nil {
 		fmt.Println(err)

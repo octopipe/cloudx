@@ -15,39 +15,39 @@ type TerraformProvider struct {
 	mock.Mock
 }
 
-// Apply provides a mock function with given fields: pluginRef, inputs, previousState, previousLockDeps
-func (_m *TerraformProvider) Apply(pluginRef string, inputs []v1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error) {
-	ret := _m.Called(pluginRef, inputs, previousState, previousLockDeps)
+// Apply provides a mock function with given fields: taskRef, inputs, previousState, previousLockDeps
+func (_m *TerraformProvider) Apply(taskRef string, inputs []v1alpha1.InfraTaskInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error) {
+	ret := _m.Called(taskRef, inputs, previousState, previousLockDeps)
 
 	var r0 map[string]tfexec.OutputMeta
 	var r1 string
 	var r2 string
 	var r3 error
-	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) (map[string]tfexec.OutputMeta, string, string, error)); ok {
-		return rf(pluginRef, inputs, previousState, previousLockDeps)
+	if rf, ok := ret.Get(0).(func(string, []v1alpha1.InfraTaskInput, string, string) (map[string]tfexec.OutputMeta, string, string, error)); ok {
+		return rf(taskRef, inputs, previousState, previousLockDeps)
 	}
-	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) map[string]tfexec.OutputMeta); ok {
-		r0 = rf(pluginRef, inputs, previousState, previousLockDeps)
+	if rf, ok := ret.Get(0).(func(string, []v1alpha1.InfraTaskInput, string, string) map[string]tfexec.OutputMeta); ok {
+		r0 = rf(taskRef, inputs, previousState, previousLockDeps)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]tfexec.OutputMeta)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) string); ok {
-		r1 = rf(pluginRef, inputs, previousState, previousLockDeps)
+	if rf, ok := ret.Get(1).(func(string, []v1alpha1.InfraTaskInput, string, string) string); ok {
+		r1 = rf(taskRef, inputs, previousState, previousLockDeps)
 	} else {
 		r1 = ret.Get(1).(string)
 	}
 
-	if rf, ok := ret.Get(2).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) string); ok {
-		r2 = rf(pluginRef, inputs, previousState, previousLockDeps)
+	if rf, ok := ret.Get(2).(func(string, []v1alpha1.InfraTaskInput, string, string) string); ok {
+		r2 = rf(taskRef, inputs, previousState, previousLockDeps)
 	} else {
 		r2 = ret.Get(2).(string)
 	}
 
-	if rf, ok := ret.Get(3).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) error); ok {
-		r3 = rf(pluginRef, inputs, previousState, previousLockDeps)
+	if rf, ok := ret.Get(3).(func(string, []v1alpha1.InfraTaskInput, string, string) error); ok {
+		r3 = rf(taskRef, inputs, previousState, previousLockDeps)
 	} else {
 		r3 = ret.Error(3)
 	}
@@ -55,13 +55,13 @@ func (_m *TerraformProvider) Apply(pluginRef string, inputs []v1alpha1.SharedInf
 	return r0, r1, r2, r3
 }
 
-// Destroy provides a mock function with given fields: pluginRef, inputs, previousState, previousLockDeps
-func (_m *TerraformProvider) Destroy(pluginRef string, inputs []v1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error {
-	ret := _m.Called(pluginRef, inputs, previousState, previousLockDeps)
+// Destroy provides a mock function with given fields: taskRef, inputs, previousState, previousLockDeps
+func (_m *TerraformProvider) Destroy(taskRef string, inputs []v1alpha1.InfraTaskInput, previousState string, previousLockDeps string) error {
+	ret := _m.Called(taskRef, inputs, previousState, previousLockDeps)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) error); ok {
-		r0 = rf(pluginRef, inputs, previousState, previousLockDeps)
+	if rf, ok := ret.Get(0).(func(string, []v1alpha1.InfraTaskInput, string, string) error); ok {
+		r0 = rf(taskRef, inputs, previousState, previousLockDeps)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -15,18 +15,18 @@ const getClassNameByExecution = (execution: any) => {
   return 'shared-infra-diagram__default-panel__execution'
 }
 
-const DefaultPanel = ({ sharedInfra, onSave, goToView }: any) => {
-  const [name, setName] = useState(sharedInfra?.name || '')
-  const [description, setDescription] = useState(sharedInfra?.description || '')
-  const [providerConfigRef, setProviderConfigRef] = useState<any>(sharedInfra?.providerConfigRef || '')
+const DefaultPanel = ({ infra, onSave, goToView }: any) => {
+  const [name, setName] = useState(infra?.name || '')
+  const [description, setDescription] = useState(infra?.description || '')
+  const [providerConfigRef, setProviderConfigRef] = useState<any>(infra?.providerConfigRef || '')
 
   const [providersConfig, setProvidersConfig] = useState<any>([])
 
   const getProvidersConfigs = useCallback(async () => {
-    const sharedInfraRes = await fetch(`http://localhost:8080/providers-configs`)
-    const sharedInfra = await sharedInfraRes.json()
+    const infraRes = await fetch(`http://localhost:8080/providers-configs`)
+    const infra = await infraRes.json()
 
-    setProvidersConfig(sharedInfra.items)
+    setProvidersConfig(infra.items)
   }, [])
 
   useEffect(() => {
@@ -34,10 +34,10 @@ const DefaultPanel = ({ sharedInfra, onSave, goToView }: any) => {
   }, [])
 
   useEffect(() => {
-    setName(sharedInfra?.name)
-    setDescription(sharedInfra?.description)
-    setProviderConfigRef(sharedInfra?.providerConfigRef)
-  }, [sharedInfra])
+    setName(infra?.name)
+    setDescription(infra?.description)
+    setProviderConfigRef(infra?.providerConfigRef)
+  }, [infra])
   
   const handleCreate = () => {
     console.log(providerConfigRef)
@@ -52,8 +52,8 @@ const DefaultPanel = ({ sharedInfra, onSave, goToView }: any) => {
   return (
     <div className='shared-infra-diagram__default-panel'>
       <div>
-        {sharedInfra && <FontAwesomeIcon onClick={goToView} className='mb-2' style={{cursor: 'pointer'}} icon="arrow-left" />}
-        <Card.Title>{sharedInfra?.name}</Card.Title>
+        {infra && <FontAwesomeIcon onClick={goToView} className='mb-2' style={{cursor: 'pointer'}} icon="arrow-left" />}
+        <Card.Title>{infra?.name}</Card.Title>
         <Form.Group className='mb-3'>
           <Form.Label>Name</Form.Label>
           <Form.Control type="text" placeholder='Type the of yout shared infra' value={name} onChange={e => setName(e.target.value)} />

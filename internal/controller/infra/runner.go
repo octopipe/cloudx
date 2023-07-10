@@ -1,4 +1,4 @@
-package sharedinfra
+package infra
 
 import (
 	"context"
@@ -18,7 +18,7 @@ type Runner struct {
 	Service *v1.Service
 }
 
-func (c *controller) NewRunner(action string, sharedInfra commonv1alpha1.SharedInfra, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
+func (c *controller) NewRunner(action string, infra commonv1alpha1.Infra, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
 	vFalse := false
 	vTrue := true
 	vUser := int64(65532)
@@ -62,8 +62,8 @@ func (c *controller) NewRunner(action string, sharedInfra commonv1alpha1.SharedI
 	}
 	serviceAccount := "cloudx-controller"
 
-	if sharedInfra.Spec.RunnerConfig.ServiceAccount != "" {
-		serviceAccount = sharedInfra.Spec.RunnerConfig.ServiceAccount
+	if infra.Spec.RunnerConfig.ServiceAccount != "" {
+		serviceAccount = infra.Spec.RunnerConfig.ServiceAccount
 	}
 
 	varsCreds, err := c.getCreds(providerConfig)
@@ -82,23 +82,23 @@ func (c *controller) NewRunner(action string, sharedInfra commonv1alpha1.SharedI
 		},
 	}
 
-	sharedInfraRef := types.NamespacedName{
-		Name:      sharedInfra.GetName(),
-		Namespace: sharedInfra.GetNamespace(),
+	infraRef := types.NamespacedName{
+		Name:      infra.GetName(),
+		Namespace: infra.GetNamespace(),
 	}
 
 	defaultVars = append(defaultVars, varsCreds...)
 
-	args := []string{"/usr/local/bin/runner", action, sharedInfraRef.String()}
+	args := []string{"/usr/local/bin/runner", action, infraRef.String()}
 
 	newRunnerObject := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-runner-%d", sharedInfra.GetName(), time.Now().Unix()),
+			Name:      fmt.Sprintf("%s-runner-%d", infra.GetName(), time.Now().Unix()),
 			Namespace: "default",
 			Labels: map[string]string{
-				"commons.cloudx.io/sharedinfra-name":      sharedInfra.GetName(),
-				"commons.cloudx.io/sharedinfra-namespace": sharedInfra.GetNamespace(),
-				"app.kubernetes.io/managed-by":            "cloudx",
+				"commons.cloudx.io/infra-name":      infra.GetName(),
+				"commons.cloudx.io/infra-namespace": infra.GetNamespace(),
+				"app.kubernetes.io/managed-by":      "cloudx",
 			},
 		},
 		Spec: v1.PodSpec{

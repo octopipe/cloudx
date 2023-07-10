@@ -16,7 +16,7 @@ theme:
   #   - navigation.tabs.sticky
   #   - navigation.top
 
-plugins:
+tasks:
   - render_swagger
 
 markdown_extensions:

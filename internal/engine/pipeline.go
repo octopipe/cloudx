@@ -9,8 +9,8 @@ import (
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/connectioninterface"
-	"github.com/octopipe/cloudx/internal/plugin"
 	"github.com/octopipe/cloudx/internal/rpcclient"
+	"github.com/octopipe/cloudx/internal/task"
 	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -47,11 +47,11 @@ func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvid
 	}
 }
 
-func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sharedInfra commonv1alpha1.SharedInfra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
-	lastExecution := sharedInfra.Status.LastExecution
+func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, infra commonv1alpha1.Infra, currentExecutionStatusChann chan commonv1alpha1.ExecutionStatus) commonv1alpha1.ExecutionStatus {
+	lastExecution := infra.Status.LastExecution
 	status := commonv1alpha1.ExecutionStatus{
-		Status:  ExecutionRunningStatus,
-		Plugins: []commonv1alpha1.PluginExecutionStatus{},
+		Status: ExecutionRunningStatus,
+		Tasks:  []commonv1alpha1.TaskExecutionStatus{},
 	}
 
 	eg := new(errgroup.Group)
@@ -66,41 +66,41 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sh
 			if _, ok := p.executionContext[node]; !ok && deps == 0 {
 				eg.Go(func(node string) func() error {
 					return func() error {
-						p.logger.Info("starting plugin execution...", zap.String("name", node), zap.Any("action", action))
+						p.logger.Info("starting task execution...", zap.String("name", node), zap.Any("action", action))
 
-						pluginExecutionStatus, pluginOutput := commonv1alpha1.PluginExecutionStatus{}, map[string]ExecutionContextItem{}
+						taskExecutionStatus, taskOutput := commonv1alpha1.TaskExecutionStatus{}, map[string]ExecutionContextItem{}
 						if action == DestroyAction {
-							lastPluginExecution := commonv1alpha1.PluginExecutionStatus{}
-							for _, statusPlugin := range lastExecution.Plugins {
-								if statusPlugin.Name == node {
-									lastPluginExecution = statusPlugin
+							lastTaskExecution := commonv1alpha1.TaskExecutionStatus{}
+							for _, statusTask := range lastExecution.Tasks {
+								if statusTask.Name == node {
+									lastTaskExecution = statusTask
 									break
 								}
 							}
-							pluginExecutionStatus = p.destroyPlugin(lastExecution, lastPluginExecution)
+							taskExecutionStatus = p.destroyTask(lastExecution, lastTaskExecution)
 						} else {
-							currentPlugin := commonv1alpha1.SharedInfraPlugin{}
-							for _, specPlugin := range sharedInfra.Spec.Plugins {
-								if specPlugin.Name == node {
-									currentPlugin = specPlugin
+							currentTask := commonv1alpha1.InfraTask{}
+							for _, specTask := range infra.Spec.Tasks {
+								if specTask.Name == node {
+									currentTask = specTask
 									break
 								}
 							}
-							pluginExecutionStatus, pluginOutput = p.applyPlugin(lastExecution, currentPlugin)
+							taskExecutionStatus, taskOutput = p.applyTask(lastExecution, currentTask)
 						}
 
 						p.mu.Lock()
 						defer p.mu.Unlock()
 
-						status.Plugins = append(status.Plugins, pluginExecutionStatus)
-						if pluginExecutionStatus.Status == ExecutionApplyErrorStatus || pluginExecutionStatus.Status == ExecutionDestroyErrorStatus {
+						status.Tasks = append(status.Tasks, taskExecutionStatus)
+						if taskExecutionStatus.Status == ExecutionApplyErrorStatus || taskExecutionStatus.Status == ExecutionDestroyErrorStatus {
 							status.Status = ExecutionErrorStatus
-							status.Error = pluginExecutionStatus.Error
-							p.logger.Info("plugin execution failed", zap.String("plugin-name", pluginExecutionStatus.Name), zap.Error(errors.New(pluginExecutionStatus.Error)))
-							return errors.New(pluginExecutionStatus.Error)
+							status.Error = taskExecutionStatus.Error
+							p.logger.Info("task execution failed", zap.String("task-name", taskExecutionStatus.Name), zap.Error(errors.New(taskExecutionStatus.Error)))
+							return errors.New(taskExecutionStatus.Error)
 						}
 
-						p.executionContext[node] = pluginOutput
+						p.executionContext[node] = taskOutput
 
 						for n, deps := range graph {
 							for _, dep := range deps {
@@ -110,7 +110,7 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sh
 							}
 						}
 
-						p.logger.Info("finish plugin execution...", zap.String("name", node), zap.Any("action", action))
+						p.logger.Info("finish task execution...", zap.String("name", node), zap.Any("action", action))
 						return nil
 					}
 				}(node))
@@ -134,20 +134,20 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sh
 	return status
 }
 
-func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.ExecutionStatus, lastExecutionPlugin commonv1alpha1.PluginExecutionStatus) commonv1alpha1.PluginExecutionStatus {
-	status := commonv1alpha1.PluginExecutionStatus{
-		Name:       lastExecutionPlugin.Name,
-		Ref:        lastExecutionPlugin.Ref,
-		Depends:    lastExecutionPlugin.Depends,
-		Inputs:     lastExecutionPlugin.Inputs,
-		PluginType: lastExecutionPlugin.PluginType,
-		Status:     ExecutionDestroyed,
-		StartedAt:  time.Now().Format(time.RFC3339),
+func (p *pipeline) destroyTask(lastExecution commonv1alpha1.ExecutionStatus, lastExecutionTask commonv1alpha1.TaskExecutionStatus) commonv1alpha1.TaskExecutionStatus {
+	status := commonv1alpha1.TaskExecutionStatus{
+		Name:      lastExecutionTask.Name,
+		Ref:       lastExecutionTask.Ref,
+		Depends:   lastExecutionTask.Depends,
+		Inputs:    lastExecutionTask.Inputs,
+		TaskType:  lastExecutionTask.TaskType,
+		Status:    ExecutionDestroyed,
+		StartedAt: time.Now().Format(time.RFC3339),
 	}
 
-	inputs := lastExecutionPlugin.Inputs
-	if lastExecutionPlugin.PluginType == plugin.TerraformPluginType {
-		err := p.terraformProvider.Destroy(lastExecutionPlugin.Ref, inputs, lastExecutionPlugin.State, lastExecutionPlugin.DependencyLock)
+	inputs := lastExecutionTask.Inputs
+	if lastExecutionTask.TaskType == task.TerraformTaskType {
+		err := p.terraformProvider.Destroy(lastExecutionTask.Ref, inputs, lastExecutionTask.State, lastExecutionTask.DependencyLock)
 		if err != nil {
 			status.Error = err.Error()
 			status.Status = ExecutionDestroyErrorStatus
@@ -157,32 +157,32 @@ func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.ExecutionStatus, l
 		return status
 	}
 
-	status.Error = "invalid plugin type"
+	status.Error = "invalid task type"
 	status.Status = ExecutionDestroyErrorStatus
 
 	return status
 }
 
-func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]ExecutionContextItem) {
-	lastPluginExecutionStatus := commonv1alpha1.PluginExecutionStatus{}
+func (p *pipeline) applyTask(lastExecution commonv1alpha1.ExecutionStatus, currentTask commonv1alpha1.InfraTask) (commonv1alpha1.TaskExecutionStatus, map[string]ExecutionContextItem) {
+	lastTaskExecutionStatus := commonv1alpha1.TaskExecutionStatus{}
 
-	for _, e := range lastExecution.Plugins {
-		if e.Name == currentPlugin.Name {
-			lastPluginExecutionStatus = e
+	for _, e := range lastExecution.Tasks {
+		if e.Name == currentTask.Name {
+			lastTaskExecutionStatus = e
 		}
 	}
 
-	status := commonv1alpha1.PluginExecutionStatus{
-		Name:       currentPlugin.Name,
-		Ref:        currentPlugin.Ref,
-		Depends:    currentPlugin.Depends,
-		Inputs:     currentPlugin.Inputs,
-		PluginType: currentPlugin.PluginType,
-		Status:     ExecutionAppliedStatus,
-		StartedAt:  time.Now().Format(time.RFC3339),
+	status := commonv1alpha1.TaskExecutionStatus{
+		Name:      currentTask.Name,
+		Ref:       currentTask.Ref,
+		Depends:   currentTask.Depends,
+		Inputs:    currentTask.Inputs,
+		TaskType:  currentTask.TaskType,
+		Status:    ExecutionAppliedStatus,
+		StartedAt: time.Now().Format(time.RFC3339),
 	}
 
-	inputs, err := p.interpolatePluginInputsByExecutionContext(currentPlugin)
+	inputs, err := p.interpolateTaskInputsByExecutionContext(currentTask)
 	if err != nil {
 		status.Error = err.Error()
 		status.Status = ExecutionApplyErrorStatus
@@ -190,8 +190,8 @@ func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, cur
 	}
 
 	status.Inputs = inputs
-	if currentPlugin.PluginType == plugin.TerraformPluginType {
-		out, state, lockfile, err := p.terraformProvider.Apply(currentPlugin.Ref, inputs, lastPluginExecutionStatus.State, lastPluginExecutionStatus.DependencyLock)
+	if currentTask.TaskType == task.TerraformTaskType {
+		out, state, lockfile, err := p.terraformProvider.Apply(currentTask.Ref, inputs, lastTaskExecutionStatus.State, lastTaskExecutionStatus.DependencyLock)
 		status.FinishedAt = time.Now().Format(time.RFC3339)
 		if err != nil {
 			status.Error = err.Error()
@@ -215,15 +215,15 @@ func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, cur
 		return status, outputs
 	}
 
-	status.Error = "invalid plugin type"
+	status.Error = "invalid task type"
 	status.Status = ExecutionApplyErrorStatus
 
 	return status, nil
 }
 
-func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alpha1.SharedInfraPlugin) ([]commonv1alpha1.SharedInfraPluginInput, error) {
-	inputs := []commonv1alpha1.SharedInfraPluginInput{}
-	for _, i := range plugin.Inputs {
+func (p *pipeline) interpolateTaskInputsByExecutionContext(task commonv1alpha1.InfraTask) ([]commonv1alpha1.InfraTaskInput, error) {
+	inputs := []commonv1alpha1.InfraTaskInput{}
+	for _, i := range task.Inputs {
 		tokens := Lex(i.Value)
 		data := map[string]string{}
 		sensitive := false
@@ -247,7 +247,7 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 			}
 		}
 
-		inputs = append(inputs, commonv1alpha1.SharedInfraPluginInput{
+		inputs = append(inputs, commonv1alpha1.InfraTaskInput{
 			Key:       i.Key,
 			Value:     Interpolate(tokens, data),
 			Sensitive: sensitive,
@@ -263,12 +263,12 @@ func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (str
 		p.logger.Info("interpolate this origin")
 		execution, ok := p.executionContext[name]
 		if !ok {
-			return "", false, fmt.Errorf("not found plugin %s in execution context", name)
+			return "", false, fmt.Errorf("not found task %s in execution context", name)
 		}
 
 		executionAttr, ok := execution[attr]
 		if !ok {
-			return "", false, fmt.Errorf("not found attr %s in finished plugin execution %s", attr, name)
+			return "", false, fmt.Errorf("not found attr %s in finished task execution %s", attr, name)
 		}
 
 		return executionAttr.Value, executionAttr.Sensitive, nil

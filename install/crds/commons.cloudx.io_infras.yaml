@@ -40,6 +40,20 @@ spec:
                 type: string
               generation:
                 type: string
+              providerConfigRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
+              runnerConfig:
+                properties:
+                  nodeSelector:
+                    type: string
+                  serviceAccount:
+                    type: string
+                type: object
               tasks:
                 items:
                   properties:
@@ -52,10 +66,13 @@ spec:
                         properties:
                           key:
                             type: string
+                          sensitive:
+                            type: boolean
                           value:
                             type: string
                         required:
                         - key
+                        - sensitive
                         - value
                         type: object
                       type: array
@@ -86,20 +103,6 @@ spec:
                   - type
                   type: object
                 type: array
-              providerConfigRef:
-                properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                type: object
-              runnerConfig:
-                properties:
-                  nodeSelector:
-                    type: string
-                  serviceAccount:
-                    type: string
-                type: object
             required:
             - tasks
             type: object
@@ -110,6 +113,10 @@ spec:
                   error:
                     type: string
                   finishedAt:
+                    type: string
+                  startedAt:
+                    type: string
+                  status:
                     type: string
                   tasks:
                     items:
@@ -129,10 +136,13 @@ spec:
                             properties:
                               key:
                                 type: string
+                              sensitive:
+                                type: boolean
                               value:
                                 type: string
                             required:
                             - key
+                            - sensitive
                             - value
                             type: object
                           type: array
@@ -155,10 +165,6 @@ spec:
                       - type
                       type: object
                     type: array
-                  startedAt:
-                    type: string
-                  status:
-                    type: string
                 type: object
             type: object
         type: object

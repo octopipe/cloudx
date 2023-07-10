@@ -1,4 +1,4 @@
-package sharedinfra
+package infra
 
 import (
 	"context"
@@ -22,11 +22,11 @@ func NewK8sRepository(c client.Client) Repository {
 }
 
 // Apply implements Repository.
-func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.SharedInfra) (v1alpha1.SharedInfra, error) {
+func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.Infra) (v1alpha1.Infra, error) {
 	err := r.client.Create(ctx, &s)
 	if err != nil && errors.IsAlreadyExists(err) {
 		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			current := commonv1alpha1.SharedInfra{}
+			current := commonv1alpha1.Infra{}
 			err = r.client.Get(ctx, types.NamespacedName{
 				Name:      s.Name,
 				Namespace: s.Namespace,
@@ -46,15 +46,15 @@ func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.SharedInfra) (v1alp
 }
 
 // Get implements Repository.
-func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.SharedInfra, error) {
-	var sharedInfra v1alpha1.SharedInfra
-	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &sharedInfra)
-	return sharedInfra, err
+func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.Infra, error) {
+	var infra v1alpha1.Infra
+	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &infra)
+	return infra, err
 }
 
 func (r k8sRepository) Reconcile(ctx context.Context, name string, namespace string) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		current := commonv1alpha1.SharedInfra{}
+		current := commonv1alpha1.Infra{}
 		err := r.client.Get(ctx, types.NamespacedName{
 			Name:      name,
 			Namespace: namespace,
@@ -71,18 +71,18 @@ func (r k8sRepository) Reconcile(ctx context.Context, name string, namespace str
 
 // Delete implements Repository.
 func (r k8sRepository) Delete(ctx context.Context, name string, namespace string) error {
-	sharedInfra, err := r.Get(ctx, name, namespace)
+	infra, err := r.Get(ctx, name, namespace)
 	if err != nil {
 		return nil
 	}
 
-	err = r.client.Delete(ctx, &sharedInfra)
+	err = r.client.Delete(ctx, &infra)
 	return err
 }
 
 // List implements Repository.
-func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.SharedInfraList, error) {
-	var sharedInfraList v1alpha1.SharedInfraList
-	err := r.client.List(ctx, &sharedInfraList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
-	return sharedInfraList, err
+func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.InfraList, error) {
+	var infraList v1alpha1.InfraList
+	err := r.client.List(ctx, &infraList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
+	return infraList, err
 }

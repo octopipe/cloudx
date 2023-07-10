@@ -1,4 +1,4 @@
-package sharedinfra
+package infra
 
 import (
 	"net/http"
@@ -9,18 +9,18 @@ import (
 )
 
 type httpHandler struct {
-	sharedInfraUseCase UseCase
+	infraUseCase UseCase
 }
 
-func NewHTTPHandler(e *gin.Engine, sharedInfraUseCase UseCase) *gin.Engine {
-	h := httpHandler{sharedInfraUseCase: sharedInfraUseCase}
+func NewHTTPHandler(e *gin.Engine, infraUseCase UseCase) *gin.Engine {
+	h := httpHandler{infraUseCase: infraUseCase}
 
-	e.GET("/shared-infras", h.List)
-	e.POST("/shared-infras", h.Create)
-	e.GET("/shared-infras/:shared-infra-name", h.Get)
-	e.PUT("/shared-infras/:shared-infra-name", h.Update)
-	e.PATCH("/shared-infras/:shared-infra-name/reconcile", h.Reconcile)
-	e.DELETE("/shared-infras/:shared-infra-name", h.Delete)
+	e.GET("/infra", h.List)
+	e.POST("/infra", h.Create)
+	e.GET("/infra/:shared-infra-name", h.Get)
+	e.PUT("/infra/:shared-infra-name", h.Update)
+	e.PATCH("/infra/:shared-infra-name/reconcile", h.Reconcile)
+	e.DELETE("/infra/:shared-infra-name", h.Delete)
 
 	return e
 }
@@ -48,7 +48,7 @@ func (h httpHandler) List(c *gin.Context) {
 		chunk = c.Query("chunk")
 	}
 
-	list, err := h.sharedInfraUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
+	list, err := h.infraUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
 		Limit: int64(limit),
 		Chunk: chunk,
 	})
@@ -70,7 +70,7 @@ func (h httpHandler) Get(c *gin.Context) {
 	}
 	name := c.Param("shared-infra-name")
 
-	item, err := h.sharedInfraUseCase.Get(c.Request.Context(), name, namespace)
+	item, err := h.infraUseCase.Get(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -89,7 +89,7 @@ func (h httpHandler) Reconcile(c *gin.Context) {
 	}
 	name := c.Param("shared-infra-name")
 
-	err := h.sharedInfraUseCase.Reconcile(c.Request.Context(), name, namespace)
+	err := h.infraUseCase.Reconcile(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -108,15 +108,15 @@ func (h httpHandler) Create(c *gin.Context) {
 	// }
 	// name := c.Param("shared-infra-name")
 
-	sharedInfra := SharedInfra{}
-	if err := c.BindJSON(&sharedInfra); err != nil {
+	infra := Infra{}
+	if err := c.BindJSON(&infra); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	item, err := h.sharedInfraUseCase.Create(c.Request.Context(), sharedInfra)
+	item, err := h.infraUseCase.Create(c.Request.Context(), infra)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -135,15 +135,15 @@ func (h httpHandler) Update(c *gin.Context) {
 	// }
 	// name := c.Param("shared-infra-name")
 
-	sharedInfra := SharedInfra{}
-	if err := c.BindJSON(&sharedInfra); err != nil {
+	infra := Infra{}
+	if err := c.BindJSON(&infra); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	item, err := h.sharedInfraUseCase.Update(c.Request.Context(), sharedInfra)
+	item, err := h.infraUseCase.Update(c.Request.Context(), infra)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -162,7 +162,7 @@ func (h httpHandler) Delete(c *gin.Context) {
 	}
 	name := c.Param("shared-infra-name")
 
-	err := h.sharedInfraUseCase.Delete(c.Request.Context(), name, namespace)
+	err := h.infraUseCase.Delete(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),

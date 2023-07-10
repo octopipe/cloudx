@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func UpdateSharedInfraStatus(client client.Client, sharedInfra commonv1alpha1.SharedInfra) error {
+func UpdateInfraStatus(client client.Client, infra commonv1alpha1.Infra) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		return client.Status().Update(context.TODO(), &sharedInfra)
+		return client.Status().Update(context.TODO(), &infra)
 	})
 }

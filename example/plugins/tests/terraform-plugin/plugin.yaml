@@ -1,6 +1,6 @@
-kind: Plugin
+kind: Task
 metadata:
-  name: terraform-plugin
+  name: terraform-task
 spec:
   inputs:
     - label: Name

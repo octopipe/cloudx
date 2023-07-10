@@ -71,7 +71,7 @@ const ProviderConfigView = () => {
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label>Secret ref</Form.Label>
-        <Form.Control type="text" disabled placeholder="type the plugin ref" value={secretRef} onChange={e => setSecretRef(e.target.value)} />
+        <Form.Control type="text" disabled placeholder="type the task ref" value={secretRef} onChange={e => setSecretRef(e.target.value)} />
         <small>Secret ref </small>
       </Form.Group>
     </div>

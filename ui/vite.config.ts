@@ -2,11 +2,11 @@
 /// <reference types="vite/client" />
 
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import react from '@vitejs/task-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  tasks: [react()],
   test: {
     globals: true,
     environment: 'jsdom',

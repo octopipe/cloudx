@@ -1,26 +1,26 @@
 package commands
 
 import (
-	"github.com/octopipe/cloudx/internal/pluginmanager"
+	"github.com/octopipe/cloudx/internal/taskmanager"
 	"github.com/spf13/cobra"
 )
 
-type sharedInfraCmd struct {
+type infraCmd struct {
 }
 
-func (p sharedInfraCmd) NewSharedInfraCmd() *cobra.Command {
+func (p infraCmd) NewInfraCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "sharedInfra",
-		Short: "Manage sharedInfras",
+		Use:   "infra",
+		Short: "Manage infras",
 		Run: func(cmd *cobra.Command, args []string) {
 		},
 	}
 }
 
-func (p sharedInfraCmd) NewCreateSharedInfraCmd() *cobra.Command {
+func (p infraCmd) NewCreateInfraCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "create",
-		Short: "create a sharedInfra",
+		Short: "create a infra",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -28,11 +28,11 @@ func (p sharedInfraCmd) NewCreateSharedInfraCmd() *cobra.Command {
 	}
 }
 
-func NewSharedInfraRoot(pluginManager pluginmanager.Manager) *cobra.Command {
-	sharedInfraRoot := sharedInfraCmd{}
+func NewInfraRoot(taskManager taskmanager.Manager) *cobra.Command {
+	infraRoot := infraCmd{}
 
-	sharedInfraCmd := sharedInfraRoot.NewSharedInfraCmd()
-	sharedInfraCmd.AddCommand(sharedInfraRoot.NewCreateSharedInfraCmd())
+	infraCmd := infraRoot.NewInfraCmd()
+	infraCmd.AddCommand(infraRoot.NewCreateInfraCmd())
 
-	return sharedInfraCmd
+	return infraCmd
 }

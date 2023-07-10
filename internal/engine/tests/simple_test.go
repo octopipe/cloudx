@@ -34,14 +34,14 @@ func (suite *SimpleTestSuite) TestSimpleCase() {
 	absPath, _ := filepath.Abs("./data/simple-infra.json")
 	simpleInfraJSON, _ := ioutil.ReadFile(absPath)
 
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err := json.Unmarshal(simpleInfraJSON, currentSharedInfra)
+	currentInfra := &commonv1alpha1.Infra{}
+	err := json.Unmarshal(simpleInfraJSON, currentInfra)
 
 	terraformProvider := new(mocks.TerraformProvider)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:sns-1",
-		currentSharedInfra.Spec.Plugins[0].Inputs,
+		"mayconjrpacheco/task:sns-1",
+		currentInfra.Spec.Tasks[0].Inputs,
 		"",
 		"",
 	).Return(map[string]any{
@@ -49,8 +49,8 @@ func (suite *SimpleTestSuite) TestSimpleCase() {
 	}, "", "", nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:lambda-role-1",
-		currentSharedInfra.Spec.Plugins[1].Inputs,
+		"mayconjrpacheco/task:lambda-role-1",
+		currentInfra.Spec.Tasks[1].Inputs,
 		"",
 		"",
 	).Return(map[string]any{
@@ -58,10 +58,10 @@ func (suite *SimpleTestSuite) TestSimpleCase() {
 	}, "", "", nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:lambda-1",
-		[]commonv1alpha1.SharedInfraPluginInput{
-			currentSharedInfra.Spec.Plugins[2].Inputs[0],
-			currentSharedInfra.Spec.Plugins[2].Inputs[1],
+		"mayconjrpacheco/task:lambda-1",
+		[]commonv1alpha1.InfraTaskInput{
+			currentInfra.Spec.Tasks[2].Inputs[0],
+			currentInfra.Spec.Tasks[2].Inputs[1],
 			{Key: "role_arn", Value: "arn:aws:role-arn"},
 			{Key: "image_uri", Value: "repository.org:latest"},
 		},
@@ -72,11 +72,11 @@ func (suite *SimpleTestSuite) TestSimpleCase() {
 	}, "", "", nil)
 
 	terraformProvider.On("Apply",
-		"mayconjrpacheco/plugin:sns-lambda-trigger-1",
-		[]commonv1alpha1.SharedInfraPluginInput{
-			currentSharedInfra.Spec.Plugins[3].Inputs[0],
+		"mayconjrpacheco/task:sns-lambda-trigger-1",
+		[]commonv1alpha1.InfraTaskInput{
+			currentInfra.Spec.Tasks[3].Inputs[0],
 			{Key: "sns_arn", Value: "arn:aws:sns-arn"},
-			currentSharedInfra.Spec.Plugins[3].Inputs[2],
+			currentInfra.Spec.Tasks[3].Inputs[2],
 		},
 		"",
 		"",
@@ -111,7 +111,7 @@ func (suite *SimpleTestSuite) TestSimpleCase() {
 
 	chann := make(chan commonv1alpha1.ExecutionStatus)
 
-	status := newEngine.Apply(*currentSharedInfra, chann)
+	status := newEngine.Apply(*currentInfra, chann)
 	assert.Empty(suite.T(), status.Error)
 	assert.Equal(suite.T(), engine.ExecutionSuccessStatus, status.Status)
 }

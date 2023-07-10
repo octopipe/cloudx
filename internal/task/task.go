@@ -1,12 +1,12 @@
-package plugin
+package task
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 const (
-	TerraformPluginType = "terraform"
+	TerraformTaskType = "terraform"
 )
 
-type PluginInput struct {
+type TaskInput struct {
 	Label    string `json:"label"`
 	Name     string `json:"name"`
 	Help     string `json:"help"`
@@ -15,13 +15,13 @@ type PluginInput struct {
 	Default  string `json:"default"`
 }
 
-type PluginSpec struct {
-	Inputs []PluginInput `json:"inputs"`
+type TaskSpec struct {
+	Inputs []TaskInput `json:"inputs"`
 }
 
-type Plugin struct {
+type Task struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec PluginSpec `json:"spec,omitempty"`
+	Spec TaskSpec `json:"spec,omitempty"`
 }

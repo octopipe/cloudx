@@ -19,26 +19,26 @@ const getClassNameByExecution = (execution: any) => {
   return 'shared-infra-diagram__default-panel__execution--running'
 }
 
-const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onReconcileClick, onSelectExecution, onClose }: any) => {
+const DefaultPanel = ({ infra, executions, onViewClick, onEditClick, onReconcileClick, onSelectExecution, onClose }: any) => {
   return (
     <div className='shared-infra-diagram__default-panel'>
       <div>
         <div className='d-flex justify-content-between'>
-          <Card.Title>{sharedInfra?.name}</Card.Title>
+          <Card.Title>{infra?.name}</Card.Title>
           <div>
             <FontAwesomeIcon style={{cursor: 'pointer'}} icon="diagram-project" onClick={onViewClick} />
             <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="edit" onClick={onEditClick} />
             <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="rotate" onClick={onReconcileClick} />
           </div>
         </div>
-        <p>{sharedInfra?.description}</p>
+        <p>{infra?.description}</p>
         <div className='mb-3'>
           <strong>Provider Config</strong><br/>
-          {sharedInfra?.providerConfigRef?.name}
+          {infra?.providerConfigRef?.name}
         </div>
         <div className='mb-3'>
-          <strong>Plugins</strong><br/>
-          {sharedInfra?.plugins?.map((p: any) => (
+          <strong>Tasks</strong><br/>
+          {infra?.tasks?.map((p: any) => (
             <Card className='p-2 mt-2'>
               {p?.name}
             </Card>
@@ -49,13 +49,13 @@ const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onRec
           <small className='mb-2'>If you want to see more executions try to use webhooks to listen and save these events</small>
           {/* {executions?.map((i: any) => ( */}
             <Card 
-              className={`${getClassNameByExecution(sharedInfra?.status)} mt-2`}
+              className={`${getClassNameByExecution(infra?.status)} mt-2`}
               style={{cursor: 'pointer'}} 
-              onClick={() => onSelectExecution(sharedInfra?.status)}
+              onClick={() => onSelectExecution(infra?.status)}
             >
               <div className='d-flex'>
-              {sharedInfra?.status?.status === "RUNNING" && <Spinner size='sm' className='me-1' />}
-              {sharedInfra?.name}
+              {infra?.status?.status === "RUNNING" && <Spinner size='sm' className='me-1' />}
+              {infra?.name}
               </div>
               
             </Card>

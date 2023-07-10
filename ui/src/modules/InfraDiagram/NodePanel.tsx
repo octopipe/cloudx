@@ -73,7 +73,7 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
             <>
               <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
                 <Form.Label>Name</Form.Label>
-                <Form.Control type="text" placeholder="type the plugin name" value={name} onChange={e => setName(e.target.value)}/>
+                <Form.Control type="text" placeholder="type the task name" value={name} onChange={e => setName(e.target.value)}/>
               </Form.Group>
               <Form.Group className="mb-3">
                 <Form.Label>Type</Form.Label>
@@ -87,7 +87,7 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
               {selectedNode?.data?.category !== "aws" && (
                 <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
                   <Form.Label>Ref</Form.Label>
-                  <Form.Control type="text" placeholder="type the plugin ref" value={ref} onChange={e => setRef(e.target.value)} />
+                  <Form.Control type="text" placeholder="type the task ref" value={ref} onChange={e => setRef(e.target.value)} />
                 </Form.Group>
               )}
               <Form.Group className="mb-3">
@@ -112,7 +112,7 @@ const NodePanel = ({ selectedNode, action, onClose, onChange }: any) => {
               <div><strong>Ref: </strong>{selectedNode?.data?.ref}</div>
               <div><strong>Type: </strong>{selectedNode?.data?.type}</div>
               <div>
-                <strong>Plugins:</strong><br/>
+                <strong>Tasks:</strong><br/>
                 {selectedNode?.data?.inputs?.map((i: any) => (
                   <Card className='p-1 mt-2 d-flex flex-row '>
                     <strong>{i?.key}: </strong>{i?.value}

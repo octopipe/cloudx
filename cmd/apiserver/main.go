@@ -7,8 +7,8 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/connectioninterface"
+	"github.com/octopipe/cloudx/internal/infra"
 	"github.com/octopipe/cloudx/internal/providerconfig"
-	"github.com/octopipe/cloudx/internal/sharedinfra"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -39,8 +39,8 @@ func main() {
 
 	r := gin.Default()
 	r.Use(CORSMiddleware())
-	sharedInfraRepository := sharedinfra.NewK8sRepository(k8sClient)
-	sharedInfraUseCase := sharedinfra.NewUseCase(sharedInfraRepository)
+	infraRepository := infra.NewK8sRepository(k8sClient)
+	infraUseCase := infra.NewUseCase(infraRepository)
 
 	connectionInterfaceRepository := connectioninterface.NewK8sRepository(k8sClient)
 	connectionInterfaceUseCase := connectioninterface.NewUseCase(connectionInterfaceRepository)
@@ -48,7 +48,7 @@ func main() {
 	providerConfigRepository := providerconfig.NewK8sRepository(k8sClient)
 	providerConfigUseCase := providerconfig.NewUseCase(providerConfigRepository)
 
-	r = sharedinfra.NewHTTPHandler(r, sharedInfraUseCase)
+	r = infra.NewHTTPHandler(r, infraUseCase)
 	r = connectioninterface.NewHTTPHandler(r, connectionInterfaceUseCase)
 	r = providerconfig.NewHTTPHandler(r, providerConfigUseCase)
 

@@ -1,4 +1,4 @@
-package sharedinfra
+package infra
 
 import (
 	"context"
@@ -40,28 +40,28 @@ func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Sch
 }
 
 func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err := c.Get(ctx, req.NamespacedName, currentSharedInfra)
+	currentInfra := &commonv1alpha1.Infra{}
+	err := c.Get(ctx, req.NamespacedName, currentInfra)
 	if err != nil {
 		return ctrl.Result{}, nil
 	}
 
-	if currentSharedInfra.Status.LastExecution.Status == engine.ExecutionRunningStatus {
-		c.logger.Info("This sharedinfra has runner in execution, enqueue this request")
+	if currentInfra.Status.LastExecution.Status == engine.ExecutionRunningStatus {
+		c.logger.Info("This infra has runner in execution, enqueue this request")
 		return ctrl.Result{
 			RequeueAfter: time.Second * 2,
 		}, nil
 	}
 
 	action := "APPLY"
-	if len(currentSharedInfra.Finalizers) > 0 {
+	if len(currentInfra.Finalizers) > 0 {
 		action = "DESTROY"
 	}
 
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
-		Name:      currentSharedInfra.Spec.ProviderConfigRef.Name,
-		Namespace: currentSharedInfra.Spec.ProviderConfigRef.Namespace,
+		Name:      currentInfra.Spec.ProviderConfigRef.Name,
+		Namespace: currentInfra.Spec.ProviderConfigRef.Namespace,
 	}, &providerConfig)
 	if err != nil {
 		c.logger.Error("Failed to get provider config by shared infra", zap.Error(err))
@@ -72,7 +72,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner...")
-		newRunner, err := c.NewRunner(action, *currentSharedInfra, providerConfig)
+		newRunner, err := c.NewRunner(action, *currentInfra, providerConfig)
 		if err != nil {
 			c.logger.Error("Failed to create runner", zap.Error(err))
 			return ctrl.Result{Requeue: false}, err
@@ -84,11 +84,11 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{Requeue: false}, err
 		}
 
-		currentSharedInfra.Status.LastExecution.Status = engine.ExecutionRunningStatus
-		currentSharedInfra.Status.LastExecution.StartedAt = time.Now().Format(time.RFC3339)
-		err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
+		currentInfra.Status.LastExecution.Status = engine.ExecutionRunningStatus
+		currentInfra.Status.LastExecution.StartedAt = time.Now().Format(time.RFC3339)
+		err = utils.UpdateInfraStatus(c.Client, *currentInfra)
 		if err != nil {
-			c.logger.Error("Failed to update sharedinfra status", zap.Error(err))
+			c.logger.Error("Failed to update infra status", zap.Error(err))
 			return ctrl.Result{Requeue: false}, err
 		}
 	}
@@ -106,7 +106,7 @@ func ignoreDeletionPredicate() predicate.Predicate {
 
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&commonv1alpha1.SharedInfra{}).
+		For(&commonv1alpha1.Infra{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Complete(c)
 }

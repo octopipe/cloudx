@@ -46,7 +46,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// labels := currentRunner.Labels
-	// sharedInfraName := labels["commons.cloudx.io/sharedinfra-name"]
+	// infraName := labels["commons.cloudx.io/infra-name"]
 
 	logsReq := c.k8sClient.CoreV1().Pods("cloudx-system").GetLogs(currentRunner.GetName(), &v1.PodLogOptions{})
 	podLogs, err := logsReq.Stream(ctx)

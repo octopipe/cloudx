@@ -1,4 +1,4 @@
-package pluginmanager
+package taskmanager
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 type Manager interface {
-	Publish(pluginName string, filecontents map[string][]byte) error
+	Publish(taskName string, filecontents map[string][]byte) error
 }
 
 type manager struct {
@@ -18,15 +18,15 @@ type manager struct {
 	terraformProvider terraform.TerraformProvider
 }
 
-func NewPluginManager(logger *zap.Logger, terraformProvider terraform.TerraformProvider) Manager {
+func NewTaskManager(logger *zap.Logger, terraformProvider terraform.TerraformProvider) Manager {
 	return manager{
 		logger:            logger,
 		terraformProvider: terraformProvider,
 	}
 }
 
-func (m manager) Publish(pluginName string, filecontents map[string][]byte) error {
-	tag, err := name.NewTag(fmt.Sprintf("mayconjrpacheco/plugin:%s", pluginName))
+func (m manager) Publish(taskName string, filecontents map[string][]byte) error {
+	tag, err := name.NewTag(fmt.Sprintf("mayconjrpacheco/task:%s", taskName))
 	if err != nil {
 		return err
 	}

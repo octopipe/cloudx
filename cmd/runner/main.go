@@ -7,7 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/controller/sharedinfra"
+	"github.com/octopipe/cloudx/internal/controller/infra"
 	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/rpcclient"
 	"github.com/octopipe/cloudx/internal/terraform"
@@ -48,24 +48,24 @@ func main() {
 		logger:    logger,
 	}
 
-	sharedInfraRef, action := newRunnerContext.getDataFromCommandArgs()
+	infraRef, action := newRunnerContext.getDataFromCommandArgs()
 	if err != nil {
 		panic(err)
 	}
 
 	logger.Info("getting last execution")
 
-	currentSharedInfra := &commonv1alpha1.SharedInfra{}
-	err = newRunnerContext.rpcClient.Call("RPCServer.GetSharedInfra", sharedinfra.RPCGetSharedInfraArgs{
-		Ref: sharedInfraRef,
-	}, currentSharedInfra)
+	currentInfra := &commonv1alpha1.Infra{}
+	err = newRunnerContext.rpcClient.Call("RPCServer.GetInfra", infra.RPCGetInfraArgs{
+		Ref: infraRef,
+	}, currentInfra)
 	if err != nil {
 		panic(err)
 	}
 
 	currentExecutionStatusChann := make(chan commonv1alpha1.ExecutionStatus)
 
-	go newRunnerContext.startTimeout(sharedInfraRef, currentExecutionStatusChann)
+	go newRunnerContext.startTimeout(infraRef, currentExecutionStatusChann)
 
 	logger.Info("installing terraform provider")
 	terraformProvider, err := terraform.NewTerraformProvider(logger, "")
@@ -78,11 +78,11 @@ func main() {
 	go func() {
 		currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
 		if action == "APPLY" {
-			currentExecutionStatus := currentExecution.Apply(*currentSharedInfra, currentExecutionStatusChann)
+			currentExecutionStatus := currentExecution.Apply(*currentInfra, currentExecutionStatusChann)
 			currentExecutionStatus.FinishedAt = time.Now().Format(time.RFC3339)
 			currentExecutionStatusChann <- currentExecutionStatus
 		} else {
-			currentExecution.Destroy(*currentSharedInfra, currentExecutionStatusChann)
+			currentExecution.Destroy(*currentInfra, currentExecutionStatusChann)
 		}
 
 		doneChann <- true
@@ -92,8 +92,8 @@ func main() {
 		select {
 		case executionStatus := <-currentExecutionStatusChann:
 			logger.Info("New status received calling controller...")
-			rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
-				Ref:             sharedInfraRef,
+			rpcRunnerFinishedArgs := &infra.RPCSetExecutionStatusArgs{
+				Ref:             infraRef,
 				ExecutionStatus: executionStatus,
 			}
 
@@ -115,27 +115,27 @@ func main() {
 func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string) {
 	commandArgs := os.Args[1:]
 	action := commandArgs[0]
-	rawSharedInfraRef := commandArgs[1]
+	rawInfraRef := commandArgs[1]
 
-	sharedInfraRef := types.NamespacedName{}
+	infraRef := types.NamespacedName{}
 
-	s := strings.Split(rawSharedInfraRef, "/")
+	s := strings.Split(rawInfraRef, "/")
 	if len(s) > 1 {
-		sharedInfraRef.Namespace = s[0]
-		sharedInfraRef.Name = s[1]
+		infraRef.Namespace = s[0]
+		infraRef.Name = s[1]
 	} else {
-		sharedInfraRef.Name = s[0]
-		sharedInfraRef.Namespace = "default"
+		infraRef.Name = s[0]
+		infraRef.Namespace = "default"
 	}
 
-	return sharedInfraRef, action
+	return infraRef, action
 }
 
-func (c runnerContext) startTimeout(sharedInfraRef types.NamespacedName, currentExecutionStatusChann <-chan commonv1alpha1.ExecutionStatus) {
+func (c runnerContext) startTimeout(infraRef types.NamespacedName, currentExecutionStatusChann <-chan commonv1alpha1.ExecutionStatus) {
 	time.Sleep(5 * time.Minute)
 
-	rpcRunnerFinishedArgs := &sharedinfra.RPCSetExecutionStatusArgs{
-		Ref:             sharedInfraRef,
+	rpcRunnerFinishedArgs := &infra.RPCSetExecutionStatusArgs{
+		Ref:             infraRef,
 		ExecutionStatus: <-currentExecutionStatusChann,
 	}
 

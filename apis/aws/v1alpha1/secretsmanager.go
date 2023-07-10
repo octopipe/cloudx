@@ -13,7 +13,7 @@ type SecretsManagerSpec struct {
 }
 
 type SecretsManagerStatus struct {
-	// Executions []SharedInfraExecutionStatus `json:"executions,omitempty"`
+	// Executions []InfraExecutionStatus `json:"executions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
