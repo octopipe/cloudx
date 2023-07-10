@@ -10,8 +10,9 @@ type SharedInfraPluginRef struct {
 }
 
 type SharedInfraPluginInput struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key       string `json:"key"`
+	Value     string `json:"value"`
+	Sensitive bool   `json:"sensitive"`
 }
 
 type SharedInfraPluginOutput struct {

@@ -78,7 +78,9 @@ func main() {
 	go func() {
 		currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
 		if action == "APPLY" {
-			currentExecutionStatusChann <- currentExecution.Apply(*currentSharedInfra, currentExecutionStatusChann)
+			currentExecutionStatus := currentExecution.Apply(*currentSharedInfra, currentExecutionStatusChann)
+			currentExecutionStatus.FinishedAt = time.Now().Format(time.RFC3339)
+			currentExecutionStatusChann <- currentExecutionStatus
 		} else {
 			currentExecution.Destroy(*currentSharedInfra, currentExecutionStatusChann)
 		}

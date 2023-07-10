@@ -24,11 +24,17 @@ const (
 
 type DependencyGraph map[string][]string
 
+type ExecutionContextItem struct {
+	Value     string
+	Sensitive bool
+	Type      string
+}
+
 type pipeline struct {
 	logger            *zap.Logger
 	terraformProvider terraform.TerraformProvider
 	mu                sync.Mutex
-	executionContext  map[string]map[string]any
+	executionContext  map[string]map[string]ExecutionContextItem
 	rpcClient         rpcclient.Client
 }
 
@@ -36,7 +42,7 @@ func NewPipeline(logger *zap.Logger, rpcClient rpcclient.Client, terraformProvid
 	return pipeline{
 		logger:            logger,
 		terraformProvider: terraformProvider,
-		executionContext:  make(map[string]map[string]any),
+		executionContext:  make(map[string]map[string]ExecutionContextItem),
 		rpcClient:         rpcClient,
 	}
 }
@@ -47,7 +53,6 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sh
 		Status:  ExecutionRunningStatus,
 		Plugins: []commonv1alpha1.PluginExecutionStatus{},
 	}
-	currentExecutionStatusChann <- status
 
 	eg := new(errgroup.Group)
 	inDegrees := make(map[string]int)
@@ -57,14 +62,13 @@ func (p *pipeline) Execute(action ExecutionActionType, graph DependencyGraph, sh
 	}
 
 	for {
-
 		for node, deps := range inDegrees {
 			if _, ok := p.executionContext[node]; !ok && deps == 0 {
 				eg.Go(func(node string) func() error {
 					return func() error {
 						p.logger.Info("starting plugin execution...", zap.String("name", node), zap.Any("action", action))
 
-						pluginExecutionStatus, pluginOutput := commonv1alpha1.PluginExecutionStatus{}, map[string]any{}
+						pluginExecutionStatus, pluginOutput := commonv1alpha1.PluginExecutionStatus{}, map[string]ExecutionContextItem{}
 						if action == DestroyAction {
 							lastPluginExecution := commonv1alpha1.PluginExecutionStatus{}
 							for _, statusPlugin := range lastExecution.Plugins {
@@ -159,7 +163,7 @@ func (p *pipeline) destroyPlugin(lastExecution commonv1alpha1.ExecutionStatus, l
 	return status
 }
 
-func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]any) {
+func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, currentPlugin commonv1alpha1.SharedInfraPlugin) (commonv1alpha1.PluginExecutionStatus, map[string]ExecutionContextItem) {
 	lastPluginExecutionStatus := commonv1alpha1.PluginExecutionStatus{}
 
 	for _, e := range lastExecution.Plugins {
@@ -198,7 +202,17 @@ func (p *pipeline) applyPlugin(lastExecution commonv1alpha1.ExecutionStatus, cur
 		status.DependencyLock = lockfile
 		status.State = state
 
-		return status, out
+		outputs := map[string]ExecutionContextItem{}
+
+		for key, tfMeta := range out {
+			outputs[key] = ExecutionContextItem{
+				Value:     string(tfMeta.Value),
+				Type:      string(tfMeta.Type),
+				Sensitive: tfMeta.Sensitive,
+			}
+		}
+
+		return status, outputs
 	}
 
 	status.Error = "invalid plugin type"
@@ -212,6 +226,7 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 	for _, i := range plugin.Inputs {
 		tokens := Lex(i.Value)
 		data := map[string]string{}
+		sensitive := false
 		for _, t := range tokens {
 			if t.Type == TokenVariable {
 				s := strings.Split(strings.Trim(t.Value, " "), ".")
@@ -219,9 +234,13 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 					return nil, fmt.Errorf("malformed input variable %s with value %s", i.Key, i.Value)
 				}
 
-				value, err := p.getDataByOrigin(s[0], s[1], s[2])
+				value, isSensitive, err := p.getDataByOrigin(s[0], s[1], s[2])
 				if err != nil {
 					return nil, err
+				}
+
+				if isSensitive {
+					sensitive = isSensitive
 				}
 
 				data[t.Value] = strings.Trim(value, "\"")
@@ -229,29 +248,30 @@ func (p *pipeline) interpolatePluginInputsByExecutionContext(plugin commonv1alph
 		}
 
 		inputs = append(inputs, commonv1alpha1.SharedInfraPluginInput{
-			Key:   i.Key,
-			Value: Interpolate(tokens, data),
+			Key:       i.Key,
+			Value:     Interpolate(tokens, data),
+			Sensitive: sensitive,
 		})
 	}
 
 	return inputs, nil
 }
 
-func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (string, error) {
+func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (string, bool, error) {
 	switch origin {
 	case ThisInterpolationOrigin:
 		p.logger.Info("interpolate this origin")
 		execution, ok := p.executionContext[name]
 		if !ok {
-			return "", fmt.Errorf("not found plugin %s in execution context", name)
+			return "", false, fmt.Errorf("not found plugin %s in execution context", name)
 		}
 
 		executionAttr, ok := execution[attr]
 		if !ok {
-			return "", fmt.Errorf("not found attr %s in finished plugin execution %s", attr, name)
+			return "", false, fmt.Errorf("not found attr %s in finished plugin execution %s", attr, name)
 		}
 
-		return executionAttr.(string), nil
+		return executionAttr.Value, executionAttr.Sensitive, nil
 
 	case ConnectionInterfaceInterpolationOrigin:
 		p.logger.Info("interpolate this connection-interface")
@@ -260,17 +280,17 @@ func (p *pipeline) getDataByOrigin(origin string, name string, attr string) (str
 			Ref: types.NamespacedName{Name: name, Namespace: "default"},
 		}, &connectionInterface)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 
 		for _, out := range connectionInterface.Spec.Outputs {
 			if out.Key == attr {
-				return out.Value, nil
+				return out.Value, out.Sensitive, nil
 			}
 		}
 
-		return "", fmt.Errorf("not found attr in connection-interface %s", name)
+		return "", false, fmt.Errorf("not found attr in connection-interface %s", name)
 	default:
-		return "", fmt.Errorf("invalid origin type %s", origin)
+		return "", false, fmt.Errorf("invalid origin type %s", origin)
 	}
 }

@@ -33,7 +33,13 @@ func (u useCase) Create(ctx context.Context, sharedInfra SharedInfra) (SharedInf
 		Name:            s.GetName(),
 		Namespace:       s.GetNamespace(),
 		SharedInfraSpec: s.Spec,
-		Status:          s.Status,
+		Status: SharedInfraStatus{
+			StartedAt:  s.Status.LastExecution.StartedAt,
+			FinishedAt: s.Status.LastExecution.FinishedAt,
+			Status:     s.Status.LastExecution.Status,
+			Error:      s.Status.LastExecution.Error,
+			Plugins:    maskPluginsSensitiveData(s.Status.LastExecution.Plugins),
+		},
 	}, nil
 }
 
@@ -53,7 +59,13 @@ func (u useCase) Get(ctx context.Context, name string, namespace string) (Shared
 		Name:            s.GetName(),
 		Namespace:       s.GetNamespace(),
 		SharedInfraSpec: s.Spec,
-		Status:          s.Status,
+		Status: SharedInfraStatus{
+			StartedAt:  s.Status.LastExecution.StartedAt,
+			FinishedAt: s.Status.LastExecution.FinishedAt,
+			Status:     s.Status.LastExecution.Status,
+			Error:      s.Status.LastExecution.Error,
+			Plugins:    maskPluginsSensitiveData(s.Status.LastExecution.Plugins),
+		},
 	}, nil
 }
 
@@ -74,7 +86,13 @@ func (u useCase) List(ctx context.Context, namespace string, chunkPagination pag
 			Name:            i.GetName(),
 			Namespace:       i.GetNamespace(),
 			SharedInfraSpec: i.Spec,
-			Status:          i.Status,
+			Status: SharedInfraStatus{
+				StartedAt:  i.Status.LastExecution.StartedAt,
+				FinishedAt: i.Status.LastExecution.FinishedAt,
+				Status:     i.Status.LastExecution.Status,
+				Error:      i.Status.LastExecution.Error,
+				Plugins:    maskPluginsSensitiveData(i.Status.LastExecution.Plugins),
+			},
 		})
 	}
 
@@ -102,6 +120,33 @@ func (u useCase) Update(ctx context.Context, sharedInfra SharedInfra) (SharedInf
 		Name:            s.GetName(),
 		Namespace:       s.GetNamespace(),
 		SharedInfraSpec: s.Spec,
-		Status:          s.Status,
+		Status: SharedInfraStatus{
+			StartedAt:  s.Status.LastExecution.StartedAt,
+			FinishedAt: s.Status.LastExecution.FinishedAt,
+			Status:     s.Status.LastExecution.Status,
+			Error:      s.Status.LastExecution.Error,
+			Plugins:    maskPluginsSensitiveData(s.Status.LastExecution.Plugins),
+		},
 	}, nil
+}
+
+func maskPluginsSensitiveData(pluginStatus []commonv1alpha1.PluginExecutionStatus) []commonv1alpha1.PluginExecutionStatus {
+	maskedPlugins := []commonv1alpha1.PluginExecutionStatus{}
+
+	for _, p := range pluginStatus {
+
+		inputs := []commonv1alpha1.SharedInfraPluginInput{}
+		for _, i := range p.Inputs {
+			if i.Sensitive {
+				i.Value = "***"
+			}
+
+			inputs = append(inputs, i)
+		}
+
+		p.Inputs = inputs
+		maskedPlugins = append(maskedPlugins, p)
+	}
+
+	return maskedPlugins
 }

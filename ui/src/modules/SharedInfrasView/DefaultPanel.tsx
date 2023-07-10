@@ -4,15 +4,15 @@ import { Alert, Card, ListGroup, ListGroupItem, Nav, Spinner } from 'react-boots
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 const getClassNameByExecution = (execution: any) => {
-  if (execution?.status?.status === "SUCCESS") {
+  if (execution?.status === "SUCCESS") {
     return 'shared-infra-diagram__default-panel__execution--success'
   }
 
-  if (execution?.status?.status === "RUNNING") {
+  if (execution?.status === "RUNNING") {
     return 'shared-infra-diagram__default-panel__execution--running'
   }
 
-  if (execution?.status?.status === "ERROR") {
+  if (execution?.status === "ERROR") {
     return 'shared-infra-diagram__default-panel__execution--error'
   }
 
@@ -45,20 +45,21 @@ const DefaultPanel = ({ sharedInfra, executions, onViewClick, onEditClick, onRec
           ))}
         </div>
         <div>
-          <strong>Executions</strong>
-          {executions?.map((i: any) => (
+          <strong>Last execution</strong><br/>
+          <small className='mb-2'>If you want to see more executions try to use webhooks to listen and save these events</small>
+          {/* {executions?.map((i: any) => ( */}
             <Card 
-              className={`${getClassNameByExecution(i)} mt-1`}
+              className={`${getClassNameByExecution(sharedInfra?.status)} mt-2`}
               style={{cursor: 'pointer'}} 
-              onClick={() => onSelectExecution(i)}
+              onClick={() => onSelectExecution(sharedInfra?.status)}
             >
               <div className='d-flex'>
-              {i?.status?.status === "RUNNING" && <Spinner size='sm' className='me-1' />}
-              {i.name}
+              {sharedInfra?.status?.status === "RUNNING" && <Spinner size='sm' className='me-1' />}
+              {sharedInfra?.name}
               </div>
               
             </Card>
-          ))}
+          {/* ))} */}
           
         </div>
       </div>

@@ -26,7 +26,7 @@ import (
 )
 
 type TerraformProvider interface {
-	Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]any, string, string, error)
+	Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error)
 	Destroy(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error
 }
 
@@ -138,7 +138,7 @@ func (p terraformProvider) prepareExecution(pluginRef string, input []commonv1al
 	return workdir, pluginConfig, nil
 }
 
-func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]any, string, string, error) {
+func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error) {
 	workdirPath, pluginConfig, err := p.prepareExecution(pluginRef, inputs)
 	if err != nil {
 		return nil, "", "", err
@@ -267,7 +267,7 @@ func (p terraformProvider) Apply(pluginRef string, inputs []commonv1alpha1.Share
 		outputs[key] = string(res.Value)
 	}
 
-	return outputs, string(escapedState), string(escapedLockFile), nil
+	return out, string(escapedState), string(escapedLockFile), nil
 }
 
 func (p terraformProvider) Destroy(pluginRef string, inputs []commonv1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) error {

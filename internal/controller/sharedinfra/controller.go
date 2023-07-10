@@ -84,6 +84,8 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{Requeue: false}, err
 		}
 
+		currentSharedInfra.Status.LastExecution.Status = engine.ExecutionRunningStatus
+		currentSharedInfra.Status.LastExecution.StartedAt = time.Now().Format(time.RFC3339)
 		err = utils.UpdateSharedInfraStatus(c.Client, *currentSharedInfra)
 		if err != nil {
 			c.logger.Error("Failed to update sharedinfra status", zap.Error(err))

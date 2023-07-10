@@ -26,8 +26,7 @@ const SharedInfraView = () => {
   const { name: sharedInfraName } = useParams()
   const [sharedInfra, setSharedInfra] = useState<any>()
   const [executions, setExecutions] = useState<any>([])
-  const [selectedExecution, setSelectedExecution] = useState<any>()
-  const [currentExecution, setCurrentExecution] = useState<any>()
+  const [selectedExecution, setSelectedExecution] = useState<boolean>()
   const [nodes, setNodes] = useState<any>([])
   const [edges, setEdges] = useState<any>([])
 
@@ -37,23 +36,6 @@ const SharedInfraView = () => {
     const sharedInfra = await sharedInfraRes.json()
 
     setSharedInfra(sharedInfra)
-    setNodes(toNodes(sharedInfra.plugins, "default"))
-    setEdges(toEdges(sharedInfra.plugins, false))
-  }, [])
-
-  const getExecutions = useCallback(async () => {
-    const res = await fetch(`http://localhost:8080/shared-infras/${sharedInfraName}/executions`)
-    const item = await res.json()
-    setExecutions(item?.items)
-  }, [])
-
-
-  const getExecution = useCallback(async (name: string, namespace: string) => {
-    const res = await fetch(`http://localhost:8080/shared-infras/${sharedInfraName}/executions/${name}?namespace=${namespace}`)
-    const item = await res.json()
-    setCurrentExecution(item)
-    setNodes(toNodes(item?.status?.plugins || [], "executionNode"))
-    setEdges(toEdges(item?.status?.plugins || [], true))
   }, [])
   
   const handleReconcile = useCallback(async () => {
@@ -62,50 +44,46 @@ const SharedInfraView = () => {
   }, [])
 
   useEffect(() => {
-    if (!sharedInfraName)
-      return
+    if (!sharedInfraName) return
     
-    getExecutions()
-    const executionsInterval = setInterval(() => {
-      getExecutions()
-    }, 3000)
-    
-    if (!!selectedExecution) {
-      clearInterval(interval)
-      interval = setInterval(() => {
-        getExecution(selectedExecution?.name, selectedExecution?.namespace)
-      }, 3000)
-      getExecution(selectedExecution?.name, selectedExecution?.namespace)
-      return
-    }
-
-    clearInterval(interval)
+    getSharedInfra(sharedInfraName)
     interval = setInterval(() => {
       getSharedInfra(sharedInfraName)
     }, 3000)
-    getSharedInfra(sharedInfraName)
+    
 
-    return () => {
-      clearInterval(interval)
-      clearInterval(executionsInterval)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    if (!sharedInfra) return
+
+    if (selectedExecution) {
+      setNodes(toNodes(sharedInfra?.status?.plugins, "executionNode"))
+      setEdges(toEdges(sharedInfra?.status?.plugins, true))
+      return
     }
-  }, [selectedExecution])
+
+    setNodes(toNodes(sharedInfra?.plugins, "default"))
+    setEdges(toEdges(sharedInfra?.plugins, false))
+  }, [selectedExecution, sharedInfra])
+
   
   return (
     <div className="shared-infra-view__content">
       <DefaultPanel
         sharedInfra={sharedInfra}
         executions={executions}
-        onViewClick={() => setSelectedExecution(null)}
+        onViewClick={() => setSelectedExecution(false)}
         onEditClick={() => navigate(`/shared-infras/${sharedInfraName}/edit`)}
         onReconcileClick={() => handleReconcile()}
-        onSelectExecution={(e: any) => setSelectedExecution(e)}
+        onSelectExecution={(e: any) => setSelectedExecution(true)}
       />
-      {currentExecution && currentExecution?.status?.error && (
+      {sharedInfra?.status && sharedInfra?.status?.error && (
         <Alert
           style={{position: 'fixed', top: '10px', right: '10px', left: '390px'}}
           variant="danger"
-        >{currentExecution?.status?.error}</Alert>
+        >{sharedInfra?.status?.error}</Alert>
       )}
       <div className="shared-infra-view__diagram">
       <SharedInfraDiagram

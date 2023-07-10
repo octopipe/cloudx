@@ -5,6 +5,8 @@ package mocks
 import (
 	mock "github.com/stretchr/testify/mock"
 
+	tfexec "github.com/hashicorp/terraform-exec/tfexec"
+
 	v1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 )
 
@@ -14,21 +16,21 @@ type TerraformProvider struct {
 }
 
 // Apply provides a mock function with given fields: pluginRef, inputs, previousState, previousLockDeps
-func (_m *TerraformProvider) Apply(pluginRef string, inputs []v1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]interface{}, string, string, error) {
+func (_m *TerraformProvider) Apply(pluginRef string, inputs []v1alpha1.SharedInfraPluginInput, previousState string, previousLockDeps string) (map[string]tfexec.OutputMeta, string, string, error) {
 	ret := _m.Called(pluginRef, inputs, previousState, previousLockDeps)
 
-	var r0 map[string]interface{}
+	var r0 map[string]tfexec.OutputMeta
 	var r1 string
 	var r2 string
 	var r3 error
-	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) (map[string]interface{}, string, string, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) (map[string]tfexec.OutputMeta, string, string, error)); ok {
 		return rf(pluginRef, inputs, previousState, previousLockDeps)
 	}
-	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) map[string]interface{}); ok {
+	if rf, ok := ret.Get(0).(func(string, []v1alpha1.SharedInfraPluginInput, string, string) map[string]tfexec.OutputMeta); ok {
 		r0 = rf(pluginRef, inputs, previousState, previousLockDeps)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(map[string]tfexec.OutputMeta)
 		}
 	}
 
