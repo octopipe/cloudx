@@ -30,7 +30,7 @@ rules:
   resources:
   - infras
   - executions
-  - connectioninterfaces
+  - taskoutputs
   - providerconfigs
   verbs:
   - create
@@ -90,7 +90,7 @@ rules:
   resources:
   - infras
   - executions
-  - connectioninterfaces
+  - taskoutputs
   - providerconfigs
   verbs:
   - create

@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, Col, Container, ListGroup, Row } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 
-const ConnectionInterfaces = () => {
+const TaskOutputs = () => {
   const navigate = useNavigate()
   const [list, setList] = useState<any>()
 
@@ -52,4 +52,4 @@ const ConnectionInterfaces = () => {
   )
 }
 
-export default ConnectionInterfaces
+export default TaskOutputs

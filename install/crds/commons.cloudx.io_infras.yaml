@@ -57,6 +57,8 @@ spec:
               tasks:
                 items:
                   properties:
+                    backend:
+                      type: string
                     depends:
                       items:
                         type: string
@@ -72,7 +74,6 @@ spec:
                             type: string
                         required:
                         - key
-                        - sensitive
                         - value
                         type: object
                       type: array
@@ -90,17 +91,33 @@ spec:
                         - sensitive
                         type: object
                       type: array
-                    ref:
-                      type: string
-                    terraformVersion:
-                      type: string
-                    type:
-                      type: string
+                    template:
+                      properties:
+                        resource:
+                          type: string
+                      required:
+                      - resource
+                      type: object
+                    terraform:
+                      properties:
+                        credentialsRef:
+                          properties:
+                            name:
+                              type: string
+                            namespace:
+                              type: string
+                          type: object
+                        source:
+                          type: string
+                        version:
+                          type: string
+                      required:
+                      - source
+                      type: object
                   required:
+                  - backend
                   - inputs
                   - name
-                  - ref
-                  - type
                   type: object
                 type: array
             required:
@@ -121,7 +138,7 @@ spec:
                   tasks:
                     items:
                       properties:
-                        dependencyLock:
+                        backend:
                           type: string
                         depends:
                           items:
@@ -142,27 +159,71 @@ spec:
                                 type: string
                             required:
                             - key
-                            - sensitive
                             - value
                             type: object
                           type: array
                         name:
                           type: string
-                        ref:
-                          type: string
                         startedAt:
-                          type: string
-                        state:
                           type: string
                         status:
                           type: string
-                        type:
-                          type: string
+                        template:
+                          properties:
+                            dependencyLock:
+                              type: string
+                            state:
+                              type: string
+                            task:
+                              properties:
+                                credentialsRef:
+                                  properties:
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                  type: object
+                                source:
+                                  type: string
+                                version:
+                                  type: string
+                              required:
+                              - source
+                              type: object
+                          required:
+                          - task
+                          type: object
+                        terraform:
+                          properties:
+                            dependencyLock:
+                              type: string
+                            state:
+                              type: string
+                            task:
+                              properties:
+                                credentialsRef:
+                                  properties:
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                  type: object
+                                source:
+                                  type: string
+                                version:
+                                  type: string
+                              required:
+                              - source
+                              type: object
+                          required:
+                          - task
+                          type: object
                       required:
+                      - backend
                       - inputs
                       - name
-                      - ref
-                      - type
+                      - template
+                      - terraform
                       type: object
                     type: array
                 type: object

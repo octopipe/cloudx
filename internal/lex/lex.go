@@ -1,4 +1,4 @@
-package engine
+package lex
 
 import (
 	"strings"
@@ -17,7 +17,7 @@ type Token struct {
 	Value string
 }
 
-func Lex(template string) []Token {
+func Tokenize(template string) []Token {
 	var tokens []Token
 	var currentToken strings.Builder
 

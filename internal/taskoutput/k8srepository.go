@@ -1,4 +1,4 @@
-package connectioninterface
+package taskoutput
 
 import (
 	"context"
@@ -21,22 +21,22 @@ func NewK8sRepository(c client.Client) Repository {
 }
 
 // Apply implements Repository.
-func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.ConnectionInterface) (v1alpha1.ConnectionInterface, error) {
+func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.TaskOutput) (v1alpha1.TaskOutput, error) {
 	err := r.client.Create(ctx, &s)
 	if err != nil && errors.IsAlreadyExists(err) {
 		err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			currentConnectionInterface := commonv1alpha1.ConnectionInterface{}
+			currentTaskOutput := commonv1alpha1.TaskOutput{}
 			err = r.client.Get(ctx, types.NamespacedName{
 				Name:      s.Name,
 				Namespace: s.Namespace,
-			}, &currentConnectionInterface)
+			}, &currentTaskOutput)
 			if err != nil {
 				return err
 			}
 
-			currentConnectionInterface.Spec = s.Spec
+			currentTaskOutput.Spec = s.Spec
 
-			return r.client.Update(ctx, &currentConnectionInterface)
+			return r.client.Update(ctx, &currentTaskOutput)
 		})
 
 	}
@@ -45,8 +45,8 @@ func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.ConnectionInterface
 }
 
 // Get implements Repository.
-func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.ConnectionInterface, error) {
-	var connectionInterface v1alpha1.ConnectionInterface
+func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.TaskOutput, error) {
+	var connectionInterface v1alpha1.TaskOutput
 	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &connectionInterface)
 	return connectionInterface, err
 }
@@ -63,8 +63,8 @@ func (r k8sRepository) Delete(ctx context.Context, name string, namespace string
 }
 
 // List implements Repository.
-func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.ConnectionInterfaceList, error) {
-	var connectionInterfaceList v1alpha1.ConnectionInterfaceList
+func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.TaskOutputList, error) {
+	var connectionInterfaceList v1alpha1.TaskOutputList
 	err := r.client.List(ctx, &connectionInterfaceList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
 	return connectionInterfaceList, err
 }

@@ -7,6 +7,11 @@ import (
 	"github.com/octopipe/cloudx/internal/pagination"
 )
 
+const (
+	ApplyAction   = "APPLY"
+	DestroyAction = "DESTROY"
+)
+
 type InfraStatus struct {
 	Tasks      []commonv1alpha1.TaskExecutionStatus `json:"tasks"`
 	StartedAt  string                               `json:"startedAt"`

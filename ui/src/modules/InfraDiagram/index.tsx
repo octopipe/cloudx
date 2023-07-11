@@ -7,7 +7,7 @@ import 'reactflow/dist/style.css';
 import './index.css'
 import NodePanel from './NodePanel';
 import AddPanel from './AddPanel';
-import ConnectionInterfaceNode from './ConnectionInterfaceNode';
+import TaskOutputNode from './TaskOutputNode';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -47,7 +47,7 @@ const getLayoutedElements = (nodes: any, edges: any) => {
 const nodeTypes = {
   default: DefaultNode,
   aws: DefaultNode,
-  'connection-interface': ConnectionInterfaceNode,
+  'connection-interface': TaskOutputNode,
   executionNode: ExecutionNode,
 };
 

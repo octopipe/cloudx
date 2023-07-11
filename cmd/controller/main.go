@@ -7,10 +7,10 @@ import (
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/connectioninterface"
 	"github.com/octopipe/cloudx/internal/controller/infra"
 	"github.com/octopipe/cloudx/internal/controller/runner"
 	"github.com/octopipe/cloudx/internal/provider"
+	"github.com/octopipe/cloudx/internal/taskoutput"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -77,10 +77,10 @@ func main() {
 		panic(err)
 	}
 
-	connectionInterfaceRepository := connectioninterface.NewK8sRepository(mgr.GetClient())
+	connectionInterfaceRepository := taskoutput.NewK8sRepository(mgr.GetClient())
 
 	infraRPCServer := infra.NewRPCServer(mgr.GetClient(), logger)
-	connectionInterfaceRPCServer := connectioninterface.NewConnectionInterfaceRPCHandler(connectionInterfaceRepository)
+	connectionInterfaceRPCServer := taskoutput.NewTaskOutputRPCHandler(connectionInterfaceRepository)
 	rpc.Register(infraRPCServer)
 	rpc.Register(connectionInterfaceRPCServer)
 	rpc.HandleHTTP()

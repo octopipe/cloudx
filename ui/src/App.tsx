@@ -3,7 +3,7 @@ import Main from './modules/Main'
 import Infras from './modules/Infras'
 import ProvidersConfig from './modules/ProviderConfig'
 import InfraView from './modules/InfrasView'
-import ConnectionInterfaces from './modules/ConnectionInterfaces'
+import TaskOutputs from './modules/TaskOutputs'
 import './core/components/icon'
 import InfraEditor from './modules/InfrasEditor'
 import ProviderConfigView from './modules/ProviderConfigView'
@@ -18,7 +18,7 @@ const App = () => {
           <Route path='/infra/create' element={<InfraEditor />}/>
           <Route path='/infra/:name/edit' element={<InfraEditor />}/>
           <Route path='/infra/:name' element={<InfraView />}/>
-          <Route path='/connection-interfaces' element={<ConnectionInterfaces />}/>
+          <Route path='/connection-interfaces' element={<TaskOutputs />}/>
           <Route path='/providers-config' element={<ProvidersConfig />}/>
           <Route path='/providers-config/:name' element={<ProviderConfigView />}/>
         </Route>

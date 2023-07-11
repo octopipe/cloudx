@@ -3,7 +3,7 @@ kind: Kustomization
 
 resources:
 - aws.cloudx.io_secretsmanagers.yaml
-- commons.cloudx.io_connectioninterfaces.yaml
+- commons.cloudx.io_taskoutputs.yaml
 - commons.cloudx.io_environments.yaml
 - commons.cloudx.io_executions.yaml
 - commons.cloudx.io_providerconfigs.yaml

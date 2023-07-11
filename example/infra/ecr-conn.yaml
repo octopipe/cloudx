@@ -1,5 +1,5 @@
 apiVersion: commons.cloudx.io/v1alpha1
-kind: ConnectionInterface
+kind: TaskOutput
 metadata:
   name: ecr-conn
   labels:

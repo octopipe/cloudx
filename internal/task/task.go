@@ -6,6 +6,11 @@ const (
 	TerraformTaskType = "terraform"
 )
 
+const (
+	ThisInterpolationOrigin       = "this"
+	TaskOutputInterpolationOrigin = "task-output"
+)
+
 type TaskInput struct {
 	Label    string `json:"label"`
 	Name     string `json:"name"`

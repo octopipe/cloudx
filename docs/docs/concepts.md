@@ -9,7 +9,7 @@ Below are some conecepts that are specific for Cloudx
 
 **Infra**: The infra represents the infraestructure diagram with the steps and orchestration by dependencies, this is a CRD.
 
-**ConnectionInterface**: The connection interface represents the outputs of a specific task executed from infra, this is a CRD.
+**TaskOutput**: The connection interface represents the outputs of a specific task executed from infra, this is a CRD.
 
 **ProviderConfig**: The providerconfig is a set of configurations to create the cloudx connection with the cloud environment, this is a CRD.
 

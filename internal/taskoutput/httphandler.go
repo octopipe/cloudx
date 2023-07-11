@@ -1,4 +1,4 @@
-package connectioninterface
+package taskoutput
 
 import (
 	"fmt"
@@ -89,7 +89,7 @@ func (h httpHandler) Create(c *gin.Context) {
 	// }
 	// name := c.Param("name")
 
-	connectionInterface := ConnectionInterface{}
+	connectionInterface := TaskOutput{}
 	if err := c.BindJSON(&connectionInterface); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
@@ -118,7 +118,7 @@ func (h httpHandler) Update(c *gin.Context) {
 	// }
 	// name := c.Param("name")
 
-	connectionInterface := ConnectionInterface{}
+	connectionInterface := TaskOutput{}
 	if err := c.BindJSON(&connectionInterface); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),

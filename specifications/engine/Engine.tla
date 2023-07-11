@@ -1,46 +1,42 @@
 ---------------------- MODULE Engine ----------------------
-EXTENDS Naturals
+EXTENDS TLC, Naturals, Sequences, FiniteSets
 
-(* Conjunto de tarefas *)
-VARIABLE tasks
+CONSTANTS tasks, dependencies, last_execution_tasks, last_execution_dependencies
+VARIABLES applied, destroyed
 
-(* Conjunto de dependências entre as tarefas *)
-VARIABLE dependencies
+vars == << applied, destroyed >>
 
-(* Estado inicial do pipeline *)
-Init == 
-  /\ tasks = {1, 2, 3, 4}
-  /\ dependencies = {<<1, 2>>, <<2, 3>>, <<1, 4>>}
+Init ==
+  /\ applied = {}
+  /\ destroyed = {}
 
-(* Ação para executar uma tarefa *)
-ExecuteTask(task) ==
-  /\ task \in tasks
-  /\ \A dep \in dependencies: dep[2] # task
-  /\ tasks' = tasks \ {task}
-  /\ dependencies' = {dep \in dependencies: dep[1] # task}
-  
-(* Próxima tarefa a ser executada *)
-NextTask ==
-  CHOOSE task \in tasks: \A dep \in dependencies: dep[2] # task
+ApplyTask(task) ==
+  /\ task \notin applied
+  /\ (dependencies[task] = {}) \/ (\A dep \in dependencies[task]: dep \in applied)
+  /\ applied' = applied \cup {task}
+  /\ UNCHANGED destroyed
 
-(* Comportamento do sistema *)
-Next == 
-  \/ ExecuteTask(NextTask)
-  \/ \E task \in tasks: ExecuteTask(task)
+DestroyTask(last_task) ==
+  /\ last_task \notin tasks
+  /\ last_task \notin destroyed
+  /\ destroyed' = destroyed \cup {last_task}
+  /\ UNCHANGED applied
 
-(* Propriedade: Não há tarefas dependentes pendentes *)
-NoPendingDependencies ==
-  \A dep \in dependencies: dep[2] \notin tasks
+Destroy == \E self \in last_execution_tasks: DestroyTask(self)
+Apply == \E self \in tasks: ApplyTask(self)
 
-(* Propriedade: O pipeline sempre termina *)
-Termination ==
-  tasks = {}
+Next ==
+  \/ Destroy
+  \/ Apply
+  \/ UNCHANGED vars
 
-(* Especificação do sistema *)
 Spec ==
   /\ Init
-  /\ [][Next]_<<tasks, dependencies>>
-  /\ NoPendingDependencies
-  /\ Termination
+  /\ [][Next]_vars
+  /\ WF_vars(Next)
+
+
+\* Properties
+Agreement == <>(\A self \in tasks: self \in applied)
 
 =============================================================

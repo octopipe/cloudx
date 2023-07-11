@@ -7,10 +7,12 @@ import (
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/backend"
+	"github.com/octopipe/cloudx/internal/backend/terraform"
 	"github.com/octopipe/cloudx/internal/controller/infra"
 	"github.com/octopipe/cloudx/internal/engine"
+	"github.com/octopipe/cloudx/internal/pipeline"
 	"github.com/octopipe/cloudx/internal/rpcclient"
-	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,53 +65,87 @@ func main() {
 		panic(err)
 	}
 
-	currentExecutionStatusChann := make(chan commonv1alpha1.ExecutionStatus)
+	executionStatus := commonv1alpha1.ExecutionStatus{
+		Status: pipeline.InfraRunningStatus,
+		Tasks:  []commonv1alpha1.TaskExecutionStatus{},
+	}
 
-	go newRunnerContext.startTimeout(infraRef, currentExecutionStatusChann)
-
-	logger.Info("installing terraform provider")
-	terraformProvider, err := terraform.NewTerraformProvider(logger, "")
+	taskStatusChan := make(chan commonv1alpha1.TaskExecutionStatus)
+	terraformBackend, err := terraform.NewTerraformBackend(logger)
 	if err != nil {
 		panic(err)
 	}
 
+	newBackend := backend.NewBackend(terraformBackend)
+	newEngine := engine.NewEngine(logger, rpcClient, newBackend)
+	newPipeline := pipeline.NewPipeline(logger, rpcClient, newBackend, &newEngine)
+
 	doneChann := make(chan bool)
 
 	go func() {
-		currentExecution := engine.NewEngine(logger, rpcClient, terraformProvider)
-		if action == "APPLY" {
-			currentExecutionStatus := currentExecution.Apply(*currentInfra, currentExecutionStatusChann)
-			currentExecutionStatus.FinishedAt = time.Now().Format(time.RFC3339)
-			currentExecutionStatusChann <- currentExecutionStatus
-		} else {
-			currentExecution.Destroy(*currentInfra, currentExecutionStatusChann)
-		}
-
+		newPipeline.Start(action, *currentInfra, taskStatusChan)
 		doneChann <- true
 	}()
 
+	ticker := time.NewTicker(time.Minute * 5)
+
 	for {
 		select {
-		case executionStatus := <-currentExecutionStatusChann:
-			logger.Info("New status received calling controller...")
-			rpcRunnerFinishedArgs := &infra.RPCSetExecutionStatusArgs{
-				Ref:             infraRef,
-				ExecutionStatus: executionStatus,
-			}
-
-			var reply int
-			err := rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
+		case taskStatus := <-taskStatusChan:
+			executionStatus.Tasks = append(executionStatus.Tasks, taskStatus)
+			err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
 			if err != nil {
 				logger.Fatal("Failed to call rpc execution status", zap.Error(err))
 			}
 		case done := <-doneChann:
 			if done {
+				status := pipeline.InfraSuccessStatus
+				rawErr := ""
+				for _, task := range executionStatus.Tasks {
+					if task.Status != pipeline.TaskAppliedStatus || task.Status != pipeline.TaskDestroyed {
+						status = pipeline.InfraErrorStatus
+						rawErr = task.Error
+						break
+					}
+				}
+				executionStatus.Status = status
+				executionStatus.Error = rawErr
+				executionStatus.FinishedAt = time.Now().Format(time.RFC3339)
+				err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
+				if err != nil {
+					logger.Fatal("Failed to call rpc execution status", zap.Error(err))
+				}
 				logger.Info("Finish engine execution")
 				return
 			}
-
+		case <-ticker.C:
+			executionStatus.Status = pipeline.InfraTimeoutStatus
+			executionStatus.Error = "time limit exceeded"
+			executionStatus.FinishedAt = time.Now().Format(time.RFC3339)
+			err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
+			if err != nil {
+				logger.Fatal("Failed to call rpc execution status", zap.Error(err))
+			}
+			logger.Info("Finish engine execution")
+			return
 		}
 	}
+}
+
+func (c runnerContext) setExecutionStatus(infraRef types.NamespacedName, executionStatus commonv1alpha1.ExecutionStatus) error {
+	c.logger.Info("New status received calling controller...")
+	rpcRunnerFinishedArgs := &infra.RPCSetExecutionStatusArgs{
+		Ref:             infraRef,
+		ExecutionStatus: executionStatus,
+	}
+
+	var reply int
+	err := c.rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string) {
@@ -129,21 +165,4 @@ func (c runnerContext) getDataFromCommandArgs() (types.NamespacedName, string) {
 	}
 
 	return infraRef, action
-}
-
-func (c runnerContext) startTimeout(infraRef types.NamespacedName, currentExecutionStatusChann <-chan commonv1alpha1.ExecutionStatus) {
-	time.Sleep(5 * time.Minute)
-
-	rpcRunnerFinishedArgs := &infra.RPCSetExecutionStatusArgs{
-		Ref:             infraRef,
-		ExecutionStatus: <-currentExecutionStatusChann,
-	}
-
-	var reply int
-	err := c.rpcClient.Call("RPCServer.SetExecutionStatus", rpcRunnerFinishedArgs, &reply)
-	if err != nil {
-		c.logger.Fatal("Error to call controller", zap.Error(err))
-	}
-
-	c.logger.Fatal("Runner timeout")
 }

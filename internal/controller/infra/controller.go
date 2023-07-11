@@ -7,7 +7,7 @@ import (
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/utils"
-	"github.com/octopipe/cloudx/internal/engine"
+	"github.com/octopipe/cloudx/internal/pipeline"
 	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,7 +46,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	if currentInfra.Status.LastExecution.Status == engine.ExecutionRunningStatus {
+	if currentInfra.Status.LastExecution.Status == pipeline.InfraRunningStatus {
 		c.logger.Info("This infra has runner in execution, enqueue this request")
 		return ctrl.Result{
 			RequeueAfter: time.Second * 2,
@@ -84,7 +84,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{Requeue: false}, err
 		}
 
-		currentInfra.Status.LastExecution.Status = engine.ExecutionRunningStatus
+		currentInfra.Status.LastExecution.Status = pipeline.InfraRunningStatus
 		currentInfra.Status.LastExecution.StartedAt = time.Now().Format(time.RFC3339)
 		err = utils.UpdateInfraStatus(c.Client, *currentInfra)
 		if err != nil {

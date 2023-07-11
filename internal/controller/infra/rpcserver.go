@@ -2,11 +2,9 @@ package infra
 
 import (
 	"context"
-	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/utils"
-	"github.com/octopipe/cloudx/internal/engine"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,21 +68,6 @@ func (s *RPCServer) SetExecutionStatus(args *RPCSetExecutionStatusArgs, reply *i
 type RPCSetRunnerTimeoutArgs struct {
 	Tasks []commonv1alpha1.TaskExecutionStatus
 	Ref   types.NamespacedName
-}
-
-func (s *RPCServer) SetRunnerTimeout(args *RPCSetRunnerTimeoutArgs, reply *int) error {
-	infra := &commonv1alpha1.Infra{}
-	err := s.Get(context.Background(), args.Ref, infra)
-	if err != nil {
-		return err
-	}
-
-	infra.Status.LastExecution.Status = engine.ExecutionTimeout
-	infra.Status.LastExecution.FinishedAt = time.Now().Format(time.RFC3339)
-	infra.Status.LastExecution.Error = "Runner time exceeded"
-	infra.Status.LastExecution.Tasks = args.Tasks
-
-	return utils.UpdateInfraStatus(s.Client, *infra)
 }
 
 type RPCGetLastExecutionArgs struct {
