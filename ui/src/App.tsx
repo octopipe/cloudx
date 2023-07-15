@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Main from './modules/Main'
 import Infras from './modules/Infras'

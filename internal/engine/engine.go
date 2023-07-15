@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"sync"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
@@ -57,6 +58,8 @@ func (e *Engine) Run(graph map[string][]string, action ActionFuncType, taskStatu
 						e.mu.Lock()
 						defer e.mu.Unlock()
 
+						fmt.Println(taskStatus.Status, taskStatus.Error)
+
 						taskStatusChan <- taskStatus
 						e.executionContext[node] = taskOutput
 
@@ -77,11 +80,11 @@ func (e *Engine) Run(graph map[string][]string, action ActionFuncType, taskStatu
 		err := eg.Wait()
 		if err != nil {
 			e.logger.Info("find errors in parallel execution...")
-			break
+			return
 		}
 
 		if len(e.executionContext) == len(graph) {
-			break
+			return
 		}
 	}
 }

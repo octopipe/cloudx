@@ -12,12 +12,23 @@ const (
 	DestroyAction = "DESTROY"
 )
 
+type InfraTaskStatus struct {
+	Name       string                          `json:"name"`
+	Depends    []string                        `json:"depends,omitempty"`
+	Backend    string                          `json:"backend"`
+	Inputs     []commonv1alpha1.InfraTaskInput `json:"inputs"`
+	StartedAt  string                          `json:"startedAt,omitempty"`
+	FinishedAt string                          `json:"finishedAt,omitempty"`
+	Status     string                          `json:"status,omitempty"`
+	Error      string                          `json:"error,omitempty"`
+}
+
 type InfraStatus struct {
-	Tasks      []commonv1alpha1.TaskExecutionStatus `json:"tasks"`
-	StartedAt  string                               `json:"startedAt"`
-	FinishedAt string                               `json:"finishedAt"`
-	Status     string                               `json:"status"`
-	Error      string                               `json:"error"`
+	Tasks      []InfraTaskStatus `json:"tasks"`
+	StartedAt  string            `json:"startedAt"`
+	FinishedAt string            `json:"finishedAt"`
+	Status     string            `json:"status"`
+	Error      string            `json:"error"`
 }
 
 type Infra struct {

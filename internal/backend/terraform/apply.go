@@ -45,11 +45,14 @@ func persistPreviousState(previousState string, workdirPath string) error {
 }
 
 func (t terraformBackend) Apply(input TerraformApplyInput) (TerraformApplyResult, error) {
+	t.logger.Info("get terrafrom from source", zap.String("source", input.Source))
+
 	workdirPath, err := t.dowloadSource(input.Source)
 	if err != nil {
 		return TerraformApplyResult{}, err
 	}
 
+	t.logger.Info("install terraform by version", zap.String("version", input.Version))
 	terraformPath, err := t.install(input.Version)
 	if err != nil {
 		return TerraformApplyResult{}, err
@@ -78,9 +81,10 @@ func (t terraformBackend) Apply(input TerraformApplyInput) (TerraformApplyResult
 		}
 	}
 
-	t.logger.Info("executing terraform init", zap.String("workdir", workdirPath))
-	err = tf.Init(context.Background(), tfexec.Upgrade(true))
+	t.logger.Info("executing terraform init", zap.String("workdir", workdirPath), zap.String("tfpath", terraformPath))
+	err = tf.Init(context.TODO())
 	if err != nil {
+		t.logger.Error(err.Error())
 		return TerraformApplyResult{}, err
 	}
 

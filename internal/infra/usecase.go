@@ -130,8 +130,8 @@ func (u useCase) Update(ctx context.Context, infra Infra) (Infra, error) {
 	}, nil
 }
 
-func maskTasksSensitiveData(taskStatus []commonv1alpha1.TaskExecutionStatus) []commonv1alpha1.TaskExecutionStatus {
-	maskedTasks := []commonv1alpha1.TaskExecutionStatus{}
+func maskTasksSensitiveData(taskStatus []commonv1alpha1.TaskExecutionStatus) []InfraTaskStatus {
+	maskedTasks := []InfraTaskStatus{}
 
 	for _, p := range taskStatus {
 
@@ -143,9 +143,16 @@ func maskTasksSensitiveData(taskStatus []commonv1alpha1.TaskExecutionStatus) []c
 
 			inputs = append(inputs, i)
 		}
-
-		p.Inputs = inputs
-		maskedTasks = append(maskedTasks, p)
+		maskedTasks = append(maskedTasks, InfraTaskStatus{
+			Name:       p.Name,
+			Depends:    p.Depends,
+			Backend:    p.Backend,
+			Inputs:     inputs,
+			StartedAt:  p.StartedAt,
+			FinishedAt: p.FinishedAt,
+			Status:     p.Status,
+			Error:      p.Error,
+		})
 	}
 
 	return maskedTasks

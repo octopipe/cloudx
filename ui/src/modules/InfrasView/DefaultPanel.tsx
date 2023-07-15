@@ -19,14 +19,15 @@ const getClassNameByExecution = (execution: any) => {
   return 'shared-infra-diagram__default-panel__execution--running'
 }
 
-const DefaultPanel = ({ infra, executions, onViewClick, onEditClick, onReconcileClick, onSelectExecution, onClose }: any) => {
+const DefaultPanel = ({ infra, executions, onViewCode, onViewClick, onEditClick, onReconcileClick, onSelectExecution, onClose }: any) => {
   return (
     <div className='shared-infra-diagram__default-panel'>
       <div>
         <div className='d-flex justify-content-between'>
           <Card.Title>{infra?.name}</Card.Title>
           <div>
-            <FontAwesomeIcon style={{cursor: 'pointer'}} icon="diagram-project" onClick={onViewClick} />
+            <FontAwesomeIcon style={{cursor: 'pointer'}} icon="code" onClick={onViewCode} />
+            <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="diagram-project" onClick={onViewClick} />
             <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="edit" onClick={onEditClick} />
             <FontAwesomeIcon style={{cursor: 'pointer'}} className='ms-2' icon="rotate" onClick={onReconcileClick} />
           </div>

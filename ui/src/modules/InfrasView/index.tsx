@@ -1,10 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Accordion, Alert, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
-import { useNavigate, useParams } from "react-router-dom";
+import ReactAce from "react-ace/lib/ace";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import "./index.css"
 import InfraDiagram from "../InfraDiagram";
 import { toEdges, toNodes } from "../InfraDiagram/utils";
 import DefaultPanel from "./DefaultPanel";
+
+import "ace-builds/src-noconflict/mode-json";
+import "ace-builds/src-noconflict/theme-monokai";
+import "ace-builds/src-noconflict/ext-language_tools";
+
 
 const getBadgeVariants = (status: string) => {
   if (status === "RUNNING") {
@@ -23,12 +29,15 @@ let interval: any
 
 const InfraView = () => {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { name: infraName } = useParams()
   const [infra, setInfra] = useState<any>()
+  const [infraCode, setInfraCode] = useState('')
   const [executions, setExecutions] = useState<any>([])
   const [selectedExecution, setSelectedExecution] = useState<boolean>()
   const [nodes, setNodes] = useState<any>([])
   const [edges, setEdges] = useState<any>([])
+  // const [codeView, setCodeView] = useState(false)
 
 
   const getInfra = useCallback(async (name: string) => {
@@ -44,6 +53,8 @@ const InfraView = () => {
   }, [])
 
   useEffect(() => {
+    setSearchParams({ view: 'DIAGRAM' })
+
     if (!infraName) return
     
     getInfra(infraName)
@@ -56,7 +67,11 @@ const InfraView = () => {
   }, [])
 
   useEffect(() => {
+    
     if (!infra) return
+
+    const {status, ...rest} = infra
+    setInfraCode(JSON.stringify(rest, null, 2))
 
     if (selectedExecution) {
       setNodes(toNodes(infra?.status?.tasks, "executionNode"))
@@ -74,10 +89,17 @@ const InfraView = () => {
       <DefaultPanel
         infra={infra}
         executions={executions}
-        onViewClick={() => setSelectedExecution(false)}
-        onEditClick={() => navigate(`/infra/${infraName}/edit`)}
+        onViewCode={() => setSearchParams({ view: 'CODE' })}
+        onViewClick={() => {
+          setSearchParams({ view: 'DIAGRAM' })
+          setSelectedExecution(false)
+        }}
+        onEditClick={() => navigate(`/infra/${infraName}/edit?view=${searchParams.get('view')}`)}
         onReconcileClick={() => handleReconcile()}
-        onSelectExecution={(e: any) => setSelectedExecution(true)}
+        onSelectExecution={(e: any) => {
+          setSearchParams({ view: 'DIAGRAM' })
+          setSelectedExecution(true)
+        }}
       />
       {infra?.status && infra?.status?.error && (
         <Alert
@@ -86,11 +108,28 @@ const InfraView = () => {
         >{infra?.status?.error}</Alert>
       )}
       <div className="shared-infra-view__diagram">
-      <InfraDiagram
+      {searchParams.get("view") === "DIAGRAM" && <InfraDiagram
         infra={infra}
         nodes={nodes}
         edges={edges}
-      />
+      />}
+      {searchParams.get("view") === "CODE" && (
+        <ReactAce
+          mode="json"
+          theme="monokai"
+          width='100%'
+          height='200px'
+          value={infraCode}
+          onChange={() => {}}
+          tabSize={2}
+          readOnly
+          enableBasicAutocompletion={true}
+          style={{
+            width: '100vw',
+            height: '100vh'
+          }}
+        />
+      )}
       </div>
      
     </div>

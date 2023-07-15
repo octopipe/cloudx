@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import './index.css'
-import { Alert, Button, Card, Form, ListGroup, ListGroupItem, Nav } from 'react-bootstrap'
+import { Alert, Button, ButtonGroup, Card, Form, ListGroup, ListGroupItem, Nav, ToggleButton } from 'react-bootstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { useSearchParams } from 'react-router-dom'
 
 const getClassNameByExecution = (execution: any) => {
   if (execution?.status?.status === "SUCCESS") {
@@ -15,7 +16,8 @@ const getClassNameByExecution = (execution: any) => {
   return 'shared-infra-diagram__default-panel__execution'
 }
 
-const DefaultPanel = ({ infra, onSave, goToView }: any) => {
+const DefaultPanel = ({ infra, onSave, onChange, goToView }: any) => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [name, setName] = useState(infra?.name || '')
   const [description, setDescription] = useState(infra?.description || '')
   const [providerConfigRef, setProviderConfigRef] = useState<any>(infra?.providerConfigRef || '')
@@ -38,6 +40,15 @@ const DefaultPanel = ({ infra, onSave, goToView }: any) => {
     setDescription(infra?.description)
     setProviderConfigRef(infra?.providerConfigRef)
   }, [infra])
+
+  useEffect(() => {
+    onChange({
+      name: name || '',
+      namespace: "default",
+      description: description || '',
+      providerConfigRef: providerConfigRef || {},
+    })
+  }, [name, description, providerConfigRef])
   
   const handleCreate = () => {
     console.log(providerConfigRef)
@@ -52,6 +63,30 @@ const DefaultPanel = ({ infra, onSave, goToView }: any) => {
   return (
     <div className='shared-infra-diagram__default-panel'>
       <div>
+        <div className="d-grid gap-2 mb-2">
+
+       
+        <ButtonGroup>
+          <ToggleButton
+            value={searchParams.get("view") || ''}
+            onClick={e => setSearchParams({ view: 'CODE' })}
+            checked={searchParams.get("view") === 'CODE'}
+            variant='secondary'
+            type='radio'
+          >
+            <FontAwesomeIcon style={{cursor: 'pointer'}} icon="code" />
+          </ToggleButton>
+          <ToggleButton
+            value={searchParams.get("view") || ''}
+            onClick={e => setSearchParams({ view: 'DIAGRAM' })}
+            checked={searchParams.get("view") === 'DIAGRAM'}
+            variant='secondary'
+            type='radio'
+          >
+            <FontAwesomeIcon style={{cursor: 'pointer'}} icon="diagram-project"/>
+          </ToggleButton>
+        </ButtonGroup>
+        </div>
         {infra && <FontAwesomeIcon onClick={goToView} className='mb-2' style={{cursor: 'pointer'}} icon="arrow-left" />}
         <Card.Title>{infra?.name}</Card.Title>
         <Form.Group className='mb-3'>

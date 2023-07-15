@@ -1,10 +1,15 @@
 import React, { memo, useCallback, useEffect, useState } from "react";
 import { Accordion, Alert, Badge, Button, Card, Col, Container, ListGroup, Row, Spinner, Tab, Table, Tabs } from "react-bootstrap";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import "./index.css"
 import InfraDiagram from "../InfraDiagram";
 import { toEdges, toNodes } from "../InfraDiagram/utils";
 import DefaultPanel from "./DefaultPanel";
+
+import "ace-builds/src-noconflict/mode-json";
+import "ace-builds/src-noconflict/theme-monokai";
+import "ace-builds/src-noconflict/ext-language_tools";
+import ReactAce from "react-ace/lib/ace";
 
 const getBadgeVariants = (status: string) => {
   if (status === "RUNNING") {
@@ -20,11 +25,15 @@ const getBadgeVariants = (status: string) => {
 }
 
 const InfraEditor = memo(() => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const { name } = useParams()
   const [infra, setInfra] = useState()
+  const [currentInfra, setCurrentInfra] = useState<any>({ name: '', namespace: 'default', providerConfigRef: '' })
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+  const [internalNodes, setInternalNodes] = useState([]);
+  const [internalEgdes, setInternalEdges] = useState([]);
   const [tasks, setTasks] = useState<any>([])
 
   const getInfra = useCallback(async (name: string) => {
@@ -73,31 +82,73 @@ const InfraEditor = memo(() => {
     })
 
     setTasks(newTasks)
+    setCurrentInfra((s: any) => ({ ...s, tasks: newTasks }))
+
   }, [setTasks])
+
+  const handleCodeChanges = useCallback((rawInfra: any) => {
+   try {
+    const parsed = JSON.parse(rawInfra)
+    setCurrentInfra(parsed)
+   } catch {
+
+   }
+
+  }, [])
 
   useEffect(() => {
     handleDiagramChanges(nodes, edges)
   }, [nodes, edges])
 
   useEffect(() => {
-    console.log(tasks)
-  }, [tasks])
+    setCurrentInfra(infra)
+  }, [infra])
 
+  useEffect(() => {
+    console.log('CHANGE')
+    setNodes(internalNodes)
+    setEdges(internalEgdes)
+  }, [searchParams])
+
+  useEffect(() => {
+
+    setInternalNodes(toNodes(currentInfra?.tasks || [], "default"))
+    setInternalEdges(toEdges(currentInfra?.tasks || [], false))
+  }, [currentInfra])
   
   return (
     <div className="shared-infra-create__content">
       <DefaultPanel
         infra={infra}
+        onChange={(e: any) => setCurrentInfra({...e, tasks})}
         onSave={createInfra}
         goToView={() => navigate(`/infra/${name}`)}
       />
       <div className="shared-infra-view__diagram">
-      <InfraDiagram
-        action="CREATE"
-        nodes={nodes}
-        edges={edges}
-        onChangeDiagram={handleDiagramChanges}
-      />
+      {searchParams.get("view") === 'DIAGRAM' && (
+        <InfraDiagram
+          action="CREATE"
+          nodes={nodes}
+          edges={edges}
+          onChangeDiagram={handleDiagramChanges}
+        />
+      )}
+      {searchParams.get("view") === 'CODE' && (
+        <ReactAce
+          mode="json"
+          theme="monokai"
+          width='100%'
+          height='200px'
+          value={JSON.stringify(currentInfra, null, 2)}
+          onChange={handleCodeChanges}
+          tabSize={2}
+          enableBasicAutocompletion={true}
+          style={{
+            width: '100vw',
+            height: '100vh'
+          }}
+        />
+      )}
       </div>
     </div>
   )

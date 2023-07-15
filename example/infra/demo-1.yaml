@@ -13,17 +13,26 @@ spec:
   tasks:
   - name: demo-0-sns
     terraform:
-      source: oci://mayconjrpacheco/task:sns-1
+      source: oci://mayconjrpacheco/plugin:sns-1
     depends: []
     backend: terraform
     outputs: []
     inputs:
     - key: name
       value: my-topic-0
-      sensitive: false
     - key: region
       value: us-east-1
-      sensitive: false
+  - name: demo-1-sns
+    terraform:
+      source: oci://mayconjrpacheco/plugin:sns-1
+    depends: []
+    backend: terraform
+    outputs: []
+    inputs:
+    - key: name
+      value: my-topic-1
+    - key: region
+      value: us-east-1
 
   # - name: demo-1-2-sns
   #   ref: mayconjrpacheco/task:sns-1

@@ -3,6 +3,7 @@ package terraform
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/hc-install/product"
@@ -10,19 +11,30 @@ import (
 )
 
 func (t terraformBackend) install(tfVersion string) (string, error) {
-	installDirPath := "/tmp/cloudx/terraform-versions"
-	err := os.MkdirAll(installDirPath, os.ModePerm)
-	if err != nil {
-		return "", err
-	}
-
 	if tfVersion != "" {
+		installDirPath := filepath.Join("/tmp/cloudx/terraform-versions", tfVersion)
+		if _, err := os.Stat(installDirPath); os.IsNotExist(err) {
+			err := os.MkdirAll(installDirPath, os.ModePerm)
+			if err != nil {
+				return "", err
+			}
+		}
+
 		installer := &releases.ExactVersion{
 			Product:    product.Terraform,
 			Version:    version.Must(version.NewVersion(tfVersion)),
 			InstallDir: installDirPath,
 		}
+
 		return installer.Install(context.Background())
+	}
+
+	installDirPath := filepath.Join("/tmp/cloudx/terraform-versions", "latest")
+	if _, err := os.Stat(installDirPath); os.IsNotExist(err) {
+		err := os.MkdirAll(installDirPath, os.ModePerm)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	installer := &releases.LatestVersion{

@@ -102,7 +102,7 @@ func main() {
 				status := pipeline.InfraSuccessStatus
 				rawErr := ""
 				for _, task := range executionStatus.Tasks {
-					if task.Status != pipeline.TaskAppliedStatus || task.Status != pipeline.TaskDestroyed {
+					if task.Status != pipeline.TaskAppliedStatus && task.Status != pipeline.TaskDestroyed {
 						status = pipeline.InfraErrorStatus
 						rawErr = task.Error
 						break
@@ -126,7 +126,7 @@ func main() {
 			if err != nil {
 				logger.Fatal("Failed to call rpc execution status", zap.Error(err))
 			}
-			logger.Info("Finish engine execution")
+			logger.Info("Timeout engine execution")
 			return
 		}
 	}
