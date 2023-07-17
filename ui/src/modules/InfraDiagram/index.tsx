@@ -47,7 +47,7 @@ const getLayoutedElements = (nodes: any, edges: any) => {
 const nodeTypes = {
   default: DefaultNode,
   aws: DefaultNode,
-  'connection-interface': TaskOutputNode,
+  taskOutput: TaskOutputNode,
   executionNode: ExecutionNode,
 };
 

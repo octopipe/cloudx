@@ -3,7 +3,7 @@ const edgeType = 'smoothstep';
 
 
 export const toNodes = (tasks: any, type="executionNode") => {
-  return tasks.map((p: any) => {
+  let nodes = tasks.map((p: any) => {
     return {
       id: p.name,
       type: type,
@@ -18,9 +18,30 @@ export const toNodes = (tasks: any, type="executionNode") => {
     }
   })
 
+  if (type === "executionNode") {
+    for(let i = 0; i < tasks.length; i++) {
+      if (tasks[i]?.taskOutputs) {
+        const taskOutputs = tasks[i]?.taskOutputs?.map((t: any) => ({
+          id: t?.name,
+          type: 'taskOutput',
+          targetPosition: 'left',
+          data: {
+            label: t?.name,
+          },
+          position
+        }))
+  
+        console.log(taskOutputs)
+  
+        nodes = [...nodes, ...taskOutputs]
+      }
+      
+    }
+  }
+  return nodes
 }
 
-export const toEdges = (tasks: any, animated: boolean) => {
+export const toEdges = (tasks: any, animated: boolean, type="executionNode") => {
   let edges: any = []
   for (let i = 0; i < tasks.length; i++) {
     for (let j = 0; j < tasks[i]?.depends?.length; j++) {
@@ -31,6 +52,23 @@ export const toEdges = (tasks: any, animated: boolean) => {
         type: edgeType,
         animated,
       }]
+    }
+  }
+
+  if (type === "executionNode") {
+    for(let i = 0; i < tasks.length; i++) {
+      if (tasks[i]?.taskOutputs) {
+        const taskOutputs = tasks[i]?.taskOutputs?.map((t: any) => ({
+          id: `e-${tasks[i].name}-${t.name}`,
+          source: tasks[i].name,
+          target: t.name,
+          type: "default",
+          sourceHandle: 'cn'
+        }))
+  
+        edges = [...edges, ...taskOutputs]
+      }
+      
     }
   }
 

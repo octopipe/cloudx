@@ -15,8 +15,8 @@ type TaskOutput struct {
 
 type UseCase interface {
 	List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (pagination.ChunkingPaginationResponse[TaskOutput], error)
-	Create(ctx context.Context, connectionInterface TaskOutput) (TaskOutput, error)
-	Update(ctx context.Context, connectionInterface TaskOutput) (TaskOutput, error)
+	Create(ctx context.Context, taskOutput TaskOutput) (TaskOutput, error)
+	Update(ctx context.Context, taskOutput TaskOutput) (TaskOutput, error)
 	Get(ctx context.Context, name string, namespace string) (TaskOutput, error)
 	Delete(ctx context.Context, name string, namespace string) error
 }

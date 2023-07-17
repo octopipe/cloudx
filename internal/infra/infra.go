@@ -13,14 +13,15 @@ const (
 )
 
 type InfraTaskStatus struct {
-	Name       string                          `json:"name"`
-	Depends    []string                        `json:"depends,omitempty"`
-	Backend    string                          `json:"backend"`
-	Inputs     []commonv1alpha1.InfraTaskInput `json:"inputs"`
-	StartedAt  string                          `json:"startedAt,omitempty"`
-	FinishedAt string                          `json:"finishedAt,omitempty"`
-	Status     string                          `json:"status,omitempty"`
-	Error      string                          `json:"error,omitempty"`
+	Name        string                           `json:"name"`
+	Depends     []string                         `json:"depends,omitempty"`
+	Backend     string                           `json:"backend"`
+	Inputs      []commonv1alpha1.InfraTaskInput  `json:"inputs"`
+	TaskOutputs []commonv1alpha1.InfraTaskOutput `json:"taskOutputs"`
+	StartedAt   string                           `json:"startedAt,omitempty"`
+	FinishedAt  string                           `json:"finishedAt,omitempty"`
+	Status      string                           `json:"status,omitempty"`
+	Error       string                           `json:"error,omitempty"`
 }
 
 type InfraStatus struct {

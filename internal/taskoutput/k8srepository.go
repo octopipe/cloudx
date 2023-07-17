@@ -46,25 +46,25 @@ func (r k8sRepository) Apply(ctx context.Context, s v1alpha1.TaskOutput) (v1alph
 
 // Get implements Repository.
 func (r k8sRepository) Get(ctx context.Context, name string, namespace string) (v1alpha1.TaskOutput, error) {
-	var connectionInterface v1alpha1.TaskOutput
-	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &connectionInterface)
-	return connectionInterface, err
+	var taskOutput v1alpha1.TaskOutput
+	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, &taskOutput)
+	return taskOutput, err
 }
 
 // Delete implements Repository.
 func (r k8sRepository) Delete(ctx context.Context, name string, namespace string) error {
-	connectionInterface, err := r.Get(ctx, name, namespace)
+	taskOutput, err := r.Get(ctx, name, namespace)
 	if err != nil {
 		return nil
 	}
 
-	err = r.client.Delete(ctx, &connectionInterface)
+	err = r.client.Delete(ctx, &taskOutput)
 	return err
 }
 
 // List implements Repository.
 func (r k8sRepository) List(ctx context.Context, namespace string, chunkPagination pagination.ChunkingPaginationRequest) (v1alpha1.TaskOutputList, error) {
-	var connectionInterfaceList v1alpha1.TaskOutputList
-	err := r.client.List(ctx, &connectionInterfaceList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
-	return connectionInterfaceList, err
+	var taskOutputList v1alpha1.TaskOutputList
+	err := r.client.List(ctx, &taskOutputList, &client.ListOptions{Limit: chunkPagination.Limit, Continue: chunkPagination.Chunk, Namespace: namespace})
+	return taskOutputList, err
 }

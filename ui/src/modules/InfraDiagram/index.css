@@ -22,7 +22,7 @@
   padding: 0 !important;
 }
 
-.react-flow__node-connection-interface {
+.react-flow__node-taskOutput {
   font-size: 12px;
   background: #e65100;
   border-radius: 5px;

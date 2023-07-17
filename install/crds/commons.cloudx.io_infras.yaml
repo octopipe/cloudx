@@ -88,7 +88,27 @@ spec:
                             type: boolean
                         required:
                         - key
-                        - sensitive
+                        type: object
+                      type: array
+                    taskOutputs:
+                      items:
+                        properties:
+                          items:
+                            items:
+                              properties:
+                                key:
+                                  type: string
+                                sensitive:
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                            type: array
+                          name:
+                            type: string
+                        required:
+                        - items
+                        - name
                         type: object
                       type: array
                     template:
@@ -168,6 +188,27 @@ spec:
                           type: string
                         status:
                           type: string
+                        taskOutputs:
+                          items:
+                            properties:
+                              items:
+                                items:
+                                  properties:
+                                    key:
+                                      type: string
+                                    sensitive:
+                                      type: boolean
+                                  required:
+                                  - key
+                                  type: object
+                                type: array
+                              name:
+                                type: string
+                            required:
+                            - items
+                            - name
+                            type: object
+                          type: array
                         template:
                           properties:
                             dependencyLock:

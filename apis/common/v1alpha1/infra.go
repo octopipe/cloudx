@@ -15,9 +15,14 @@ type InfraTaskInput struct {
 	Sensitive bool   `json:"sensitive,omitempty"`
 }
 
-type InfraTaskOutput struct {
+type InfraTaskOutputItem struct {
 	Key       string `json:"key"`
-	Sensitive bool   `json:"sensitive"`
+	Sensitive bool   `json:"sensitive,omitempty"`
+}
+
+type InfraTaskOutput struct {
+	Name  string                `json:"name"`
+	Items []InfraTaskOutputItem `json:"items"`
 }
 
 type TerraformTask struct {
@@ -31,13 +36,14 @@ type TemplateTask struct {
 }
 
 type InfraTask struct {
-	Name      string            `json:"name"`
-	Depends   []string          `json:"depends,omitempty"`
-	Backend   string            `json:"backend"`
-	Terraform TerraformTask     `json:"terraform,omitempty"`
-	Template  TemplateTask      `json:"template,omitempty"`
-	Inputs    []InfraTaskInput  `json:"inputs"`
-	Outputs   []InfraTaskOutput `json:"outputs,omitempty"`
+	Name        string                `json:"name"`
+	Depends     []string              `json:"depends,omitempty"`
+	Backend     string                `json:"backend"`
+	Terraform   TerraformTask         `json:"terraform,omitempty"`
+	Template    TemplateTask          `json:"template,omitempty"`
+	Inputs      []InfraTaskInput      `json:"inputs"`
+	TaskOutputs []InfraTaskOutput     `json:"taskOutputs,omitempty"`
+	Outputs     []InfraTaskOutputItem `json:"outputs,omitempty"`
 }
 
 type InfraRunnerConfig struct {
@@ -72,16 +78,17 @@ type TemplateTaskStatus struct {
 }
 
 type TaskExecutionStatus struct {
-	Name       string              `json:"name"`
-	Depends    []string            `json:"depends,omitempty"`
-	Backend    string              `json:"backend"`
-	Inputs     []InfraTaskInput    `json:"inputs"`
-	Terraform  TerraformTaskStatus `json:"terraform"`
-	Template   TemplateTaskStatus  `json:"template"`
-	StartedAt  string              `json:"startedAt,omitempty"`
-	FinishedAt string              `json:"finishedAt,omitempty"`
-	Status     string              `json:"status,omitempty"`
-	Error      string              `json:"error,omitempty"`
+	Name        string              `json:"name"`
+	Depends     []string            `json:"depends,omitempty"`
+	Backend     string              `json:"backend"`
+	Inputs      []InfraTaskInput    `json:"inputs"`
+	Terraform   TerraformTaskStatus `json:"terraform"`
+	TaskOutputs []InfraTaskOutput   `json:"taskOutputs,omitempty"`
+	Template    TemplateTaskStatus  `json:"template"`
+	StartedAt   string              `json:"startedAt,omitempty"`
+	FinishedAt  string              `json:"finishedAt,omitempty"`
+	Status      string              `json:"status,omitempty"`
+	Error       string              `json:"error,omitempty"`
 }
 
 type ExecutionStatus struct {

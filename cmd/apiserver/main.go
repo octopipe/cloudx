@@ -42,14 +42,14 @@ func main() {
 	infraRepository := infra.NewK8sRepository(k8sClient)
 	infraUseCase := infra.NewUseCase(infraRepository)
 
-	connectionInterfaceRepository := taskoutput.NewK8sRepository(k8sClient)
-	connectionInterfaceUseCase := taskoutput.NewUseCase(connectionInterfaceRepository)
+	taskOutputRepository := taskoutput.NewK8sRepository(k8sClient)
+	taskOutputUseCase := taskoutput.NewUseCase(taskOutputRepository)
 
 	providerConfigRepository := providerconfig.NewK8sRepository(k8sClient)
 	providerConfigUseCase := providerconfig.NewUseCase(providerConfigRepository)
 
 	r = infra.NewHTTPHandler(r, infraUseCase)
-	r = taskoutput.NewHTTPHandler(r, connectionInterfaceUseCase)
+	r = taskoutput.NewHTTPHandler(r, taskOutputUseCase)
 	r = providerconfig.NewHTTPHandler(r, providerConfigUseCase)
 
 	r.GET("/healthz", func(ctx *gin.Context) {

@@ -8,6 +8,7 @@ import (
 	"github.com/octopipe/cloudx/internal/backend/terraform"
 	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/rpcclient"
+	"github.com/octopipe/cloudx/internal/taskoutput"
 	"go.uber.org/zap"
 )
 
@@ -79,12 +80,13 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 		}
 
 		status := commonv1alpha1.TaskExecutionStatus{
-			Name:      currentTask.Name,
-			Depends:   currentTask.Depends,
-			Inputs:    currentTask.Inputs,
-			Backend:   currentTask.Backend,
-			Status:    TaskAppliedStatus,
-			StartedAt: time.Now().Format(time.RFC3339),
+			Name:        currentTask.Name,
+			Depends:     currentTask.Depends,
+			Inputs:      currentTask.Inputs,
+			Backend:     currentTask.Backend,
+			TaskOutputs: currentTask.TaskOutputs,
+			Status:      TaskAppliedStatus,
+			StartedAt:   time.Now().Format(time.RFC3339),
 		}
 
 		interpolatedInputs, err := p.interpolateTaskInputsByExecutionContext(currentTask, executionContext)
@@ -127,6 +129,14 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 				}
 			}
 
+			p.logger.Info("creating tasks outputs...")
+			err = p.createTaskOutputs(currentTask, outputs)
+			if err != nil {
+				status.Error = err.Error()
+				status.Status = TaskApplyErrorStatus
+				return status, nil
+			}
+
 			return status, outputs
 		}
 
@@ -134,6 +144,34 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 		status.Status = TaskApplyErrorStatus
 		return status, nil
 	}
+}
+
+func (p pipelineCtx) createTaskOutputs(task commonv1alpha1.InfraTask, outputs map[string]engine.ExecutionOutputItem) error {
+	for _, t := range task.TaskOutputs {
+		p.logger.Info("creating task output", zap.String("name", t.Name))
+		items := []taskoutput.RPCCreateTaskOutputItem{}
+		for key, value := range outputs {
+			items = append(items, taskoutput.RPCCreateTaskOutputItem{
+				InfraTaskOutputItem: commonv1alpha1.InfraTaskOutputItem{
+					Key:       key,
+					Sensitive: value.Sensitive,
+				},
+				Value: value.Value,
+			})
+		}
+
+		var reply int
+		err := p.rpcClient.Call("TaskOutputRPCHandler.ApplyTaskOuput", taskoutput.RPCCreateTaskOutputArgs{
+			Name:      t.Name,
+			Namespace: "default",
+			Items:     items,
+		}, &reply)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (p pipelineCtx) destroy(infra commonv1alpha1.Infra) engine.ActionFuncType {
@@ -145,11 +183,12 @@ func (p pipelineCtx) destroy(infra commonv1alpha1.Infra) engine.ActionFuncType {
 			}
 		}
 		status := commonv1alpha1.TaskExecutionStatus{
-			Name:      lastTaskExecutionStatus.Name,
-			Depends:   lastTaskExecutionStatus.Depends,
-			Inputs:    lastTaskExecutionStatus.Inputs,
-			Status:    TaskDestroyed,
-			StartedAt: time.Now().Format(time.RFC3339),
+			Name:        lastTaskExecutionStatus.Name,
+			Depends:     lastTaskExecutionStatus.Depends,
+			Inputs:      lastTaskExecutionStatus.Inputs,
+			TaskOutputs: lastTaskExecutionStatus.TaskOutputs,
+			Status:      TaskDestroyed,
+			StartedAt:   time.Now().Format(time.RFC3339),
 		}
 
 		if lastTaskExecutionStatus.Backend == backend.TerraformBackend {
@@ -167,6 +206,13 @@ func (p pipelineCtx) destroy(infra commonv1alpha1.Infra) engine.ActionFuncType {
 				return status, nil
 			}
 
+			err = p.deleteTaskOutputs(lastTaskExecutionStatus)
+			if err != nil {
+				status.Error = err.Error()
+				status.Status = TaskDestroyErrorStatus
+				return status, nil
+			}
+
 			return status, nil
 		}
 
@@ -175,6 +221,21 @@ func (p pipelineCtx) destroy(infra commonv1alpha1.Infra) engine.ActionFuncType {
 
 		return status, nil
 	}
+}
+
+func (p pipelineCtx) deleteTaskOutputs(task commonv1alpha1.TaskExecutionStatus) error {
+	var reply int
+	for _, t := range task.TaskOutputs {
+		err := p.rpcClient.Call("TaskOutputRPCHandler.DeleteTaskOutput", taskoutput.RPCCreateTaskOutputArgs{
+			Name:      t.Name,
+			Namespace: "default",
+		}, &reply)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (e pipelineCtx) diffTasksForApply(infra commonv1alpha1.Infra) map[string]commonv1alpha1.TaskExecutionStatus {

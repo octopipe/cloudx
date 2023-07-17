@@ -16,13 +16,13 @@ func NewUseCase(repository Repository) UseCase {
 }
 
 // Create implements UseCase.
-func (u useCase) Create(ctx context.Context, connectionInterface TaskOutput) (TaskOutput, error) {
+func (u useCase) Create(ctx context.Context, taskOutput TaskOutput) (TaskOutput, error) {
 	newTaskOutput := commonv1alpha1.TaskOutput{
-		Spec: connectionInterface.TaskOutputSpec,
+		Spec: taskOutput.TaskOutputSpec,
 	}
 
-	newTaskOutput.SetName(connectionInterface.Name)
-	newTaskOutput.SetNamespace(connectionInterface.Namespace)
+	newTaskOutput.SetName(taskOutput.Name)
+	newTaskOutput.SetNamespace(taskOutput.Namespace)
 
 	s, err := u.repository.Apply(ctx, newTaskOutput)
 	if err != nil {
@@ -62,9 +62,9 @@ func (u useCase) List(ctx context.Context, namespace string, chunkPagination pag
 		return pagination.ChunkingPaginationResponse[TaskOutput]{}, err
 	}
 
-	connectionInterfaces := []TaskOutput{}
+	taskOutputs := []TaskOutput{}
 	for _, i := range l.Items {
-		connectionInterfaces = append(connectionInterfaces, TaskOutput{
+		taskOutputs = append(taskOutputs, TaskOutput{
 			Name:           i.GetName(),
 			Namespace:      i.GetNamespace(),
 			TaskOutputSpec: i.Spec,
@@ -72,19 +72,19 @@ func (u useCase) List(ctx context.Context, namespace string, chunkPagination pag
 	}
 
 	return pagination.ChunkingPaginationResponse[TaskOutput]{
-		Items: connectionInterfaces,
+		Items: taskOutputs,
 		Chunk: l.Continue,
 	}, nil
 }
 
 // Update implements UseCase.
-func (u useCase) Update(ctx context.Context, connectionInterface TaskOutput) (TaskOutput, error) {
+func (u useCase) Update(ctx context.Context, taskOutput TaskOutput) (TaskOutput, error) {
 	newTaskOutput := commonv1alpha1.TaskOutput{
-		Spec: connectionInterface.TaskOutputSpec,
+		Spec: taskOutput.TaskOutputSpec,
 	}
 
-	newTaskOutput.SetName(connectionInterface.Name)
-	newTaskOutput.SetNamespace(connectionInterface.Namespace)
+	newTaskOutput.SetName(taskOutput.Name)
+	newTaskOutput.SetNamespace(taskOutput.Namespace)
 
 	s, err := u.repository.Apply(ctx, newTaskOutput)
 	if err != nil {

@@ -21,7 +21,7 @@ const TaskOutputs = () => {
   return (
     <div  style={{margin: "80px"}}>
       <div className="d-flex justify-content-between my-4">
-        <h1 className="h2">Connections Interfaces</h1>
+        <h1 className="h2">Tasks Outputs</h1>
         <Button onClick={() => navigate('/infra/create')}>
           <FontAwesomeIcon icon="add" /> Create
         </Button>  

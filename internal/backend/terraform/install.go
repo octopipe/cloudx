@@ -18,15 +18,17 @@ func (t terraformBackend) install(tfVersion string) (string, error) {
 			if err != nil {
 				return "", err
 			}
+
+			installer := &releases.ExactVersion{
+				Product:    product.Terraform,
+				Version:    version.Must(version.NewVersion(tfVersion)),
+				InstallDir: installDirPath,
+			}
+
+			return installer.Install(context.Background())
 		}
 
-		installer := &releases.ExactVersion{
-			Product:    product.Terraform,
-			Version:    version.Must(version.NewVersion(tfVersion)),
-			InstallDir: installDirPath,
-		}
-
-		return installer.Install(context.Background())
+		return filepath.Join(installDirPath, "terraform"), nil
 	}
 
 	installDirPath := filepath.Join("/tmp/cloudx/terraform-versions", "latest")
@@ -35,12 +37,14 @@ func (t terraformBackend) install(tfVersion string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
+		installer := &releases.LatestVersion{
+			Product:    product.Terraform,
+			InstallDir: installDirPath,
+		}
+
+		return installer.Install(context.Background())
 	}
 
-	installer := &releases.LatestVersion{
-		Product:    product.Terraform,
-		InstallDir: installDirPath,
-	}
-
-	return installer.Install(context.Background())
+	return filepath.Join(installDirPath, "terraform"), nil
 }

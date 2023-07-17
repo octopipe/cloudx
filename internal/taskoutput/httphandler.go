@@ -10,11 +10,11 @@ import (
 )
 
 type httpHandler struct {
-	connectionInterfaceUseCase UseCase
+	taskOutputUseCase UseCase
 }
 
-func NewHTTPHandler(e *gin.Engine, connectionInterfaceUseCase UseCase) *gin.Engine {
-	h := httpHandler{connectionInterfaceUseCase: connectionInterfaceUseCase}
+func NewHTTPHandler(e *gin.Engine, taskOutputUseCase UseCase) *gin.Engine {
+	h := httpHandler{taskOutputUseCase: taskOutputUseCase}
 
 	e.GET("/connections-interfaces", h.List)
 	e.POST("/connections-interfaces", h.Create)
@@ -48,7 +48,7 @@ func (h httpHandler) List(c *gin.Context) {
 		chunk = c.Query("chunk")
 	}
 
-	list, err := h.connectionInterfaceUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
+	list, err := h.taskOutputUseCase.List(c.Request.Context(), namespace, pagination.ChunkingPaginationRequest{
 		Limit: int64(limit),
 		Chunk: chunk,
 	})
@@ -70,7 +70,7 @@ func (h httpHandler) Get(c *gin.Context) {
 	}
 	name := c.Param("name")
 
-	item, err := h.connectionInterfaceUseCase.Get(c.Request.Context(), name, namespace)
+	item, err := h.taskOutputUseCase.Get(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -89,17 +89,17 @@ func (h httpHandler) Create(c *gin.Context) {
 	// }
 	// name := c.Param("name")
 
-	connectionInterface := TaskOutput{}
-	if err := c.BindJSON(&connectionInterface); err != nil {
+	taskOutput := TaskOutput{}
+	if err := c.BindJSON(&taskOutput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	fmt.Println(connectionInterface)
+	fmt.Println(taskOutput)
 
-	item, err := h.connectionInterfaceUseCase.Create(c.Request.Context(), connectionInterface)
+	item, err := h.taskOutputUseCase.Create(c.Request.Context(), taskOutput)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -118,15 +118,15 @@ func (h httpHandler) Update(c *gin.Context) {
 	// }
 	// name := c.Param("name")
 
-	connectionInterface := TaskOutput{}
-	if err := c.BindJSON(&connectionInterface); err != nil {
+	taskOutput := TaskOutput{}
+	if err := c.BindJSON(&taskOutput); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": err.Error(),
 		})
 		return
 	}
 
-	item, err := h.connectionInterfaceUseCase.Update(c.Request.Context(), connectionInterface)
+	item, err := h.taskOutputUseCase.Update(c.Request.Context(), taskOutput)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),
@@ -145,7 +145,7 @@ func (h httpHandler) Delete(c *gin.Context) {
 	}
 	name := c.Param("name")
 
-	err := h.connectionInterfaceUseCase.Delete(c.Request.Context(), name, namespace)
+	err := h.taskOutputUseCase.Delete(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),

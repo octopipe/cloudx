@@ -16,23 +16,23 @@ type UseCase struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, connectionInterface
-func (_m *UseCase) Create(ctx context.Context, connectionInterface taskoutput.TaskOutput) (taskoutput.TaskOutput, error) {
-	ret := _m.Called(ctx, connectionInterface)
+// Create provides a mock function with given fields: ctx, taskOutput
+func (_m *UseCase) Create(ctx context.Context, taskOutput taskoutput.TaskOutput) (taskoutput.TaskOutput, error) {
+	ret := _m.Called(ctx, taskOutput)
 
 	var r0 taskoutput.TaskOutput
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, taskoutput.TaskOutput) (taskoutput.TaskOutput, error)); ok {
-		return rf(ctx, connectionInterface)
+		return rf(ctx, taskOutput)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, taskoutput.TaskOutput) taskoutput.TaskOutput); ok {
-		r0 = rf(ctx, connectionInterface)
+		r0 = rf(ctx, taskOutput)
 	} else {
 		r0 = ret.Get(0).(taskoutput.TaskOutput)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, taskoutput.TaskOutput) error); ok {
-		r1 = rf(ctx, connectionInterface)
+		r1 = rf(ctx, taskOutput)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -102,23 +102,23 @@ func (_m *UseCase) List(ctx context.Context, namespace string, chunkPagination p
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: ctx, connectionInterface
-func (_m *UseCase) Update(ctx context.Context, connectionInterface taskoutput.TaskOutput) (taskoutput.TaskOutput, error) {
-	ret := _m.Called(ctx, connectionInterface)
+// Update provides a mock function with given fields: ctx, taskOutput
+func (_m *UseCase) Update(ctx context.Context, taskOutput taskoutput.TaskOutput) (taskoutput.TaskOutput, error) {
+	ret := _m.Called(ctx, taskOutput)
 
 	var r0 taskoutput.TaskOutput
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, taskoutput.TaskOutput) (taskoutput.TaskOutput, error)); ok {
-		return rf(ctx, connectionInterface)
+		return rf(ctx, taskOutput)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, taskoutput.TaskOutput) taskoutput.TaskOutput); ok {
-		r0 = rf(ctx, connectionInterface)
+		r0 = rf(ctx, taskOutput)
 	} else {
 		r0 = ret.Get(0).(taskoutput.TaskOutput)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, taskoutput.TaskOutput) error); ok {
-		r1 = rf(ctx, connectionInterface)
+		r1 = rf(ctx, taskOutput)
 	} else {
 		r1 = ret.Error(1)
 	}

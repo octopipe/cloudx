@@ -77,12 +77,12 @@ func main() {
 		panic(err)
 	}
 
-	connectionInterfaceRepository := taskoutput.NewK8sRepository(mgr.GetClient())
+	taskOutputRepository := taskoutput.NewK8sRepository(mgr.GetClient())
 
 	infraRPCServer := infra.NewRPCServer(mgr.GetClient(), logger)
-	connectionInterfaceRPCServer := taskoutput.NewTaskOutputRPCHandler(connectionInterfaceRepository)
+	taskOutputRPCServer := taskoutput.NewTaskOutputRPCHandler(logger, mgr.GetClient(), taskOutputRepository)
 	rpc.Register(infraRPCServer)
-	rpc.Register(connectionInterfaceRPCServer)
+	rpc.Register(taskOutputRPCServer)
 	rpc.HandleHTTP()
 	l, e := net.Listen("tcp", ":9000")
 	if e != nil {

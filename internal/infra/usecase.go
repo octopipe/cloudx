@@ -144,14 +144,15 @@ func maskTasksSensitiveData(taskStatus []commonv1alpha1.TaskExecutionStatus) []I
 			inputs = append(inputs, i)
 		}
 		maskedTasks = append(maskedTasks, InfraTaskStatus{
-			Name:       p.Name,
-			Depends:    p.Depends,
-			Backend:    p.Backend,
-			Inputs:     inputs,
-			StartedAt:  p.StartedAt,
-			FinishedAt: p.FinishedAt,
-			Status:     p.Status,
-			Error:      p.Error,
+			Name:        p.Name,
+			Depends:     p.Depends,
+			Backend:     p.Backend,
+			Inputs:      inputs,
+			StartedAt:   p.StartedAt,
+			FinishedAt:  p.FinishedAt,
+			Status:      p.Status,
+			Error:       p.Error,
+			TaskOutputs: p.TaskOutputs,
 		})
 	}
 
