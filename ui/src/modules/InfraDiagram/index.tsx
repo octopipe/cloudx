@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom'
 import ReactFlow, { useNodesState, useEdgesState, addEdge, ConnectionLineType, Background, ReactFlowProvider, useReactFlow } from 'reactflow';
 import DefaultNode from './DefaultNode'
 import ExecutionNode from './ExecutionNode';
@@ -8,6 +9,7 @@ import './index.css'
 import NodePanel from './NodePanel';
 import AddPanel from './AddPanel';
 import TaskOutputNode from './TaskOutputNode';
+import h337, { BaseHeatmapConfiguration, HeatmapConfiguration } from '@mars3d/heatmap.js'
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -54,13 +56,16 @@ const nodeTypes = {
 let id = 0;
 const getId = () => `dndnode_${id++}`;
 
-const InfraDiagram = ({ infra, nodes: initialNodes, edges: initialEdges, action, onChangeDiagram }: any) => {
+const InfraDiagram = ({ infra, nodes: initialNodes, edges: initialEdges, action, onChangeDiagram, isExecution }: any) => {
+  const ref = useRef()
   const reactFlowWrapper = useRef<any>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<any>()
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [heatmap, setHeatmap] = useState(isExecution)
   const { fitView } = useReactFlow()
+  
 
   const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), []);
 
@@ -77,6 +82,46 @@ const InfraDiagram = ({ infra, nodes: initialNodes, edges: initialEdges, action,
       return n
     }))
   }
+
+  useEffect(() => {
+    setHeatmap(isExecution)
+  }, [isExecution])
+
+  useEffect(() => {
+    if (!ref?.current)
+      return
+
+    let heatmapInstance = h337.create({
+      container: ref.current,
+      radius: 300,
+      blur: .60
+      // maxOpacity: .8
+    })
+    const current = ReactDOM.findDOMNode(ref?.current) as any 
+    let data: any = []
+    let max = 0
+    
+    const nodes = document.querySelectorAll(".react-flow__node-executionNode")
+    console.log(nodes)
+    nodes.forEach((i: any) => {
+      const rect = i.getBoundingClientRect()
+      const executionBody = i.querySelector("#execution-body")
+      const duration = executionBody.getAttribute("data-duration")
+      const [value, type] = duration.split(' ')
+      max += Number(value)
+      data = [...data, { x: rect.x-210, y: rect.y+80, value: Number(value) }]
+    })
+
+    heatmapInstance.setData({
+      max,
+      min: 1,
+      data,
+    })
+
+    console.log(heatmapInstance.getData())
+
+
+  }, [heatmap])
 
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -136,7 +181,8 @@ const InfraDiagram = ({ infra, nodes: initialNodes, edges: initialEdges, action,
   );
 
   return (
-    <div className='shared-infra-diagram'>
+    <div className='shared-infra-diagram' >
+      {heatmap && <div className='shared-infra-diagram-heatmap' ref={ref as any}></div>}
       <ReactFlowProvider>
         <div className="reactflow-wrapper" ref={reactFlowWrapper}>
           <ReactFlow

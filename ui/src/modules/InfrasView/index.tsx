@@ -10,6 +10,7 @@ import DefaultPanel from "./DefaultPanel";
 import "ace-builds/src-noconflict/mode-json";
 import "ace-builds/src-noconflict/theme-monokai";
 import "ace-builds/src-noconflict/ext-language_tools";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 
 const getBadgeVariants = (status: string) => {
@@ -35,6 +36,7 @@ const InfraView = () => {
   const [infraCode, setInfraCode] = useState('')
   const [executions, setExecutions] = useState<any>([])
   const [selectedExecution, setSelectedExecution] = useState<boolean>()
+  const [heatmap, setHeatmap] = useState(false)
   const [nodes, setNodes] = useState<any>([])
   const [edges, setEdges] = useState<any>([])
   // const [codeView, setCodeView] = useState(false)
@@ -107,11 +109,33 @@ const InfraView = () => {
           variant="danger"
         >{infra?.status?.error}</Alert>
       )}
+      {!!selectedExecution && (
+        <div
+          style={{
+            position: "absolute",
+            top: "20px",
+            right: "20px",
+            background: "#2c2c2e",
+            color: "#fff",
+            borderRadius: "50%",
+            padding: "20px",
+            width: "80px",
+            height: "80px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99,
+          }}
+        >
+          <FontAwesomeIcon style={{cursor: 'pointer'}} size="2x" icon="fire" onClick={() => setHeatmap(!heatmap)} />
+        </div>
+      )}
       <div className="shared-infra-view__diagram">
       {searchParams.get("view") === "DIAGRAM" && <InfraDiagram
         infra={infra}
         nodes={nodes}
         edges={edges}
+        isExecution={heatmap}
       />}
       {searchParams.get("view") === "CODE" && (
         <ReactAce

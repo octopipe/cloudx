@@ -1,6 +1,7 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import { Button } from 'react-bootstrap';
 import { Handle, Position } from 'reactflow';
+import h337, { BaseHeatmapConfiguration, HeatmapConfiguration } from 'heatmap.js'
 
 const colorByStatus: any = {
   'SUCCESS': '#13aa80',
@@ -33,6 +34,15 @@ export default memo(({ data, isConnectable }: any) => {
         isConnectable={isConnectable}
       />
       <div>
+        <div 
+          style={{
+            position: 'absolute',
+            width: '80px',
+            height: '80px',
+            zIndex: 5,
+            background: "hsl(var(--hue), 100%, 50%"
+          }}
+        ></div>
         <div
           style={{
             background: data?.status ? colorByStatus[data?.status] : 'gray',
@@ -43,7 +53,7 @@ export default memo(({ data, isConnectable }: any) => {
           {data.label}
         </div>
         { data?.startedAt && data?.finishedAt && (
-          <div style={{padding: '10px', color: "#000"}}>
+          <div style={{padding: '10px', color: "#000"}} id="execution-body" data-duration={getDuration(data?.startedAt, data?.finishedAt)}>
 
             {getDuration(data?.startedAt, data?.finishedAt)}
             {/* {(data?.status === "ERROR" || data?.status === "FAILED") && (
@@ -61,13 +71,18 @@ export default memo(({ data, isConnectable }: any) => {
         style={{ background: '#555' }}
         isConnectable={isConnectable}
       />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="cn"
-        style={{ background: '#555', marginTop: '20px' }}
-        isConnectable={isConnectable}
-      />
+      {
+        data?.taskOutputs?.length > 0 && (
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="cn"
+            style={{ background: '#555', marginTop: '20px' }}
+            isConnectable={isConnectable}
+          />
+        )
+      }
+      
     </>
   );
 });

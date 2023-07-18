@@ -4,6 +4,13 @@
   flex-grow: 1;
   height: 100%;
 }
+ 
+.shared-infra-diagram-heatmap {
+  height: 100%;
+  width: 100%;
+  position: absolute !important;
+  z-index: 10;
+}
 
 .shared-infra-diagram .reactflow-wrapper {
   flex-grow: 1;
@@ -31,6 +38,16 @@
   height: 70px;
   padding: 0 !important;
 }
+
+/* [data-handleid="cn"] {
+  width: 20px;
+  height: 20px;
+  background-color: #e65100 !important;
+  border-radius: 0;
+  right: 0px;
+  color: #fff !important;
+  content: "CN" !important;
+} */
 
 /* .react-flow__node-defaultNode {
   font-size: 12px;

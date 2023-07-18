@@ -1,3 +1,5 @@
+import { MarkerType } from "reactflow";
+
 const position = { x: 0, y: 0 };
 const edgeType = 'smoothstep';
 
@@ -63,7 +65,18 @@ export const toEdges = (tasks: any, animated: boolean, type="executionNode") => 
           source: tasks[i].name,
           target: t.name,
           type: "default",
-          sourceHandle: 'cn'
+          sourceHandle: 'cn',
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 10,
+            height: 10,
+            color: '#e65100',
+            
+          },
+          style: {
+            strokeWidth: 2,
+            stroke: '#e65100',
+          },
         }))
   
         edges = [...edges, ...taskOutputs]
