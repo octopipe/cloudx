@@ -4,13 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type RepositoryAuth struct {
-	Type      string `json:"type,omitempty"`
-	Username  string `json:"username,omitempty"`
-	Password  string `json:"password,omitempty"`
-	PublicKey string `json:"publicKey,omitempty"`
-}
-
 type RepositorySync struct {
 	Auto bool `json:"auto,omitempty"`
 }
@@ -24,6 +17,9 @@ type RepositorySpec struct {
 }
 
 type RepositoryStatus struct {
+	LastSyncAt string `json:"lastSyncAt,omitempty"`
+	Status     string `json:"status,omitempty"`
+	Error      Error  `json:"error,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -8,7 +8,10 @@ import (
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/infra"
 	"github.com/octopipe/cloudx/internal/providerconfig"
+	"github.com/octopipe/cloudx/internal/repository"
+	"github.com/octopipe/cloudx/internal/secret"
 	"github.com/octopipe/cloudx/internal/taskoutput"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -26,7 +29,7 @@ func init() {
 }
 
 func main() {
-	// logger, _ := zap.NewProduction()
+	logger, _ := zap.NewProduction()
 	_ = godotenv.Load()
 
 	config := ctrl.GetConfigOrDie()
@@ -48,9 +51,16 @@ func main() {
 	providerConfigRepository := providerconfig.NewK8sRepository(k8sClient)
 	providerConfigUseCase := providerconfig.NewUseCase(providerConfigRepository)
 
+	secretRepository := secret.NewK8sRepository(k8sClient)
+	secretUseCase := secret.NewUseCase(logger, secretRepository)
+
+	repositoryK8sRepository := repository.NewK8sRepository(k8sClient)
+	repositoryUseCase := repository.NewUseCase(logger, repositoryK8sRepository, secretUseCase)
+
 	r = infra.NewHTTPHandler(r, infraUseCase)
 	r = taskoutput.NewHTTPHandler(r, taskOutputUseCase)
 	r = providerconfig.NewHTTPHandler(r, providerConfigUseCase)
+	r = repository.NewHTTPHandler(r, repositoryUseCase)
 
 	r.GET("/healthz", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, map[string]string{

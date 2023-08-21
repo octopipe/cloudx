@@ -7,7 +7,9 @@ import (
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/annotation"
-	"github.com/octopipe/cloudx/internal/controller/repository"
+	repositoryController "github.com/octopipe/cloudx/internal/controller/repository"
+	"github.com/octopipe/cloudx/internal/repository"
+	"github.com/octopipe/cloudx/internal/secret"
 	"github.com/octopipe/cloudx/pkg/twice/cache"
 	"github.com/octopipe/cloudx/pkg/twice/reconciler"
 	"go.uber.org/zap"
@@ -49,14 +51,30 @@ func main() {
 	reconciler := reconciler.NewReconciler(zapr.NewLogger(logger), mgr.GetConfig(), clusterCache)
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 
-	repositoryController := repository.NewController(
+	secretRepository := secret.NewK8sRepository(mgr.GetClient())
+	secretUseCase := secret.NewUseCase(logger, secretRepository)
+
+	repositoryK8sRepository := repository.NewK8sRepository(mgr.GetClient())
+	repositoryUseCase := repository.NewUseCase(logger, repositoryK8sRepository, secretUseCase)
+
+	logger.Info("preloading cluster cache...")
+	err = reconciler.Preload(context.Background(), func(un *unstructured.Unstructured) bool {
+		return un.GetAnnotations()[annotation.ManagedByAnnotation] == "cloudx"
+	}, true)
+	if err != nil {
+		logger.Error("failed to preload", zap.Error(err))
+		panic(err)
+	}
+
+	controller := repositoryController.NewController(
 		logger,
 		mgr.GetClient(),
 		mgr.GetScheme(),
 		k8sClient,
+		repositoryUseCase,
 	)
 
-	if err := repositoryController.SetupWithManager(mgr); err != nil {
+	if err := controller.SetupWithManager(mgr); err != nil {
 		panic(err)
 	}
 
@@ -64,16 +82,6 @@ func main() {
 		panic(err)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		panic(err)
-	}
-
-	logger.Info("preloading cluster cache...")
-	err = reconciler.Preload(context.Background(), func(un *unstructured.Unstructured) bool {
-		return un.GetAnnotations()[annotation.ManagedByAnnotation] == "cloudx"
-	}, true)
-
-	if err != nil {
-		logger.Error("failed to preload", zap.Error(err))
 		panic(err)
 	}
 

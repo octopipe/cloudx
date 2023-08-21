@@ -2,12 +2,10 @@ package repository
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"time"
 
-	"github.com/go-git/go-git/v5"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/repository"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,18 +22,20 @@ type Controller interface {
 
 type controller struct {
 	client.Client
-	logger    *zap.Logger
-	scheme    *runtime.Scheme
-	k8sClient *kubernetes.Clientset
+	logger            *zap.Logger
+	scheme            *runtime.Scheme
+	k8sClient         *kubernetes.Clientset
+	repositoryUseCase repository.UseCase
 }
 
-func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, k8sClient *kubernetes.Clientset) Controller {
+func NewController(logger *zap.Logger, client client.Client, scheme *runtime.Scheme, k8sClient *kubernetes.Clientset, repositoryUseCase repository.UseCase) Controller {
 
 	return &controller{
-		Client:    client,
-		logger:    logger,
-		scheme:    scheme,
-		k8sClient: k8sClient,
+		Client:            client,
+		logger:            logger,
+		scheme:            scheme,
+		k8sClient:         k8sClient,
+		repositoryUseCase: repositoryUseCase,
 	}
 }
 
@@ -47,13 +47,9 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	tmpDir := os.Getenv("TMP_DIR")
-
-	repoDir := fmt.Sprintf("%s/%s", tmpDir, repository.Spec.Url)
-	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{})
+	err = c.repositoryUseCase.Sync(ctx, req.Name, req.Namespace)
 	if err != nil {
-		c.logger.Error("Failed to plain clone repository", zap.Error(err))
-		return getControlResult(repository), err
+		return ctrl.Result{}, err
 	}
 
 	return getControlResult(repository), nil
