@@ -5,18 +5,17 @@ import (
 	"os"
 
 	"github.com/octopipe/cloudx/cmd/cli/commands"
-	"github.com/octopipe/cloudx/internal/taskmanager"
 	"go.uber.org/zap"
 )
 
 func main() {
 	logger, _ := zap.NewProduction()
-	taskManager := taskmanager.NewTaskManager(logger)
-	taskCmd := commands.NewTaskRoot(taskManager)
-	infraCmd := commands.NewInfraRoot(taskManager)
+	// taskManager := taskmanager.NewTaskManager(logger)
+	// taskCmd := commands.NewTaskRoot(taskManager)
+	// infraCmd := commands.NewInfraRoot(taskManager)
+	repositoryCmd := commands.NewRepositoryRoot(logger)
 
-	commands.RootCmd.AddCommand(taskCmd)
-	commands.RootCmd.AddCommand(infraCmd)
+	commands.RootCmd.AddCommand(repositoryCmd)
 
 	if err := commands.RootCmd.Execute(); err != nil {
 		fmt.Println(err)
