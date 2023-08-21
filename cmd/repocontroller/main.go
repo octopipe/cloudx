@@ -1,10 +1,17 @@
 package main
 
 import (
+	"context"
+
+	"github.com/go-logr/zapr"
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/annotation"
 	"github.com/octopipe/cloudx/internal/controller/repository"
+	"github.com/octopipe/cloudx/pkg/twice/cache"
+	"github.com/octopipe/cloudx/pkg/twice/reconciler"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -38,9 +45,9 @@ func main() {
 		panic(err)
 	}
 
+	clusterCache := cache.NewLocalCache()
+	reconciler := reconciler.NewReconciler(zapr.NewLogger(logger), mgr.GetConfig(), clusterCache)
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
-
-	// provider := provider.NewProvider(mgr.GetClient())
 
 	repositoryController := repository.NewController(
 		logger,
@@ -57,6 +64,16 @@ func main() {
 		panic(err)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		panic(err)
+	}
+
+	logger.Info("preloading cluster cache...")
+	err = reconciler.Preload(context.Background(), func(un *unstructured.Unstructured) bool {
+		return un.GetAnnotations()[annotation.ManagedByAnnotation] == "cloudx"
+	}, true)
+
+	if err != nil {
+		logger.Error("failed to preload", zap.Error(err))
 		panic(err)
 	}
 

@@ -74,5 +74,8 @@ install: manifests build-job build-controller
 controller:
 	go run cmd/controller/*.go
 
+repocontroller:
+	go run cmd/repocontroller/*.go
+
 apiserver:
 	go run cmd/apiserver/*.go

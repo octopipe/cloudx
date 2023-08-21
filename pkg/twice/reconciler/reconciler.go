@@ -119,6 +119,10 @@ func (r reconciler) syncCache(ctx context.Context, resourceList *v1.APIResourceL
 		}
 
 		for _, un := range uns.Items {
+			if !isManaged(&un) {
+				continue
+			}
+
 			isManaged := isManaged(&un)
 			newRes := resource.NewResourceByUnstructured(un, un.GetNamespace(), apiResource.Name, isManaged)
 			r.cache.Set(newRes.GetResourceIdentifier(), newRes)
