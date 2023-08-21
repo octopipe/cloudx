@@ -1,55 +1,105 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useCallback, useEffect, useState } from "react";
-import { Badge, Button, Card, Col, Container, ListGroup, Row } from "react-bootstrap";
-import { Link, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import React, { useCallback, useEffect, useState } from "react"
+import { Alert, Breadcrumb, Button, ListGroup, ProgressBar } from "react-bootstrap"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
+import { useFetch } from "use-http"
+
 
 const Infras = () => {
+  const location = useLocation()
   const navigate = useNavigate()
-  const [list, setList] = useState<any>()
-
-  const getList = useCallback(async () => {
-    const res = await fetch("http://localhost:8080/infra")
-    const list = await res.json()
-
-    setList(list)
-  }, [])
+  const { workspaceId } = useParams()
+  const { patch, get, response, loading, error } = useFetch({ cachePolicy: 'no-cache' as any })
+  const [infras, setInfras] = useState<any>([])
 
   useEffect(() => {
-    getList()
+    getInfras()
+    const interval = setInterval(() => {
+      getInfras()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
+
+  const getProgressNow = (infra: any) => {
+    return  (infra?.status?.tasks?.length * 100) / infra?.tasks?.length
+  }
   
+  const getInfras = useCallback(async () => {
+    const infras = await get(`/infra`)
+    if (response.ok) setInfras(infras?.items)
+  }, [get])
+
+  const sync = useCallback(async (infraId: string) => {
+    const infras = await patch(`/infra/${infraId}/reconcile`)
+  }, [get])
+
   return (
-    <div  style={{margin: "80px"}}>
-      <div className="d-flex justify-content-between my-4">
-        <h1 className="h2">Shared infras</h1>
-        <Button onClick={() => navigate('/infra/create')}>
-          <FontAwesomeIcon icon="add" /> Create
-        </Button>  
+    <div className="m-4">
+      <div>
+        <Breadcrumb>
+          {location.pathname.split('/').map((path, index) => {
+            if (path === '') {
+              return null
+            }
+
+            return (
+              <Breadcrumb.Item key={index} href="#">
+                {path}
+              </Breadcrumb.Item>
+            )
+          })}
+        </Breadcrumb>
       </div>
-      <Card>
-        <Card.Body>
-          <ListGroup as="ul">
-            {list?.items?.map((item: any, idx: any) => (
-            <ListGroup.Item
-              as="li"
-              className="d-flex justify-content-between align-items-start"
-            >
-              <div className="">
-                <div className="fw-bold">
-                  <Link to={item?.name}>{item?.name}</Link>
+      <div className="mb-3 d-flex align-items-center justify-content-between">
+        <h1>Infras</h1>
+        <Button onClick={() => navigate(`/workspaces/${workspaceId}/infras/create`)}>
+          <FontAwesomeIcon icon="plus" /> Create
+        </Button>
+      </div>
+      <ListGroup variant="flush">
+        {infras.map((infra: any, index: any) => (
+          <ListGroup.Item>
+            <div className="ms-2 me-auto">
+
+              <div className="d-flex justify-content-between">
+                <div>
+                  <strong>Name: </strong>
+                  <a 
+                    className="fw-bold"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/workspaces/${workspaceId}/infras/${infra?.name}?mode=VIEW`)}
+                  >
+                    {infra?.name}
+                  </a>
                 </div>
-                {item?.description}
+                <div>
+                  <FontAwesomeIcon className="me-2" icon="rotate" style={{ cursor: 'pointer' }} onClick={() => sync(infra?.name)} />
+                  <FontAwesomeIcon icon="trash" color="red" style={{ cursor: 'pointer' }} />
+                </div>
               </div>
-              <Badge bg="primary" pill>
-                {item?.spec?.tasks?.length}
-              </Badge>
-            </ListGroup.Item>
-            ))}
-          </ListGroup>
-        </Card.Body>
-      </Card>
+              <strong>Description: </strong>{infra?.description}<br/><br/>
+              {infra?.status?.status === "RUNNING" && (
+                <ProgressBar animated className="my-2" now={getProgressNow(infra)} />
+              )}
+              
+              {infra?.status?.status === "ERROR" && (
+                <>
+                  <strong>Last execution: </strong>
+                  <Alert variant="danger" className="my-2" onClick={e => e.preventDefault()}>
+                    <strong>Error: </strong>{infra?.status?.error?.message}<br/>
+                    <strong>Code: </strong>{infra?.status?.error?.code}<br/>
+                    <strong>Message: </strong>{infra?.status?.error?.tip}<br/>
+                  </Alert>
+                </>
+              )}
+            </div>
+            
+
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
     </div>
-    
   )
 }
 

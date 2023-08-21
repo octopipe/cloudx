@@ -8,6 +8,7 @@ import (
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/customerror"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -68,7 +69,7 @@ func (c *controller) NewRunner(action string, infra commonv1alpha1.Infra, provid
 
 	varsCreds, err := c.getCreds(providerConfig)
 	if err != nil {
-		return Runner{}, err
+		return Runner{}, customerror.NewByErr(err, "GET_CREDENTIALS_ERROR", "Error to get credentials from provider config. Please check your provider config")
 	}
 
 	defaultVars := []v1.EnvVar{
@@ -144,5 +145,5 @@ func (c controller) getCreds(providerConfig commonv1alpha1.ProviderConfig) ([]v1
 		return vars, nil
 	}
 
-	return nil, errors.New("invalid provider type")
+	return nil, errors.New("invalid provider config type")
 }

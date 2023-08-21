@@ -21,15 +21,15 @@ type InfraTaskStatus struct {
 	StartedAt   string                           `json:"startedAt,omitempty"`
 	FinishedAt  string                           `json:"finishedAt,omitempty"`
 	Status      string                           `json:"status,omitempty"`
-	Error       string                           `json:"error,omitempty"`
+	Error       commonv1alpha1.Error             `json:"error,omitempty"`
 }
 
 type InfraStatus struct {
-	Tasks      []InfraTaskStatus `json:"tasks"`
-	StartedAt  string            `json:"startedAt"`
-	FinishedAt string            `json:"finishedAt"`
-	Status     string            `json:"status"`
-	Error      string            `json:"error"`
+	Tasks      []InfraTaskStatus    `json:"tasks"`
+	StartedAt  string               `json:"startedAt"`
+	FinishedAt string               `json:"finishedAt"`
+	Status     string               `json:"status"`
+	Error      commonv1alpha1.Error `json:"error"`
 }
 
 type Infra struct {

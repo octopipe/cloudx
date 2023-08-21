@@ -1,19 +1,21 @@
-import ReactDOM from 'react-dom'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { fab } from '@fortawesome/free-brands-svg-icons'
-import { faLayerGroup, faDiagramProject, faCloud, faClose, faAdd, faBox, faRotate, faEdit, faArrowLeft, faCode, faFire } from '@fortawesome/free-solid-svg-icons'
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { faArrowLeft, faBox, faCircleExclamation, faCircleNodes, faClock, faClose, faCloud, faDiagramProject, faEdit, faEye, faGear, faHome, faPlus, faRotate, faTowerBroadcast, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
-  fab,
-  faLayerGroup,
+  faHome,
   faDiagramProject,
+  faCircleNodes,
   faCloud,
-  faClose,
-  faAdd,
-  faBox,
-  faRotate,
-  faEdit,
+  faGear,
   faArrowLeft,
-  faCode,
-  faFire,
+  faPlus,
+  faTowerBroadcast,
+  faRotate,
+  faTrash,
+  faClock,
+  faCircleExclamation,
+  faEdit,
+  faEye,
+  faBox,
+  faClose,
 )

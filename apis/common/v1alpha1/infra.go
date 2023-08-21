@@ -25,22 +25,18 @@ type InfraTaskOutput struct {
 	Items []InfraTaskOutputItem `json:"items"`
 }
 
-type TerraformTask struct {
+type Terraform struct {
 	Source         string `json:"source"`
 	Version        string `json:"version,omitempty"`
 	CredentialsRef Ref    `json:"credentialsRef,omitempty"`
-}
-
-type TemplateTask struct {
-	Resource string `json:"resource"`
 }
 
 type InfraTask struct {
 	Name        string                `json:"name"`
 	Depends     []string              `json:"depends,omitempty"`
 	Backend     string                `json:"backend"`
-	Terraform   TerraformTask         `json:"terraform,omitempty"`
-	Template    TemplateTask          `json:"template,omitempty"`
+	Terraform   Terraform             `json:"terraform,omitempty"`
+	Resource    string                `json:"resource,omitempty"`
 	Inputs      []InfraTaskInput      `json:"inputs"`
 	TaskOutputs []InfraTaskOutput     `json:"taskOutputs,omitempty"`
 	Outputs     []InfraTaskOutputItem `json:"outputs,omitempty"`
@@ -65,30 +61,30 @@ type InfraSpec struct {
 	Tasks             []InfraTask       `json:"tasks"`
 }
 
-type TerraformTaskStatus struct {
-	TerraformTask  `json:"task"`
+type TaskStatus struct {
+	Terraform      `json:"terraform"`
+	Resource       string `json:"resource,omitempty"`
 	DependencyLock string `json:"dependencyLock,omitempty"`
 	State          string `json:"state,omitempty"`
 }
 
-type TemplateTaskStatus struct {
-	TerraformTask  `json:"task"`
-	DependencyLock string `json:"dependencyLock,omitempty"`
-	State          string `json:"state,omitempty"`
+type Error struct {
+	Message string `json:"message,omitempty"`
+	Code    string `json:"code,omitempty"`
+	Tip     string `json:"tip,omitempty"`
 }
 
 type TaskExecutionStatus struct {
-	Name        string              `json:"name"`
-	Depends     []string            `json:"depends,omitempty"`
-	Backend     string              `json:"backend"`
-	Inputs      []InfraTaskInput    `json:"inputs"`
-	Terraform   TerraformTaskStatus `json:"terraform"`
-	TaskOutputs []InfraTaskOutput   `json:"taskOutputs,omitempty"`
-	Template    TemplateTaskStatus  `json:"template"`
-	StartedAt   string              `json:"startedAt,omitempty"`
-	FinishedAt  string              `json:"finishedAt,omitempty"`
-	Status      string              `json:"status,omitempty"`
-	Error       string              `json:"error,omitempty"`
+	Name        string            `json:"name"`
+	Depends     []string          `json:"depends,omitempty"`
+	Backend     string            `json:"backend"`
+	Inputs      []InfraTaskInput  `json:"inputs"`
+	Task        TaskStatus        `json:"task"`
+	TaskOutputs []InfraTaskOutput `json:"taskOutputs,omitempty"`
+	StartedAt   string            `json:"startedAt,omitempty"`
+	FinishedAt  string            `json:"finishedAt,omitempty"`
+	Status      string            `json:"status,omitempty"`
+	Error       Error             `json:"error,omitempty"`
 }
 
 type ExecutionStatus struct {
@@ -96,7 +92,7 @@ type ExecutionStatus struct {
 	StartedAt  string                `json:"startedAt,omitempty"`
 	FinishedAt string                `json:"finishedAt,omitempty"`
 	Status     string                `json:"status,omitempty"`
-	Error      string                `json:"error,omitempty"`
+	Error      Error                 `json:"error,omitempty"`
 }
 
 type InfraStatus struct {

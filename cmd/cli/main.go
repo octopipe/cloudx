@@ -6,18 +6,13 @@ import (
 
 	"github.com/octopipe/cloudx/cmd/cli/commands"
 	"github.com/octopipe/cloudx/internal/taskmanager"
-	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 )
 
 func main() {
 	logger, _ := zap.NewProduction()
-	terraformProvider, err := terraform.NewTerraformProvider(logger)
-	if err != nil {
-		panic(err)
-	}
-	taskManager := taskmanager.NewTaskManager(logger, terraformProvider)
-	taskCmd := commands.NewTaskRoot(taskManager, terraformProvider)
+	taskManager := taskmanager.NewTaskManager(logger)
+	taskCmd := commands.NewTaskRoot(taskManager)
 	infraCmd := commands.NewInfraRoot(taskManager)
 
 	commands.RootCmd.AddCommand(taskCmd)

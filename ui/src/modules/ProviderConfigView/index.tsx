@@ -1,81 +1,116 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useCallback, useEffect, useState } from "react";
-import ReactAce from "react-ace/lib/ace";
-import { Badge, Button, Card, Col, Container, Form, ListGroup, Row } from "react-bootstrap";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import React, { useCallback, useEffect, useState } from "react"
+import { Breadcrumb, Button, Form, ListGroup } from "react-bootstrap"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
+import { useFetch } from "use-http"
+import { useForm, SubmitHandler } from "react-hook-form"
 
-const ProviderConfigView = () => {
+const ProvidersConfigView = () => {
+  const location = useLocation()
   const navigate = useNavigate()
-  const { name } = useParams()
-  const [providerConfig, setProviderConfig] = useState<any>()
-  const [type, setType] = useState('')
-  const [source, setSource ] = useState('')
-  const [config, setConfig ] = useState('{}')
-  const [secretRef, setSecretRef] = useState('')
+  const { workspaceId, providerConfigId } = useParams()
+  const { register, setValue, getValues, handleSubmit } = useForm<any>()
+  const { patch, get, response, loading, error } = useFetch({ cachePolicy: 'no-cache' as any })
+  const [providerConfig, setProviderConfig] = useState<any>([])
 
 
-  const getItem = useCallback(async () => {
-    const res = await fetch(`http://localhost:8080/providers-configs/${name}`)
-    const item = await res.json()
+  const getProviderConfig = useCallback(async () => {
+    const providersConfig = await get(`/providers-configs/${providerConfigId}`)
+    if (response.ok) setProviderConfig(providersConfig)
+  }, [get])
 
-    setProviderConfig(item)
+  useEffect(() => {
+    getProviderConfig()
+    const interval = setInterval(() => {
+      getProviderConfig()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
-    getItem()
-  }, [])
-
-  useEffect(() => {
-    setType(providerConfig?.type)
-    setSource(providerConfig?.source)
-    setConfig(JSON.stringify(providerConfig?.awsConfig, null, 2))
-    setSecretRef(`${providerConfig?.secretRef?.namespace}/${providerConfig?.secretRef?.name}`)
+    setValue('name', providerConfig?.name)
+    setValue('source', providerConfig?.source)
   }, [providerConfig])
-  
+
   return (
-    <div style={{padding: '80px'}}>
-      <h1>{providerConfig?.name}</h1>
-      <Form.Group className="mb-3">
-        <Form.Label>Type</Form.Label>
-        <Form.Select disabled value={type} onChange={e => setType(e.target.value)}>
-          <option value="" disabled>Select a type</option>
-          {['AWS', 'Azure'].map(i => (
-            <option value={i}>{i}</option>
-          ))}
-        </Form.Select>
-        <small>Provider type</small>
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>Source</Form.Label>
-        <Form.Select disabled value={source} onChange={e => setSource(e.target.value)}>
-          <option value="" disabled>Select a type</option>
-          {['SECRET', 'CURRENT_ACCOUNT'].map(i => (
-            <option value={i}>{i}</option>
-          ))}
-        </Form.Select>
-        <small>Credentials source</small>
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>Config</Form.Label>
-        <ReactAce
-          mode="json"
-          theme="monokai"
-          width='100%'
-          height='200px'
-          value={config}
-          onChange={e => setConfig(e)}
-          readOnly={true}
-          enableBasicAutocompletion={true}
-        />
-        <small>Provider config</small>
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label>Secret ref</Form.Label>
-        <Form.Control type="text" disabled placeholder="type the task ref" value={secretRef} onChange={e => setSecretRef(e.target.value)} />
-        <small>Secret ref </small>
-      </Form.Group>
+    <div className="p-4">
+      <div>
+        <Breadcrumb>
+          {location.pathname.split('/').map((path, index) => {
+            if (path === '') {
+              return null
+            }
+
+            return (
+              <Breadcrumb.Item key={index} href="#">
+                {path}
+              </Breadcrumb.Item>
+            )
+          })}
+        </Breadcrumb>
+      </div>
+      <div style={{width: '40rem'}}>
+        <Form>
+          <Form.Group className="mb-3">
+            <Form.Label>Name</Form.Label>
+            <Form.Control {...register("name")} type="text"  placeholder="Infra name..." />
+          </Form.Group>
+          <div className="mb-3">
+            <Form.Check
+              inline
+              label="AWS"
+              name="type"
+              type="radio"
+              id="aws"
+              checked={providerConfig?.type === 'AWS'}
+            />
+            <Form.Check
+              inline
+              label="Azure"
+              name="group1"
+              type="radio"
+              id="azure"
+              checked={providerConfig?.type === 'AZURE'}
+            />
+            <Form.Check
+              inline
+              label="GCP"
+              name="group1"
+              type="radio"
+              id="gcp"
+              checked={providerConfig?.type === 'GCP'}
+            />
+          </div>
+          {providerConfig?.type === 'AWS' && (
+            <>
+              <Form.Group className="mb-3">
+                <Form.Label>Source</Form.Label>
+                <Form.Select {...register("source")} aria-label="Default select example">
+                  <option>Open this select menu</option>
+                  <option value="SECRET_REF">Secret Ref</option>
+                  <option value="CREDENTIALS">Credentials</option>
+                  <option value="ROLE_ARN">Role arn</option>
+                </Form.Select>
+              </Form.Group>
+            </>
+          )}
+          {getValues()?.source === 'CREDENTIALS' && (
+            <>
+              <Form.Group className="mb-3">
+                <Form.Label>Access key ID</Form.Label>
+                <Form.Control type="text" value="***" placeholder="Infra name..." />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Secret access key</Form.Label>
+                <Form.Control type="text" value="***" placeholder="Infra name..." />
+              </Form.Group>
+            </>
+          )}
+        </Form>
+      </div>
     </div>
   )
 }
 
-export default ProviderConfigView
+export default ProvidersConfigView

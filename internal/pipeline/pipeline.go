@@ -91,7 +91,11 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 
 		interpolatedInputs, err := p.interpolateTaskInputsByExecutionContext(currentTask, executionContext)
 		if err != nil {
-			status.Error = err.Error()
+			status.Error = commonv1alpha1.Error{
+				Message: err.Error(),
+				Code:    "TASK_INPUT_INTERPOLATION_ERROR",
+				Tip:     "Verify that the task inputs are valid",
+			}
 			status.Status = TaskApplyErrorStatus
 			return status, nil
 		}
@@ -102,19 +106,23 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 				Source:           currentTask.Terraform.Source,
 				Version:          currentTask.Terraform.Version,
 				TaskInputs:       interpolatedInputs,
-				PreviousState:    lastTaskExecutionStatus.Terraform.State,
-				PreviousLockDeps: lastTaskExecutionStatus.Terraform.DependencyLock,
+				PreviousState:    lastTaskExecutionStatus.Task.State,
+				PreviousLockDeps: lastTaskExecutionStatus.Task.DependencyLock,
 			}
 			result, err := p.backend.Terraform.Apply(applyInput)
 			status.FinishedAt = time.Now().Format(time.RFC3339)
 			if err != nil {
-				status.Error = err.Error()
+				status.Error = commonv1alpha1.Error{
+					Message: err.Error(),
+					Code:    "TASK_APPLY_TERRAFORM_ERROR",
+					Tip:     "Verify that the terraform code is valid",
+				}
 				status.Status = TaskApplyErrorStatus
 				return status, nil
 			}
 
-			status.Terraform = commonv1alpha1.TerraformTaskStatus{
-				TerraformTask:  currentTask.Terraform,
+			status.Task = commonv1alpha1.TaskStatus{
+				Terraform:      currentTask.Terraform,
 				State:          result.State,
 				DependencyLock: result.DependenciesLock,
 			}
@@ -132,7 +140,11 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 			p.logger.Info("creating tasks outputs...")
 			err = p.createTaskOutputs(currentTask, outputs)
 			if err != nil {
-				status.Error = err.Error()
+				status.Error = commonv1alpha1.Error{
+					Message: err.Error(),
+					Code:    "TASK_OUTPUT_CREATION_ERROR",
+					Tip:     "An error occurred while creating task outputs, please retry the execution",
+				}
 				status.Status = TaskApplyErrorStatus
 				return status, nil
 			}
@@ -140,7 +152,11 @@ func (p pipelineCtx) apply(infra commonv1alpha1.Infra) engine.ActionFuncType {
 			return status, outputs
 		}
 
-		status.Error = "invalid task type"
+		status.Error = commonv1alpha1.Error{
+			Message: "invalid task backend",
+			Code:    "INVALID_TASK_BACKEND",
+			Tip:     "Verify that the task backend is valid",
+		}
 		status.Status = TaskApplyErrorStatus
 		return status, nil
 	}
@@ -193,22 +209,28 @@ func (p pipelineCtx) destroy(infra commonv1alpha1.Infra) engine.ActionFuncType {
 
 		if lastTaskExecutionStatus.Backend == backend.TerraformBackend {
 			destroyInput := terraform.TerraformDestroyInput{
-				Source:           lastTaskExecutionStatus.Terraform.Source,
-				Version:          lastTaskExecutionStatus.Terraform.Version,
+				Source:           lastTaskExecutionStatus.Task.Source,
+				Version:          lastTaskExecutionStatus.Task.Version,
 				TaskInputs:       lastTaskExecutionStatus.Inputs,
-				PreviousState:    lastTaskExecutionStatus.Terraform.State,
-				PreviousLockDeps: lastTaskExecutionStatus.Terraform.DependencyLock,
+				PreviousState:    lastTaskExecutionStatus.Task.State,
+				PreviousLockDeps: lastTaskExecutionStatus.Task.DependencyLock,
 			}
 			err := p.backend.Terraform.Destroy(destroyInput)
 			if err != nil {
-				status.Error = err.Error()
+				status.Error = commonv1alpha1.Error{
+					Message: err.Error(),
+					Code:    "TASK_DESTROY_TERRAFORM_ERROR",
+				}
 				status.Status = TaskDestroyErrorStatus
 				return status, nil
 			}
 
 			err = p.deleteTaskOutputs(lastTaskExecutionStatus)
 			if err != nil {
-				status.Error = err.Error()
+				status.Error = commonv1alpha1.Error{
+					Message: err.Error(),
+					Code:    "DESTROY_TASK_OUTPUTS_ERROR",
+				}
 				status.Status = TaskDestroyErrorStatus
 				return status, nil
 			}
@@ -216,7 +238,11 @@ func (p pipelineCtx) destroy(infra commonv1alpha1.Infra) engine.ActionFuncType {
 			return status, nil
 		}
 
-		status.Error = "invalid task type"
+		status.Error = commonv1alpha1.Error{
+			Message: "invalid task backend",
+			Code:    "INVALID_TASK_BACKEND",
+			Tip:     "Verify that the task backend is valid",
+		}
 		status.Status = TaskDestroyErrorStatus
 
 		return status, nil

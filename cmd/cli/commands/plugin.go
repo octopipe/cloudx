@@ -7,13 +7,11 @@ import (
 	"path/filepath"
 
 	"github.com/octopipe/cloudx/internal/taskmanager"
-	"github.com/octopipe/cloudx/internal/terraform"
 	"github.com/spf13/cobra"
 )
 
 type taskCmd struct {
-	taskManager       taskmanager.Manager
-	terraformProvider terraform.TerraformProvider
+	taskManager taskmanager.Manager
 }
 
 func (p taskCmd) NewTaskCmd() *cobra.Command {
@@ -85,10 +83,9 @@ func (p taskCmd) NewExecutTaskCmd() *cobra.Command {
 	}
 }
 
-func NewTaskRoot(taskManager taskmanager.Manager, terraformProvider terraform.TerraformProvider) *cobra.Command {
+func NewTaskRoot(taskManager taskmanager.Manager) *cobra.Command {
 	taskRoot := taskCmd{
-		taskManager:       taskManager,
-		terraformProvider: terraformProvider,
+		taskManager: taskManager,
 	}
 
 	taskCmd := taskRoot.NewTaskCmd()

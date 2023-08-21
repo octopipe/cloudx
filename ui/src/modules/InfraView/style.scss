@@ -1,0 +1,40 @@
+.react-flow__node-executionNode {
+  font-size: 12px;
+  background: #eee;
+  border: 1px solid #555;
+  border-radius: 5px;
+
+  width: 170px;
+  height: 80px;
+
+  .bar {
+    width: 10px;
+    height: 80px;
+    background: #f00;
+    border-bottom-left-radius: 5px;
+  }
+
+  .content {
+    padding: 10px;
+  }
+}
+
+.react-flow__node-defaultNode {
+  font-size: 12px;
+  background: #ccc;
+  border: 1px solid #555;
+  border-radius: 5px;
+
+  width: 170px;
+  height: 80px;
+
+  .bar {
+    width: 10px;
+    height: 80px;
+    background: #ccc;
+  }
+
+  .content {
+    padding: 10px;
+  }
+}

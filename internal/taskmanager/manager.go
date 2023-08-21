@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/octopipe/cloudx/internal/terraform"
 	"go.uber.org/zap"
 )
 
@@ -14,14 +13,12 @@ type Manager interface {
 }
 
 type manager struct {
-	logger            *zap.Logger
-	terraformProvider terraform.TerraformProvider
+	logger *zap.Logger
 }
 
-func NewTaskManager(logger *zap.Logger, terraformProvider terraform.TerraformProvider) Manager {
+func NewTaskManager(logger *zap.Logger) Manager {
 	return manager{
-		logger:            logger,
-		terraformProvider: terraformProvider,
+		logger: logger,
 	}
 }
 

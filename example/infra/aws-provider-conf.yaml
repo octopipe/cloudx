@@ -4,7 +4,7 @@ metadata:
   name: aws-config
 spec:
   type: AWS
-  source: ENV
+  source: CREDENTIALS
   secretRef:
     name: aws-creds
     namespace: default

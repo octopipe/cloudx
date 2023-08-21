@@ -99,17 +99,17 @@ func main() {
 			}
 		case done := <-doneChann:
 			if done {
+				var infraErr commonv1alpha1.Error
 				status := pipeline.InfraSuccessStatus
-				rawErr := ""
 				for _, task := range executionStatus.Tasks {
 					if task.Status != pipeline.TaskAppliedStatus && task.Status != pipeline.TaskDestroyed {
 						status = pipeline.InfraErrorStatus
-						rawErr = task.Error
+						infraErr = task.Error
 						break
 					}
 				}
 				executionStatus.Status = status
-				executionStatus.Error = rawErr
+				executionStatus.Error = infraErr
 				executionStatus.FinishedAt = time.Now().Format(time.RFC3339)
 				err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
 				if err != nil {
@@ -120,7 +120,11 @@ func main() {
 			}
 		case <-ticker.C:
 			executionStatus.Status = pipeline.InfraTimeoutStatus
-			executionStatus.Error = "time limit exceeded"
+			executionStatus.Error = commonv1alpha1.Error{
+				Message: "time limit exceeded",
+				Code:    "TIME_LIMIT_EXCEEDED",
+				Tip:     "Verify if your infrastructure is not stuck in some task.",
+			}
 			executionStatus.FinishedAt = time.Now().Format(time.RFC3339)
 			err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
 			if err != nil {

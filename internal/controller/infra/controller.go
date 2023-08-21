@@ -7,6 +7,7 @@ import (
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/controller/utils"
+	"github.com/octopipe/cloudx/internal/customerror"
 	"github.com/octopipe/cloudx/internal/pipeline"
 	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
@@ -58,6 +59,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		action = "DESTROY"
 	}
 
+	c.logger.Info("get provider config from infra...")
 	providerConfig := commonv1alpha1.ProviderConfig{}
 	err = c.Get(ctx, types.NamespacedName{
 		Name:      currentInfra.Spec.ProviderConfigRef.Name,
@@ -65,9 +67,8 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}, &providerConfig)
 	if err != nil {
 		c.logger.Error("Failed to get provider config by shared infra", zap.Error(err))
-		return ctrl.Result{
-			RequeueAfter: time.Second * 2,
-		}, err
+		customErr := customerror.NewByErr(err, "PROVIDER_CONFIG_NOT_FOUND", "Failed to get provider config by shared infra")
+		return c.persistError(customErr, currentInfra)
 	}
 
 	if os.Getenv("ENV") != "local" {
@@ -75,13 +76,14 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		newRunner, err := c.NewRunner(action, *currentInfra, providerConfig)
 		if err != nil {
 			c.logger.Error("Failed to create runner", zap.Error(err))
-			return ctrl.Result{Requeue: false}, err
+			return c.persistError(err, currentInfra)
 		}
 
 		err = c.Create(ctx, newRunner.Pod)
 		if err != nil {
 			c.logger.Error("Failed to apply runner", zap.Error(err))
-			return ctrl.Result{Requeue: false}, err
+			customErr := customerror.NewByErr(err, "RUNNER_CREATION_ERROR", "Failed to create runner")
+			return c.persistError(customErr, currentInfra)
 		}
 
 		currentInfra.Status.LastExecution.Status = pipeline.InfraRunningStatus
@@ -94,6 +96,20 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return ctrl.Result{Requeue: false}, nil
+}
+
+func (c *controller) persistError(err error, currentInfra *commonv1alpha1.Infra) (ctrl.Result, error) {
+	customError := customerror.Unwrap(err)
+
+	currentInfra.Status.LastExecution.Status = pipeline.InfraErrorStatus
+	currentInfra.Status.LastExecution.Error = commonv1alpha1.Error{
+		Code:    customError.Code,
+		Message: customError.Message,
+		Tip:     customError.Tip,
+	}
+	currentInfra.Status.LastExecution.StartedAt = time.Now().Format(time.RFC3339)
+	err = utils.UpdateInfraStatus(c.Client, *currentInfra)
+	return ctrl.Result{Requeue: false}, err
 }
 
 func ignoreDeletionPredicate() predicate.Predicate {
