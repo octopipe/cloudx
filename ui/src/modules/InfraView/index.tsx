@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react"
-import { Background, ReactFlow, useEdgesState, useNodesState } from "reactflow"
+import { Background, ReactFlow, useEdgesState, ReactFlowProvider, useNodesState, useReactFlow } from "reactflow"
 import { useFetch } from "use-http";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -15,6 +15,7 @@ import './style.scss'
 const InfraView = () => {
   const location = useLocation()
   const { workspaceId, infraId } = useParams()
+  const { fitView } = useReactFlow();
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const [lastExecution, setLastExecution] = useState<any>()
@@ -91,6 +92,7 @@ const InfraView = () => {
       setNodesAndEdges(lastExecution?.tasks, lastExecution?.tasks, "executionNode", true)
   }, [lastExecution])
 
+
   const getInfra = useCallback(async () => {
     const infra = await get(`/infra/${infraId}`)
     if (response.ok) setInfra(infra)
@@ -98,24 +100,24 @@ const InfraView = () => {
 
   return (
     <>
-      <Navbar style={{height: '60px'}} className="text-white" bg="dark" data-bs-theme="dark">
-        <Container>
-          
-          <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="me-auto">
-              <NavLink to={`/workspaces/${workspaceId}/infras`}  className="nav-link-sub py-3 me-4 text-decoration-none">
-                Voltar
-              </NavLink>
+      <Navbar style={{height: '60px', borderBottom: '1px solid #ccc'}} className="text-white" bg="light">
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="me-auto ms-3">
+            <NavLink to={`/workspaces/${workspaceId}/infras`}  className="nav-link-sub py-3 me-4 text-decoration-none">
+              <FontAwesomeIcon icon="arrow-left" />
+            </NavLink>
+            {(!searchParams.has('mode') || searchParams?.get('mode') === 'VIEW') && (
               <NavLink to={`/workspaces/${workspaceId}/infras/${infraId}?mode=EDIT`} className="nav-link-sub py-3 text-decoration-none">
                 Editar
               </NavLink>
-              {/* <Nav.Link href="#home">Edit</Nav.Link>
-              <Nav.Link href="#link">Link</Nav.Link> */}
-            </Nav>
-          </Navbar.Collapse>
-        </Container>
+            )}
+            
+            {/* <Nav.Link href="#home">Edit</Nav.Link>
+            <Nav.Link href="#link">Link</Nav.Link> */}
+          </Nav>
+        </Navbar.Collapse>
       </Navbar>
-      <div style={{ height: '100vh', display: 'flex' }}>
+      <div style={{ height: 'calc(100vh - 60px)', display: 'flex' }}>
         
         {/* <div className="d-flex flex-column justify-content-between text-white" style={{width: '4.5rem', borderRight: '1px solid #ccc'}}> */}
           {/* <Nav variant="pills" activeKey={location.pathname} className="nav-flush flex-column mb-auto text-center">
@@ -135,11 +137,17 @@ const InfraView = () => {
           /> */}
         {/* </div> */}
         {searchParams.get('mode') === 'EDIT' && (
-          <div className="bg-light" style={{width: infra && !lastExecution ? '45%' : '5%', maxHeight: '100vh'}}>
+          <div className="bg-light" style={{width: infra && !lastExecution ? '45%' : '5%', maxHeight: 'calc(100vh - 60px)'}}>
             {infra && !lastExecution && (
               <>
-                <Tabs className="mt-2" style={{width: '100%'}}>
-                  <Tab style={{height: '100%'}} eventKey="code" title="Code">
+                <div
+                  style={{ cursor: 'pointer', display: 'flex', width: '43%', position: "absolute", justifyContent: 'flex-end', padding: '10px' }}
+                  
+                >
+                  <FontAwesomeIcon icon="close" onClick={() => navigate(`/workspaces/${workspaceId}/infras/${infraId}?mode=VIEW`)} />
+                </div>
+                <Tabs className="mt-2">
+                  <Tab eventKey="code" title="Code">
                     <AceEditor
                       mode="json"
                       theme="github"
@@ -152,11 +160,13 @@ const InfraView = () => {
                       }}
                       value={infraEditorValue}
                       width="100%"
-                      height="87%"
+                      height="calc(100vh - 110px)"
+                      fontSize={14}
+               
                     />
-                    <div style={{position: 'fixed', bottom: 0, zIndex: 5, width: '100%'}}>
+                    {/* <div style={{position: 'fixed', bottom: 0, zIndex: 5, width: '100%'}}>
                       <Button style={{borderRadius: 0}}>Save</Button>
-                    </div>
+                    </div> */}
                   </Tab>
                   <Tab className="p-4" eventKey="last-execution" title="Last execution">
                     <div className="bg-light">
@@ -189,7 +199,8 @@ const InfraView = () => {
           </div>
         )}
         
-        <div style={{ width: '55%', height: '100vh' }}>
+        <div style={{ width: (!searchParams.has('mode') || searchParams?.get('mode') === 'VIEW') ? '100%' : '55%', height: 'calc(100vh - 60px)' }}>
+          
           <ReactFlow
             nodes={nodes}
             edges={edges} 
@@ -208,4 +219,8 @@ const InfraView = () => {
   )
 }
 
-export default InfraView
+export default () => (
+  <ReactFlowProvider>
+    <InfraView />
+  </ReactFlowProvider>
+)
