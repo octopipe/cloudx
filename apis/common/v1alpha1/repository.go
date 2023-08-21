@@ -19,6 +19,7 @@ type RepositorySpec struct {
 	Url     string         `json:"url,omitempty"`
 	Path    string         `json:"path,omitempty"`
 	Sync    RepositorySync `json:"sync,omitempty"`
+	Branch  string         `json:"branch,omitempty"`
 	AuthRef Ref            `json:"ref,omitempty"`
 }
 

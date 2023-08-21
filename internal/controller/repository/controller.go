@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
@@ -49,13 +50,21 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	tmpDir := os.Getenv("TMP_DIR")
 
 	repoDir := fmt.Sprintf("%s/%s", tmpDir, repository.Spec.Url)
-	_, err := git.PlainClone(repoDir, false, &git.CloneOptions{})
+	_, err = git.PlainClone(repoDir, false, &git.CloneOptions{})
 	if err != nil {
 		c.logger.Error("Failed to plain clone repository", zap.Error(err))
-		return ctrl.Result{}, err
+		return getControlResult(repository), err
 	}
 
-	return ctrl.Result{}, nil
+	return getControlResult(repository), nil
+}
+
+func getControlResult(repository *commonv1alpha1.Repository) ctrl.Result {
+	if repository.Spec.Sync.Auto {
+		return ctrl.Result{RequeueAfter: 3 * time.Second}
+	}
+
+	return ctrl.Result{}
 }
 
 func (c *controller) SetupWithManager(mgr ctrl.Manager) error {
