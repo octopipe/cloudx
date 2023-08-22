@@ -34,6 +34,8 @@ spec:
             type: object
           spec:
             properties:
+              branch:
+                type: string
               path:
                 type: string
               ref:
@@ -52,6 +54,20 @@ spec:
                 type: string
             type: object
           status:
+            properties:
+              error:
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  tip:
+                    type: string
+                type: object
+              lastSyncAt:
+                type: string
+              status:
+                type: string
             type: object
         type: object
     served: true

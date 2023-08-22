@@ -2,9 +2,12 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/go-resty/resty/v2"
+	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
+	"github.com/octopipe/cloudx/internal/repository"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -43,6 +46,12 @@ func (p repositoryCmd) NewCreateRepositoryCmd() *cobra.Command {
 					Transform: survey.Title,
 				},
 				{
+					Name:      "url",
+					Prompt:    &survey.Input{Message: "What is the url of repository?"},
+					Validate:  survey.Required,
+					Transform: survey.Title,
+				},
+				{
 					Name:      "path",
 					Prompt:    &survey.Input{Message: "What is the path inside of repository?", Default: "."},
 					Validate:  survey.Required,
@@ -72,11 +81,12 @@ func (p repositoryCmd) NewCreateRepositoryCmd() *cobra.Command {
 			}
 
 			commonAnswers := struct {
-				Name      string `json:"name"`
-				Namespace string `json:"namespace"`
-				Path      string `json:"path"`
-				Branch    string `json:"branch"`
-				Public    bool   `json:"public"`
+				Name      string
+				Namespace string
+				Url       string
+				Path      string
+				Branch    string
+				Public    bool
 			}{}
 
 			// perform the questions
@@ -86,9 +96,25 @@ func (p repositoryCmd) NewCreateRepositoryCmd() *cobra.Command {
 				return
 			}
 
-			// p.restclient.R().
-			// 	SetBody().
-			// 	Post(fmt.Sprintf("%s/repositories", os.Getenv("APISERVER_BASE_PATH")))
+			_, err = p.restclient.R().
+				SetBody(repository.Repository{
+					Name:      commonAnswers.Name,
+					Namespace: commonAnswers.Namespace,
+					RepositorySpec: commonv1alpha1.RepositorySpec{
+						Sync: commonv1alpha1.RepositorySync{
+							Auto: true,
+						},
+						Url:    commonAnswers.Url,
+						Path:   commonAnswers.Path,
+						Branch: commonAnswers.Branch,
+					},
+				}).
+				Post(fmt.Sprintf("%s/repositories", os.Getenv("APISERVER_BASE_PATH")))
+
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
 
 		},
 	}

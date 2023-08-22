@@ -8,4 +8,5 @@ resources:
 - commons.cloudx.io_executions.yaml
 - commons.cloudx.io_providerconfigs.yaml
 - commons.cloudx.io_infras.yaml
+- commons.cloudx.io_repositories.yaml
 

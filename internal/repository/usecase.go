@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/go-git/go-git/v5"
@@ -120,6 +121,7 @@ func (u useCase) syncRemote(ctx context.Context, currRepository Repository) erro
 
 	// TODO: SSH AUTHENTICATION
 	gitRepository, err := git.PlainClone(repoDir, false, &git.CloneOptions{
+		URL:  currRepository.Url,
 		Auth: gitCloneAuth,
 	})
 	if err != nil && !errors.Is(err, git.ErrRepositoryAlreadyExists) {
@@ -141,14 +143,20 @@ func (u useCase) syncRemote(ctx context.Context, currRepository Repository) erro
 		return err
 	}
 
-	err = worktree.Checkout(&git.CheckoutOptions{Branch: plumbing.ReferenceName(currRepository.Branch)})
+	branchRef := plumbing.NewBranchReferenceName(currRepository.Branch)
+	branch, err := gitRepository.Reference(branchRef, false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = worktree.Checkout(&git.CheckoutOptions{Branch: branch.Name()})
 	if err != nil {
 		u.logger.Error("Failed to checkout branch", zap.Error(err))
 		return err
 	}
 
 	err = worktree.Pull(&git.PullOptions{RemoteName: "origin"})
-	if err != nil {
+	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		u.logger.Error("Failed to pull branch", zap.Error(err))
 		return err
 	}
