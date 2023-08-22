@@ -32,7 +32,7 @@ type UseCase interface {
 	Create(ctx context.Context, repository Repository) (Repository, error)
 	Update(ctx context.Context, repository Repository) (Repository, error)
 	Get(ctx context.Context, name string, namespace string) (Repository, error)
-	Sync(ctx context.Context, name string, namespace string) error
+	Sync(ctx context.Context, name string, namespace string) ([]string, error)
 	Delete(ctx context.Context, name string, namespace string) error
 }
 

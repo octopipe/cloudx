@@ -59,7 +59,7 @@ const Infras = () => {
       </div>
       <ListGroup variant="flush">
         {infras.map((infra: any, index: any) => (
-          <ListGroup.Item>
+          <ListGroup.Item className="mb-2">
             <div className="ms-2 me-auto">
 
               <div className="d-flex justify-content-between">

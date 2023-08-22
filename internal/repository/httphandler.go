@@ -89,7 +89,7 @@ func (h httpHandler) Sync(c *gin.Context) {
 	}
 	name := c.Param("repository-name")
 
-	err := h.repositoryUseCase.Sync(c.Request.Context(), name, namespace)
+	_, err := h.repositoryUseCase.Sync(c.Request.Context(), name, namespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": err.Error(),

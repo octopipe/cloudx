@@ -71,6 +71,7 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return c.persistError(customErr, currentInfra)
 	}
 
+	c.logger.Info("verify enverionment to create runner")
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner...")
 		newRunner, err := c.NewRunner(action, *currentInfra, providerConfig)
@@ -109,7 +110,7 @@ func (c *controller) persistError(err error, currentInfra *commonv1alpha1.Infra)
 	}
 	currentInfra.Status.LastExecution.StartedAt = time.Now().Format(time.RFC3339)
 	err = utils.UpdateInfraStatus(c.Client, *currentInfra)
-	return ctrl.Result{Requeue: false}, err
+	return ctrl.Result{Requeue: true, RequeueAfter: 5 * time.Second}, err
 }
 
 func ignoreDeletionPredicate() predicate.Predicate {

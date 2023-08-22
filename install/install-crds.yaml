@@ -535,6 +535,8 @@ spec:
                 type: string
               path:
                 type: string
+              public:
+                type: boolean
               ref:
                 properties:
                   name:

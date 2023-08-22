@@ -1,0 +1,9 @@
+apiVersion: commons.cloudx.io/v1alpha1
+kind: Repository
+metadata:
+  name: octopipe-example-1
+spec:
+  url: "https://github.com/octopipe/examples.git"
+  path: cloudx/example-1
+  branch: main
+  public: true

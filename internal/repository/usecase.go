@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -85,52 +87,89 @@ func (u useCase) Get(ctx context.Context, name string, namespace string) (Reposi
 	}, nil
 }
 
-func (u useCase) Sync(ctx context.Context, name string, namespace string) error {
+func (u useCase) Sync(ctx context.Context, name string, namespace string) ([]string, error) {
 	currRepository, err := u.Get(ctx, name, namespace)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = u.syncRemote(ctx, currRepository)
-	if err != nil {
-		return err
-	}
+	manifests := []string{}
 
-	return nil
-}
-
-func (u useCase) syncRemote(ctx context.Context, currRepository Repository) error {
 	tmpDir := os.Getenv("TMP_DIR")
 	repoDir := fmt.Sprintf("%s/%s", tmpDir, currRepository.Url)
-
-	secret, err := u.secretUseCase.Get(ctx, currRepository.AuthRef.Name, currRepository.AuthRef.Namespace)
+	err = u.syncRemote(ctx, repoDir, currRepository)
 	if err != nil {
-		u.logger.Error("Failed to get secret from repository", zap.Error(err))
-		return err
+		return nil, err
 	}
 
-	gitCloneAuth := &http.BasicAuth{
-		Username: string(secret.Data["username"]),
-		Password: string(secret.Data["password"]),
-	}
+	repoPath := filepath.Join(repoDir, currRepository.Path)
+	err = filepath.Walk(repoPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-	// if string(secret.Data["type"]) == "ssh" {
-	// 	sshPublicKey, err := ssh.ParsePublicKey(secret.Data["publicKey"])
+		if info.IsDir() {
+			return nil
+		}
 
-	// }
+		fileData, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
 
-	// TODO: SSH AUTHENTICATION
-	gitRepository, err := git.PlainClone(repoDir, false, &git.CloneOptions{
-		URL:  currRepository.Url,
-		Auth: gitCloneAuth,
+		// un := &unstructured.Unstructured{}
+		// if err := json.Unmarshal(fileData, un); err != nil {
+		// 	return err
+		// }
+
+		// currAnnotations := un.GetAnnotations()
+
+		// if currAnnotations == nil {
+		// 	currAnnotations = map[string]string{}
+		// }
+
+		// for key, value := range annotation.DefaultAnnotations {
+		// 	currAnnotations[key] = value
+		// }
+
+		// currAnnotations[RepositoryNameAnnotation] = currRepository.Name
+		// currAnnotations[RepositoryNamespaceAnnotation] = currRepository.Namespace
+
+		manifests = append(manifests, string(fileData))
+		return nil
 	})
+
+	return manifests, err
+}
+
+func (u useCase) syncRemote(ctx context.Context, dir string, currRepository Repository) error {
+
+	cloneOptions := git.CloneOptions{
+		URL: currRepository.Url,
+	}
+
+	if !currRepository.Public {
+		secret, err := u.secretUseCase.Get(ctx, currRepository.AuthRef.Name, currRepository.AuthRef.Namespace)
+		if err != nil {
+			u.logger.Error("Failed to get secret from repository", zap.Error(err))
+			return err
+		}
+
+		// TODO: SSH AUTHENTICATION
+		cloneOptions.Auth = &http.BasicAuth{
+			Username: string(secret.Data["username"]),
+			Password: string(secret.Data["password"]),
+		}
+	}
+
+	gitRepository, err := git.PlainClone(dir, false, &cloneOptions)
 	if err != nil && !errors.Is(err, git.ErrRepositoryAlreadyExists) {
 		u.logger.Error("Failed to plain clone repository", zap.Error(err))
 		return err
 	}
 
 	if errors.Is(err, git.ErrRepositoryAlreadyExists) {
-		gitRepository, err = git.PlainOpen(repoDir)
+		gitRepository, err = git.PlainOpen(dir)
 		if err != nil {
 			u.logger.Error("Failed to open repository", zap.Error(err))
 			return err

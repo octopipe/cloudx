@@ -434,8 +434,8 @@ func (r *reconciler) getPlanResultsForDeletion(isManaged isManagedFunc, currentR
 	return result
 }
 
-func applyMetadataToObject(res PlanResult, metadata map[string]string) *unstructured.Unstructured {
-	un := res.Object
+func applyMetadataToObject(planResult PlanResult, un *unstructured.Unstructured, metadata map[string]string) *unstructured.Unstructured {
+
 	currentAnnotations := un.GetAnnotations()
 	if currentAnnotations == nil {
 		currentAnnotations = map[string]string{}
@@ -445,7 +445,7 @@ func applyMetadataToObject(res PlanResult, metadata map[string]string) *unstruct
 		currentAnnotations[k] = v
 	}
 
-	currentAnnotations[LastAppliedConfigurationAnnotation] = string(res.targetManifest)
+	currentAnnotations[LastAppliedConfigurationAnnotation] = string(planResult.targetManifest)
 	un.SetAnnotations(currentAnnotations)
 
 	return un
@@ -470,7 +470,7 @@ func (r reconciler) Apply(ctx context.Context, planResults []PlanResult, namespa
 		}).Namespace(namespace)
 
 		if res.action == PlanCreateAction {
-			modifiedObject := applyMetadataToObject(res, metadata)
+			modifiedObject := applyMetadataToObject(res, res.Object, metadata)
 			_, err := dynamicInterface.Create(ctx, modifiedObject, v1.CreateOptions{})
 
 			if err != nil {
@@ -489,7 +489,14 @@ func (r reconciler) Apply(ctx context.Context, planResults []PlanResult, namespa
 					return err
 				}
 
-				modifiedObject := applyMetadataToObject(res, metadata)
+				curr, err := dynamicInterface.Get(ctx, target.GetName(), v1.GetOptions{})
+				if err != nil {
+					return err
+				}
+
+				target.SetResourceVersion(curr.GetResourceVersion())
+
+				modifiedObject := applyMetadataToObject(res, target, metadata)
 				_, err = dynamicInterface.Update(ctx, modifiedObject, v1.UpdateOptions{})
 				if err != nil {
 					return err
