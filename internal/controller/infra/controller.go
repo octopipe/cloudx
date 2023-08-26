@@ -2,6 +2,8 @@ package infra
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/octopipe/cloudx/internal/pipeline"
 	"github.com/octopipe/cloudx/internal/provider"
 	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -71,10 +74,20 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return c.persistError(customErr, currentInfra)
 	}
 
+	c.logger.Info("get creds from providerconfig...")
+	varsCreds, err := c.getCreds(providerConfig)
+	if err != nil {
+		c.logger.Error("Failed to credentials", zap.Error(err))
+		customErr := customerror.NewByErr(err, "GET_CREDENTIALS_ERROR", "Error to get credentials from provider config. Please check your provider config")
+		return c.persistError(customErr, currentInfra)
+	}
+
+	fmt.Println(varsCreds)
+
 	c.logger.Info("verify enverionment to create runner")
 	if os.Getenv("ENV") != "local" {
 		c.logger.Info("creating runner...")
-		newRunner, err := c.NewRunner(action, *currentInfra, providerConfig)
+		newRunner, err := c.NewRunner(action, *currentInfra, providerConfig, varsCreds)
 		if err != nil {
 			c.logger.Error("Failed to create runner", zap.Error(err))
 			return c.persistError(err, currentInfra)
@@ -97,6 +110,25 @@ func (c *controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return ctrl.Result{Requeue: false}, nil
+}
+
+func (c controller) getCreds(providerConfig commonv1alpha1.ProviderConfig) ([]v1.EnvVar, error) {
+	if providerConfig.Spec.Type == "AWS" {
+		creds, err := c.provider.GetCreds(context.Background(), providerConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		vars := []v1.EnvVar{
+			{Name: "AWS_ACCESS_KEY_ID", Value: creds.AccessKeyId},
+			{Name: "AWS_SECRET_ACCESS_KEY", Value: creds.AccessKey},
+			{Name: "AWS_SESSION_TOKEN", Value: creds.SessionToken},
+		}
+
+		return vars, nil
+	}
+
+	return nil, errors.New("invalid provider config type")
 }
 
 func (c *controller) persistError(err error, currentInfra *commonv1alpha1.Infra) (ctrl.Result, error) {

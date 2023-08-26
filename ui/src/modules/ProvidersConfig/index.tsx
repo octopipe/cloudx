@@ -48,7 +48,7 @@ const ProvidersConfig = () => {
       </div>
       <ListGroup variant="flush">
         {providersConfig.map((infra: any, index: any) => (
-          <ListGroup.Item action onClick={() => navigate(`/workspaces/${workspaceId}/providers-config/${infra?.name}`)}>
+          <ListGroup.Item className="mb-2" action onClick={() => navigate(`/workspaces/${workspaceId}/providers-config/${infra?.name}`)}>
             <div className="ms-2 me-auto">
               <div className="fw-bold">{infra?.name}</div>
               {infra?.description}

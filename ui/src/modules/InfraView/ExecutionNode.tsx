@@ -9,7 +9,7 @@ export default memo(({ data, selected }: any) => {
     <>
       <Handle type="target" position={Position.Left} />
       <div className='d-flex'>
-        <div className='bar'></div>
+        <div className={`bar-${data?.status}`}></div>
         <div className='d-flex flex-column content'>
           <div>
             <strong>{data.label}</strong>

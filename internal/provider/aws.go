@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -35,7 +36,7 @@ func (p Provider) GetCreds(ctx context.Context, providerConfig commonv1alpha1.Pr
 	var cfg aws.Config
 	var err error
 
-	if providerConfig.Spec.Source != "SECRET" {
+	if providerConfig.Spec.Source == "STATIC_CREDENTIALS" {
 		var secret v1.Secret
 
 		err := p.k8sClient.Get(ctx, types.NamespacedName{
@@ -46,11 +47,28 @@ func (p Provider) GetCreds(ctx context.Context, providerConfig commonv1alpha1.Pr
 			return AWSCreds{}, err
 		}
 
+		// v := make(map[string]string)
+
+		raw, err := json.Marshal(secret.Data)
+		if err != nil {
+			return AWSCreds{}, err
+		}
+
+		v := make(map[string]string)
+		err = json.Unmarshal(raw, &v)
+		if err != nil {
+			return AWSCreds{}, err
+		}
+
+		// awsKeyId := string(secret.Data["aws_access_key_id"])
+
+		// fmt.Println(string(v))
+
 		cfg, err = config.LoadDefaultConfig(context.TODO(), func(opts *config.LoadOptions) error {
 			opts.Region = providerConfig.Spec.AWSConfig.Region
 			opts.Credentials = credentials.NewStaticCredentialsProvider(
-				string(secret.Data["aws_access_key_id"]),
-				string(secret.Data["aws_secret_access_key"]),
+				v["aws_access_key_id"],
+				v["aws_secret_access_key"],
 				"",
 			)
 			return nil

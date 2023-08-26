@@ -1,14 +1,11 @@
 package infra
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/customerror"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,7 +16,7 @@ type Runner struct {
 	Service *v1.Service
 }
 
-func (c *controller) NewRunner(action string, infra commonv1alpha1.Infra, providerConfig commonv1alpha1.ProviderConfig) (Runner, error) {
+func (c *controller) NewRunner(action string, infra commonv1alpha1.Infra, providerConfig commonv1alpha1.ProviderConfig, varsCreds []v1.EnvVar) (Runner, error) {
 	vFalse := false
 	vTrue := true
 	vUser := int64(65532)
@@ -65,11 +62,6 @@ func (c *controller) NewRunner(action string, infra commonv1alpha1.Infra, provid
 
 	if infra.Spec.RunnerConfig.ServiceAccount != "" {
 		serviceAccount = infra.Spec.RunnerConfig.ServiceAccount
-	}
-
-	varsCreds, err := c.getCreds(providerConfig)
-	if err != nil {
-		return Runner{}, customerror.NewByErr(err, "GET_CREDENTIALS_ERROR", "Error to get credentials from provider config. Please check your provider config")
 	}
 
 	defaultVars := []v1.EnvVar{
@@ -127,23 +119,4 @@ func (c *controller) NewRunner(action string, infra commonv1alpha1.Infra, provid
 	return Runner{
 		Pod: newRunnerObject,
 	}, nil
-}
-
-func (c controller) getCreds(providerConfig commonv1alpha1.ProviderConfig) ([]v1.EnvVar, error) {
-	if providerConfig.Spec.Type == "AWS" {
-		creds, err := c.provider.GetCreds(context.Background(), providerConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		vars := []v1.EnvVar{
-			{Name: "AWS_ACCESS_KEY_ID", Value: creds.AccessKeyId},
-			{Name: "AWS_SECRET_ACCESS_KEY", Value: creds.AccessKey},
-			{Name: "AWS_SESSION_TOKEN", Value: creds.SessionToken},
-		}
-
-		return vars, nil
-	}
-
-	return nil, errors.New("invalid provider config type")
 }

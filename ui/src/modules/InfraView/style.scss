@@ -7,10 +7,17 @@
   width: 170px;
   height: 80px;
 
-  .bar {
+  .bar-APPLIED {
     width: 10px;
     height: 80px;
-    background: #f00;
+    background: green;
+    border-bottom-left-radius: 5px;
+  }
+
+  .bar-APPLIED {
+    width: 10px;
+    height: 80px;
+    background: green;
     border-bottom-left-radius: 5px;
   }
 

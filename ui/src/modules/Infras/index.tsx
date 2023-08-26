@@ -93,6 +93,14 @@ const Infras = () => {
                   </Alert>
                 </>
               )}
+              {infra?.status?.status === "SUCCESS" && (
+                <>
+                  <strong>Last execution: </strong>
+                  <Alert variant="success" className="my-2" onClick={e => e.preventDefault()}>
+                    The last execution executed successfully
+                  </Alert>
+                </>
+              )}
             </div>
             
 

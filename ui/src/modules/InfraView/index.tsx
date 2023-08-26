@@ -4,19 +4,19 @@ import { useFetch } from "use-http";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { NavLink, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AceEditor from "react-ace";
-import { Alert, Button, Card, Col, Container, Form, Nav, Navbar, Row, Tab, Tabs } from "react-bootstrap";
+import { Alert, Button, Card, Col, Container, Form, Modal, Nav, Navbar, Row, Tab, Tabs } from "react-bootstrap";
 import 'reactflow/dist/style.css';
 import ExecutionNode from "./ExecutionNode";
 import DefaultNode from "./DefaultNode";
 
 import { getLayoutedElements, toEdges, toNodes } from "./utils";
 import './style.scss'
+import { Ace } from "ace-builds";
 
 const InfraView = () => {
   const location = useLocation()
   const { workspaceId, infraId } = useParams()
   const { fitView } = useReactFlow();
-  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const [lastExecution, setLastExecution] = useState<any>()
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -26,13 +26,11 @@ const InfraView = () => {
   const [infraInterval, setInfraInterval] = useState<any>()
   const [infraEditorValue, setInfraEditorValue] = useState<any>('')
   const [hasModifications, setHasModifications] = useState<boolean>(false)
+  const [show, setShow] = useState(false);
+  const [currTask, setCurrTask] = useState<any>(null)
 
   useEffect(() => {
     getInfra()
-    if (searchParams.get('mode') === 'EDIT') {
-      clearInterval(infraInterval)
-      return
-    }
     
     const interval = setInterval(() => {
       getInfra()
@@ -41,7 +39,7 @@ const InfraView = () => {
     setInfraInterval(interval)
 
     return () => clearInterval(interval)
-  }, [searchParams])
+  }, [])
 
   const setNodesAndEdges = useCallback((n: any[], e: any[], nodeType: string, animated: boolean) => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -106,11 +104,6 @@ const InfraView = () => {
             <NavLink to={`/workspaces/${workspaceId}/infras`}  className="nav-link-sub py-3 me-4 text-decoration-none">
               <FontAwesomeIcon icon="arrow-left" />
             </NavLink>
-            {(!searchParams.has('mode') || searchParams?.get('mode') === 'VIEW') && (
-              <NavLink to={`/workspaces/${workspaceId}/infras/${infraId}?mode=EDIT`} className="nav-link-sub py-3 text-decoration-none">
-                Editar
-              </NavLink>
-            )}
             
             {/* <Nav.Link href="#home">Edit</Nav.Link>
             <Nav.Link href="#link">Link</Nav.Link> */}
@@ -119,88 +112,62 @@ const InfraView = () => {
       </Navbar>
       <div style={{ height: 'calc(100vh - 60px)', display: 'flex' }}>
         
-        {/* <div className="d-flex flex-column justify-content-between text-white" style={{width: '4.5rem', borderRight: '1px solid #ccc'}}> */}
-          {/* <Nav variant="pills" activeKey={location.pathname} className="nav-flush flex-column mb-auto text-center">
-            <NavLink to={`/workspaces/${workspaceId}/infras`} className="nav-link-sub text-black py-3">
-              <FontAwesomeIcon size="lg" icon="arrow-left" />
-            </NavLink>
-            <NavLink to={`/workspaces/${workspaceId}/infras/${infraId}?mode=${searchParams.get("mode")}`} className="nav-link-sub text-black py-3">
-              <FontAwesomeIcon size="lg" icon="edit" />
-            </NavLink>
-          </Nav> */}
-          
-          {/* <FontAwesomeIcon
-            icon={infra && !lastExecution ? "arrow-left" : "close"}
-            onClick={() => infra && !lastExecution ? navigate(-1) : setLastExecution(null)}
-            cursor={'pointer'}
-            size={infra && !lastExecution ? "sm" : "2x"}
-          /> */}
-        {/* </div> */}
-        {searchParams.get('mode') === 'EDIT' && (
-          <div className="bg-light" style={{width: infra && !lastExecution ? '45%' : '5%', maxHeight: 'calc(100vh - 60px)'}}>
-            {infra && !lastExecution && (
-              <>
-                <div
-                  style={{ cursor: 'pointer', display: 'flex', width: '43%', position: "absolute", justifyContent: 'flex-end', padding: '10px' }}
-                  
-                >
-                  <FontAwesomeIcon icon="close" onClick={() => navigate(`/workspaces/${workspaceId}/infras/${infraId}?mode=VIEW`)} />
-                </div>
-                <Tabs className="mt-2">
-                  <Tab eventKey="code" title="Code">
-                    <AceEditor
-                      mode="json"
-                      theme="github"
-                      onChange={v => setInfraEditorValue(v)}
-                      name="UNIQUE_ID_OF_DIV"
-                      editorProps={{ $blockScrolling: true }}
-                      setOptions={{
-                        useWorker: false,
-                        readOnly: (!searchParams.has('mode') || searchParams?.get('mode') === 'VIEW'),
-                      }}
-                      value={infraEditorValue}
-                      width="100%"
-                      height="calc(100vh - 110px)"
-                      fontSize={14}
-               
-                    />
-                    {/* <div style={{position: 'fixed', bottom: 0, zIndex: 5, width: '100%'}}>
-                      <Button style={{borderRadius: 0}}>Save</Button>
-                    </div> */}
-                  </Tab>
-                  <Tab className="p-4" eventKey="last-execution" title="Last execution">
-                    <div className="bg-light">
-                      {infra && !lastExecution && (
-                        <>
-                          <h5>Last execution</h5>
-                          <small>Cloudx save only last execution, if you want to save more, use webhooks.</small>
-                          {infra?.status?.status === "ERROR" && (
-                            <Alert style={{ cursor: 'pointer' }} variant="danger" className="my-2" onClick={() => setLastExecution(infra?.status)}>
-                              <strong>Error: </strong>{infra?.status?.error?.message}<br/>
-                              <strong>Code: </strong>{infra?.status?.error?.code}<br/>
-                              <strong>Message: </strong>{infra?.status?.error?.tip}<br/>
-                              <strong>Started At: </strong>{infra?.status?.startedAt}<br/>
+        <div
+          style={{ width: '40%',  maxHeight: 'calc(100vh - 60px)', zIndex: 10 }}
+          className="p-2 bg-light"
+        >
+          <Tabs defaultActiveKey="info" id="uncontrolled-tab-example" className="mb-3">
+            <Tab eventKey="info" title="Info">
+              <AceEditor
+                style={{ width: '100%', height: 'calc(100vh - 125px)' }}
+                mode="json"
+                theme="github"
+                name="infra-editor"
+                onChange={(value) => JSON.stringify(infra, null, 2)}
+                fontSize={14}
+                showPrintMargin={true}
+                showGutter={true}
+                highlightActiveLine={true}
+                value={JSON.stringify(infra, null, 2)}
+                setOptions={{
+                  useWorker: false,
+                  showLineNumbers: true,
+                  tabSize: 2,
+                }}
+              />
+            </Tab>
+            <Tab eventKey="last-execution" title="Last execution">
+              <h5>Last execution</h5>
+              <small>Cloudx save only last execution, if you want to save more, use webhooks.</small>
+              {infra?.status?.status === "ERROR" && (
+                <Alert style={{ cursor: 'pointer' }} variant="danger" className="my-2" onClick={() => setLastExecution(infra?.status)}>
+                  <strong>Error: </strong>{infra?.status?.error?.message}<br/>
+                  <strong>Code: </strong>{infra?.status?.error?.code}<br/>
+                  <strong>Message: </strong>{infra?.status?.error?.tip}<br/>
+                  <strong>Started At: </strong>{infra?.status?.startedAt}<br/>
+                </Alert>
+              )}
+              {infra?.status?.status === "" && (
+                <Alert style={{ cursor: 'pointer' }} variant="secondary" className="my-2" onClick={() => setLastExecution(infra?.status)}>
+                  Not executed yet
 
-                            </Alert>
-                          ) }
-                        </>
-                      )}
-                      {lastExecution && (
-                        <div style={{width: '100%'}}>
-                          <Button variant="decondary" onClick={() => setLastExecution(null)}>Exit execution mode</Button>
-                        </div>
-                      )}
-                    </div>
-                  </Tab>
-                </Tabs>
-              </>
-            )}
-            
-          </div>
-        )}
+                </Alert>
+              ) }
+              {infra?.status?.status === "SUCCESS" && (
+                <>
+                  <strong>Last execution: </strong>
+                  <Alert variant="success" className="my-2" onClick={() => setLastExecution(infra?.status)}>
+                    The last execution executed successfully
+                  </Alert>
+                </>
+              )}
+            </Tab>
+          </Tabs>
+        </div>
+
         
-        <div style={{ width: (!searchParams.has('mode') || searchParams?.get('mode') === 'VIEW') ? '100%' : '55%', height: 'calc(100vh - 60px)' }}>
-          
+        
+        <div style={{ width: '60%', height: 'calc(100vh - 60px)' }}>  
           <ReactFlow
             nodes={nodes}
             edges={edges} 
@@ -210,11 +177,59 @@ const InfraView = () => {
             }}
             fitView
             fitViewOptions={{maxZoom: 1}}
+            onNodeClick={(event, node) => setCurrTask(node?.data)}
           >
             <Background/>
           </ReactFlow>
         </div>
       </div>
+
+      <Modal show={!!currTask} onHide={() => setCurrTask(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Modal heading</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {/* <strong>Name: </strong> {currTask?.name} <br/>
+          <strong>Backend: </strong> {currTask?.backend} <br/>
+          <strong>Inputs: </strong> <br/>
+          <ul>
+            {currTask?.inputs?.map((input: any) => (
+              <li>
+                <strong>{input?.key}: </strong> {input?.value} <br/>
+              </li>
+            ))}
+          </ul>
+          <strong>Task outputs: </strong> <br/>
+          <ul>
+            {currTask?.inputs?.map((input: any) => (
+              <li>
+                <strong>{input?.key}: </strong> {input?.value} <br/>
+              </li>
+            ))}
+          </ul> */}
+          <AceEditor
+            style={{ width: '100%', height: '400px' }}
+            mode="json"
+            theme="github"
+            name="infra-editor"
+            fontSize={14}
+            showPrintMargin={true}
+            showGutter={true}
+            highlightActiveLine={true}
+            value={JSON.stringify(currTask, null, 2)}
+            setOptions={{
+              useWorker: false,
+              showLineNumbers: true,
+              tabSize: 2,
+            }}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setCurrTask(null)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   )
 }

@@ -13,7 +13,7 @@ import (
 func (t terraformBackend) install(tfVersion string) (string, error) {
 	if tfVersion != "" {
 		installDirPath := filepath.Join("/tmp/cloudx/terraform-versions", tfVersion)
-		if _, err := os.Stat(installDirPath); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(installDirPath, "terraform")); os.IsNotExist(err) {
 			err := os.MkdirAll(installDirPath, os.ModePerm)
 			if err != nil {
 				return "", err
@@ -25,14 +25,17 @@ func (t terraformBackend) install(tfVersion string) (string, error) {
 				InstallDir: installDirPath,
 			}
 
-			return installer.Install(context.Background())
+			t.logger.Info("install terraform by specific version")
+			res, err := installer.Install(context.Background())
+			return res, err
 		}
 
+		t.logger.Info("using specific terraform version")
 		return filepath.Join(installDirPath, "terraform"), nil
 	}
 
 	installDirPath := filepath.Join("/tmp/cloudx/terraform-versions", "latest")
-	if _, err := os.Stat(installDirPath); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(installDirPath, "terraform")); os.IsNotExist(err) {
 		err := os.MkdirAll(installDirPath, os.ModePerm)
 		if err != nil {
 			return "", err
@@ -43,8 +46,11 @@ func (t terraformBackend) install(tfVersion string) (string, error) {
 			InstallDir: installDirPath,
 		}
 
-		return installer.Install(context.Background())
+		t.logger.Info("install terraform by latest version")
+		res, err := installer.Install(context.Background())
+		return res, err
 	}
 
+	t.logger.Info("using latest terraform version")
 	return filepath.Join(installDirPath, "terraform"), nil
 }
