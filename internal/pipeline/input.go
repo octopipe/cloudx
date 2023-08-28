@@ -5,14 +5,13 @@ import (
 	"strings"
 
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
-	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/lex"
 	"github.com/octopipe/cloudx/internal/task"
 	"github.com/octopipe/cloudx/internal/taskoutput"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (p *pipelineCtx) interpolateTaskInputsByExecutionContext(task commonv1alpha1.InfraTask, executionContext engine.ExecutionContext) ([]commonv1alpha1.InfraTaskInput, error) {
+func (p *pipelineCtx) interpolateTaskInputsByExecutionContext(task commonv1alpha1.InfraTask, executionContext ExecutionContext) ([]commonv1alpha1.InfraTaskInput, error) {
 	inputs := []commonv1alpha1.InfraTaskInput{}
 	for _, i := range task.Inputs {
 		tokens := lex.Tokenize(i.Value)
@@ -48,7 +47,7 @@ func (p *pipelineCtx) interpolateTaskInputsByExecutionContext(task commonv1alpha
 	return inputs, nil
 }
 
-func (p *pipelineCtx) getDataByOrigin(origin string, name string, attr string, executionContext engine.ExecutionContext) (string, bool, error) {
+func (p *pipelineCtx) getDataByOrigin(origin string, name string, attr string, executionContext ExecutionContext) (string, bool, error) {
 	switch origin {
 	case task.ThisInterpolationOrigin:
 		p.logger.Info("interpolate this origin")

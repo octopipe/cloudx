@@ -161,6 +161,14 @@ const InfraView = () => {
                   </Alert>
                 </>
               )}
+              {infra?.status?.status === "RUNNING" && (
+                <>
+                  <strong>Last execution: </strong>
+                  <Alert variant="primary" className="my-2" onClick={() => setLastExecution(infra?.status)}>
+                    Running...
+                  </Alert>
+                </>
+              )}
             </Tab>
           </Tabs>
         </div>

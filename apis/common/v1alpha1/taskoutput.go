@@ -16,9 +16,10 @@ type TaskOutputSpecItem struct {
 }
 
 type TaskOutputSpec struct {
-	Infra   Ref                  `json:"infra,omitempty"`
-	Outputs []TaskOutputSpecItem `json:"outputs,omitempty"`
-	Secret  Ref                  `json:"secret,omitempty"`
+	Infra    Ref                  `json:"infra,omitempty"`
+	TaskName string               `json:"taskName,omitempty"`
+	Outputs  []TaskOutputSpecItem `json:"outputs,omitempty"`
+	Secret   Ref                  `json:"secret,omitempty"`
 }
 
 type TaskOutputStatus struct {

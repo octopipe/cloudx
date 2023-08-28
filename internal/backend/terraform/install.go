@@ -35,6 +35,7 @@ func (t terraformBackend) install(tfVersion string) (string, error) {
 	}
 
 	installDirPath := filepath.Join("/tmp/cloudx/terraform-versions", "latest")
+	// TODO: fix error text file busy
 	if _, err := os.Stat(filepath.Join(installDirPath, "terraform")); os.IsNotExist(err) {
 		err := os.MkdirAll(installDirPath, os.ModePerm)
 		if err != nil {

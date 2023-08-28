@@ -45,6 +45,8 @@ type RPCCreateTaskOutputArgs struct {
 	Name      string
 	Namespace string
 	Items     []RPCCreateTaskOutputItem
+	TaskName  string
+	InfraRef  commonv1alpha1.Ref
 }
 
 func (h TaskOutputRPCHandler) isSecretTaskOutput(items []RPCCreateTaskOutputItem) bool {
@@ -129,8 +131,15 @@ func (h *TaskOutputRPCHandler) ApplyTaskOuput(args *RPCCreateTaskOutputArgs, rep
 		newTaskOutput.Spec.Outputs = append(newTaskOutput.Spec.Outputs, newOutput)
 	}
 
-	h.taskOutputRepository.Apply(context.Background(), newTaskOutput)
-	_, err := h.taskOutputRepository.Get(context.Background(), args.Name, args.Namespace)
+	newTaskOutput.Spec.Infra = args.InfraRef
+	newTaskOutput.Spec.TaskName = args.TaskName
+
+	_, err := h.taskOutputRepository.Apply(context.Background(), newTaskOutput)
+	if err != nil {
+		return err
+	}
+
+	_, err = h.taskOutputRepository.Get(context.Background(), args.Name, args.Namespace)
 	// *reply = currentTaskOutput
 	return err
 }

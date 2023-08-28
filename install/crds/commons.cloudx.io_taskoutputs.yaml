@@ -59,6 +59,8 @@ spec:
                   namespace:
                     type: string
                 type: object
+              taskName:
+                type: string
             type: object
           status:
             type: object

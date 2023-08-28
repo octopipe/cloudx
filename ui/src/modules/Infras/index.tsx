@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import React, { useCallback, useEffect, useState } from "react"
-import { Alert, Breadcrumb, Button, ListGroup, ProgressBar } from "react-bootstrap"
+import { Alert, Breadcrumb, Button, ListGroup, ProgressBar, Spinner } from "react-bootstrap"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { useFetch } from "use-http"
 
@@ -11,6 +11,7 @@ const Infras = () => {
   const { workspaceId } = useParams()
   const { patch, get, response, loading, error } = useFetch({ cachePolicy: 'no-cache' as any })
   const [infras, setInfras] = useState<any>([])
+  const [timer, setTimer] = useState<any>(null)
 
   useEffect(() => {
     getInfras()
@@ -74,14 +75,21 @@ const Infras = () => {
                   </a>
                 </div>
                 <div>
-                  <FontAwesomeIcon className="me-2" icon="rotate" style={{ cursor: 'pointer' }} onClick={() => sync(infra?.name)} />
-                  <FontAwesomeIcon icon="trash" color="red" style={{ cursor: 'pointer' }} />
+                {infra?.status?.status === "RUNNING" ? (
+                  <Spinner variant="primary" animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </Spinner>
+                ) : (
+                  <>
+                    <FontAwesomeIcon className="me-2" icon="rotate" style={{ cursor: 'pointer' }} onClick={() => sync(infra?.name)} />
+                    <FontAwesomeIcon icon="trash" color="red" style={{ cursor: 'pointer' }} />
+                  </>
+                )}
+                  
                 </div>
               </div>
               <strong>Description: </strong>{infra?.description}<br/><br/>
-              {infra?.status?.status === "RUNNING" && (
-                <ProgressBar animated className="my-2" now={getProgressNow(infra)} />
-              )}
+              
               
               {infra?.status?.status === "ERROR" && (
                 <>

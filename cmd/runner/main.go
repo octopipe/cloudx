@@ -3,14 +3,12 @@ package main
 import (
 	"os"
 	"strings"
-	"time"
 
 	"github.com/joho/godotenv"
 	commonv1alpha1 "github.com/octopipe/cloudx/apis/common/v1alpha1"
 	"github.com/octopipe/cloudx/internal/backend"
 	"github.com/octopipe/cloudx/internal/backend/terraform"
 	"github.com/octopipe/cloudx/internal/controller/infra"
-	"github.com/octopipe/cloudx/internal/engine"
 	"github.com/octopipe/cloudx/internal/pipeline"
 	"github.com/octopipe/cloudx/internal/rpcclient"
 	"go.uber.org/zap"
@@ -56,7 +54,6 @@ func main() {
 	}
 
 	logger.Info("getting last execution")
-
 	currentInfra := &commonv1alpha1.Infra{}
 	err = newRunnerContext.rpcClient.Call("RPCServer.GetInfra", infra.RPCGetInfraArgs{
 		Ref: infraRef,
@@ -65,72 +62,28 @@ func main() {
 		panic(err)
 	}
 
-	executionStatus := commonv1alpha1.ExecutionStatus{
-		Status: pipeline.InfraRunningStatus,
-		Tasks:  []commonv1alpha1.TaskExecutionStatus{},
-	}
-
-	taskStatusChan := make(chan commonv1alpha1.TaskExecutionStatus)
+	statusChan := make(chan commonv1alpha1.ExecutionStatus)
 	terraformBackend, err := terraform.NewTerraformBackend(logger)
 	if err != nil {
 		panic(err)
 	}
 
 	newBackend := backend.NewBackend(terraformBackend)
-	newEngine := engine.NewEngine(logger, rpcClient, newBackend)
-	newPipeline := pipeline.NewPipeline(logger, rpcClient, newBackend, &newEngine)
-
-	doneChann := make(chan bool)
+	newPipeline := pipeline.NewPipeline(logger, rpcClient, newBackend)
 
 	go func() {
-		newPipeline.Start(action, *currentInfra, taskStatusChan)
-		doneChann <- true
+		logger.Info("start pipeline execution")
+		newPipeline.Start(action, *currentInfra, statusChan)
 	}()
 
-	ticker := time.NewTicker(time.Minute * 5)
+	for executionStatus := range statusChan {
+		err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
+		if err != nil {
+			logger.Fatal("Failed to call rpc execution status", zap.Error(err))
+		}
 
-	for {
-		select {
-		case taskStatus := <-taskStatusChan:
-			executionStatus.Tasks = append(executionStatus.Tasks, taskStatus)
-			err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
-			if err != nil {
-				logger.Fatal("Failed to call rpc execution status", zap.Error(err))
-			}
-		case done := <-doneChann:
-			if done {
-				var infraErr commonv1alpha1.Error
-				status := pipeline.InfraSuccessStatus
-				for _, task := range executionStatus.Tasks {
-					if task.Status != pipeline.TaskAppliedStatus && task.Status != pipeline.TaskDestroyed {
-						status = pipeline.InfraErrorStatus
-						infraErr = task.Error
-						break
-					}
-				}
-				executionStatus.Status = status
-				executionStatus.Error = infraErr
-				executionStatus.FinishedAt = time.Now().Format(time.RFC3339)
-				err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
-				if err != nil {
-					logger.Fatal("Failed to call rpc execution status", zap.Error(err))
-				}
-				logger.Info("Finish engine execution")
-				return
-			}
-		case <-ticker.C:
-			executionStatus.Status = pipeline.InfraTimeoutStatus
-			executionStatus.Error = commonv1alpha1.Error{
-				Message: "time limit exceeded",
-				Code:    "TIME_LIMIT_EXCEEDED",
-				Tip:     "Verify if your infrastructure is not stuck in some task.",
-			}
-			executionStatus.FinishedAt = time.Now().Format(time.RFC3339)
-			err = newRunnerContext.setExecutionStatus(infraRef, executionStatus)
-			if err != nil {
-				logger.Fatal("Failed to call rpc execution status", zap.Error(err))
-			}
-			logger.Info("Timeout engine execution")
+		if executionStatus.Status == pipeline.InfraSuccessStatus || executionStatus.Status == pipeline.InfraErrorStatus || executionStatus.Status == pipeline.InfraTimeoutStatus {
+			logger.Info("Finish engine execution")
 			return
 		}
 	}
