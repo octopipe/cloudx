@@ -12,6 +12,7 @@ import ProvidersConfig from './modules/ProvidersConfig';
 import Webhooks from './modules/Webhooks';
 import ProvidersConfigView from './modules/ProviderConfigView';
 import { Alert } from 'react-bootstrap';
+import ExecutionTaskModal from './modules/InfraView/ExecutionTaskModal';
 
 const RequestErrorToast = ({ res }: any) => (
   <div>
@@ -66,7 +67,10 @@ const App = () => {
             <Route path='' index element={<Navigate to="infras" />} />
             <Route path='infras' element={<Infras />} />
             <Route path='infras/create' element={<InfraView />} />
-            <Route path='infras/:infraId' element={<InfraView />} />
+            <Route path='infras/:infraId' element={<InfraView mode="info" />} />
+            <Route path='infras/:infraId/last-execution' element={<InfraView mode="last-execution" />}>
+              <Route path='task/:taskName' element={<ExecutionTaskModal />} />
+            </Route>
             <Route path='tasks-outputs' element={<TasksOutputs />} />
             <Route path='providers-config' element={<ProvidersConfig />} />
             <Route path='providers-config/:providerConfigId' element={<ProvidersConfigView />} />

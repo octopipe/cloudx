@@ -69,7 +69,7 @@ const Infras = () => {
                   <a 
                     className="fw-bold"
                     style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/workspaces/${workspaceId}/infras/${infra?.name}?mode=VIEW`)}
+                    onClick={() => navigate(`/workspaces/${workspaceId}/infras/${infra?.name}`)}
                   >
                     {infra?.name}
                   </a>

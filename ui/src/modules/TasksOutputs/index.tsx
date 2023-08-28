@@ -57,15 +57,23 @@ const TasksOutputs = () => {
       </div>
       <ListGroup variant="flush">
         {taskOutputs.map((taskOutput: any, index: any) => (
-          <ListGroup.Item key={index} action onClick={() => navigate(`/workspaces/${workspaceId}/taskOutputs/${taskOutput.id}`)}>
+          <ListGroup.Item key={index}>
             <div className="ms-2 me-auto">
               <Breadcrumb>
-              
-                <Breadcrumb.Item href="#">
+                <Breadcrumb.Item active>
+                  Infra
+                </Breadcrumb.Item>
+                <Breadcrumb.Item onClick={() => navigate(`/workspaces/${workspaceId}/infras/${taskOutput?.infra?.name}/last-execution`)}>
                   {taskOutput?.infra?.name}
                 </Breadcrumb.Item>
-                <Breadcrumb.Item href="#">
+                <Breadcrumb.Item active>
+                  Task
+                </Breadcrumb.Item>
+                <Breadcrumb.Item onClick={() => navigate(`/workspaces/${workspaceId}/infras/${taskOutput?.infra?.name}/last-execution/task/${taskOutput?.taskName}`)}>
                   {taskOutput?.taskName}
+                </Breadcrumb.Item>
+                <Breadcrumb.Item active>
+                  Task output
                 </Breadcrumb.Item>
                 <Breadcrumb.Item href="#">
                   {taskOutput?.name}
